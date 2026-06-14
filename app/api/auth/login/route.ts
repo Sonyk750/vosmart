@@ -16,6 +16,9 @@ export async function POST(req: NextRequest) {
 
     const hashed = hashPassword(password);
     if (user.password !== hashed) return NextResponse.json({ error: "Email sau parolă incorectă" }, { status: 401 });
+    if (user.role === "client" && user.status !== "active") {
+      return NextResponse.json({ error: "Contul tau asteapta aprobarea administratorului VoSmart." }, { status: 403 });
+    }
 
     const token = crypto.randomBytes(32).toString("hex");
     const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 zile

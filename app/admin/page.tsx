@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
-import AdminDashboard from "./AdminDashboard";
+import AdminDashboard from "@/app/admin/AdminDashboard";
 
 export default async function AdminPage() {
   const cookieStore = await cookies();

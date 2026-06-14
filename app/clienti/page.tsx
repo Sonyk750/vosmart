@@ -6,6 +6,7 @@ export default function ClientiPage() {
   const [tab, setTab] = useState<"login" | "register">("login");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
   // Login form
   const [loginEmail, setLoginEmail] = useState("");
@@ -50,6 +51,7 @@ export default function ClientiPage() {
     e.preventDefault();
     setLoading(true);
     setError("");
+    setSuccess("");
     try {
       const res = await fetch("/api/auth/register", {
         method: "POST",
@@ -108,6 +110,11 @@ export default function ClientiPage() {
               {error}
             </div>
           )}
+          {success && (
+            <div className="mb-5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300">
+              {success}
+            </div>
+          )}
 
           {tab === "login" ? (
             <form onSubmit={handleLogin} className="space-y-4">
@@ -136,6 +143,9 @@ export default function ClientiPage() {
             </form>
           ) : (
             <form onSubmit={handleRegister} className="space-y-4">
+              <div className="rounded-xl border border-yellow-500/30 bg-yellow-500/10 px-4 py-3 text-sm text-yellow-200">
+                Contul va fi verificat de administratorul VoSmart. Vei putea intra in cont dupa aprobare.
+              </div>
               <p className="text-sm text-slate-400 mb-2">Date personale</p>
               <input type="text" required value={regName} onChange={e => setRegName(e.target.value)}
                 placeholder="Nume complet"

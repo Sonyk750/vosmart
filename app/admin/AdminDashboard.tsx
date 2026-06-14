@@ -5,7 +5,7 @@ import Image from "next/image";
 interface User { id: string; name: string | null; email: string; role: string; }
 interface Association {
   id: string; name: string; package: string; cui: string | null;
-  user: { name: string | null; email: string; };
+  user: { name: string | null; email: string; status: string; };
   documents: Document[];
   reports: Report[];
   _count: { documents: number; reports: number; };
@@ -153,6 +153,20 @@ export default function AdminDashboard({ user }: { user: User }) {
     fetchCenzori();
   }
 
+  async function approveClient(associationId: string) {
+    const res = await fetch("/api/admin/clients/approve", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ associationId }),
+    });
+    if (res.ok) {
+      setMsg("Client aprobat. Acum se poate loga.");
+      fetchAssociations();
+    } else {
+      setMsg("Eroare la aprobarea clientului");
+    }
+  }
+
   async function handleLogout() {
     await fetch("/api/auth/logout", { method: "POST" });
     window.location.href = "/admin/login";
@@ -175,6 +189,7 @@ export default function AdminDashboard({ user }: { user: User }) {
 
   const pendingDocs = allDocs.filter(d => d.status === "analyzed");
   const totalClients = associations.length;
+  const pendingClients = associations.filter(a => a.user.status === "pending");
 
   return (
     <main className="min-h-screen bg-[#050814] text-white">
@@ -243,6 +258,26 @@ export default function AdminDashboard({ user }: { user: User }) {
                 </div>
               ))}
             </div>
+
+            {pendingClients.length > 0 && (
+              <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-5 mb-6">
+                <p className="text-sm font-semibold text-emerald-300 mb-3">Clienti noi care asteapta aprobare ({pendingClients.length})</p>
+                <div className="space-y-2">
+                  {pendingClients.slice(0, 5).map(a => (
+                    <div key={a.id} className="flex items-center justify-between gap-4 rounded-xl bg-black/20 p-3">
+                      <div>
+                        <p className="text-sm font-medium">{a.name}</p>
+                        <p className="text-xs text-slate-400">{a.user.email}</p>
+                      </div>
+                      <button onClick={() => approveClient(a.id)}
+                        className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold transition hover:bg-emerald-500">
+                        Aproba client
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {pendingDocs.length > 0 && (
               <div className="rounded-2xl border border-yellow-500/20 bg-yellow-500/5 p-5 mb-6">
@@ -416,6 +451,12 @@ export default function AdminDashboard({ user }: { user: User }) {
                     {a.cui && <p className="text-xs text-slate-500">CUI: {a.cui}</p>}
                   </div>
                   <div className="flex flex-col items-end gap-2">
+                    {a.user.status === "pending" && (
+                      <button type="button" onClick={(e) => { e.preventDefault(); approveClient(a.id); }}
+                        className="rounded-full bg-emerald-600 px-3 py-1 text-xs font-semibold text-white hover:bg-emerald-500">
+                        Aproba
+                      </button>
+                    )}
                     <span className={`rounded-full px-3 py-1 text-xs font-medium ${a.package === "premium" ? "bg-violet-500/15 text-violet-300" : "bg-cyan-500/15 text-cyan-300"}`}>
                       {a.package === "premium" ? "Premium" : "Smart"}
                     </span>

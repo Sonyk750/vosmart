@@ -13,7 +13,7 @@ export async function GET() {
   const associations = await prisma.association.findMany({
     where: whereClause,
     include: {
-      user: { select: { name: true, email: true } },
+      user: { select: { name: true, email: true, status: true } },
       documents: { orderBy: { createdAt: "desc" }, take: 5 },
       reports: { orderBy: { createdAt: "desc" }, take: 5 },
       _count: { select: { documents: true, reports: true } },
