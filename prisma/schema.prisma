@@ -1,0 +1,116 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String?
+  email     String   @unique
+  password  String
+  role      String   @default("client") // client | cenzor | admin | corporate
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  association      Association?
+  sessions         Session[]
+  allocatedClients CenzorAllocation[] @relation("CenzorAllocations")
+  corporateAccount CorporateAccount?  @relation("CorporateOwner")
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model CorporateAccount {
+  id           String    @id @default(cuid())
+  userId       String    @unique
+  companyName  String
+  cui          String?
+  address      String?
+  phone        String?
+  logoUrl      String?
+  package      String    @default("starter") // starter | business | professional | enterprise
+  status       String    @default("pending") // pending | active | suspended
+  maxAssoc     Int       @default(5)
+  activatedAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  user         User          @relation("CorporateOwner", fields: [userId], references: [id], onDelete: Cascade)
+  associations Association[]
+}
+
+model Association {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  name              String
+  cui               String?
+  address           String?
+  phone             String?
+  package           String   @default("smart")
+  corporateId       String?
+  createdAt         DateTime @default(now())
+
+  user              User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  corporate         CorporateAccount? @relation(fields: [corporateId], references: [id])
+  documents         Document[]
+  reports           Report[]
+  allocations       CenzorAllocation[]
+}
+
+model CenzorAllocation {
+  id            String   @id @default(cuid())
+  cenzorId      String
+  associationId String
+  createdAt     DateTime @default(now())
+
+  cenzor      User        @relation("CenzorAllocations", fields: [cenzorId], references: [id], onDelete: Cascade)
+  association Association @relation(fields: [associationId], references: [id], onDelete: Cascade)
+
+  @@unique([cenzorId, associationId])
+}
+
+model Document {
+  id            String   @id @default(cuid())
+  associationId String
+  title         String
+  type          String   @default("uploaded_by_client")
+  fileName      String
+  fileUrl       String
+  month         String?
+  year          Int?
+  status        String   @default("uploaded")
+  aiScore       Float?
+  aiFindings    String?
+  aiSummary     String?
+  createdAt     DateTime @default(now())
+
+  association Association @relation(fields: [associationId], references: [id], onDelete: Cascade)
+}
+
+model Report {
+  id            String    @id @default(cuid())
+  associationId String
+  title         String
+  month         String?
+  year          Int?
+  fileUrl       String?
+  aiDraft       String?
+  status        String    @default("draft")
+  approvedBy    String?
+  approvedAt    DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  association Association @relation(fields: [associationId], references: [id], onDelete: Cascade)
+}

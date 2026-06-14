@@ -1,0 +1,14 @@
+import { NextResponse } from "next/server";
+import { getSession } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+
+export async function GET() {
+  const user = await getSession();
+  if (!user || !user.association) return NextResponse.json({ error: "Neautorizat" }, { status: 401 });
+
+  const documents = await prisma.document.findMany({
+    where: { associationId: user.association.id },
+    orderBy: { createdAt: "desc" },
+  });
+  return NextResponse.json(documents);
+}
