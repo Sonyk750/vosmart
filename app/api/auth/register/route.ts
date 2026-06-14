@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { notifyAdminForClientApproval } from "@/lib/email";
 import crypto from "crypto";
 
 function hashPassword(password: string): string {
@@ -21,23 +22,28 @@ export async function POST(req: NextRequest) {
     const hashed = hashPassword(password);
     const user = await prisma.user.create({
       data: {
-        name, email: email.toLowerCase(), password: hashed,
+        name, email: email.toLowerCase(), password: hashed, status: "pending",
         association: {
           create: { name: associationName, cui, address, phone, package: pkg || "smart" }
         }
       }
     });
 
-    const token = crypto.randomBytes(32).toString("hex");
-    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-    await prisma.session.create({ data: { userId: user.id, token, expiresAt } });
+    notifyAdminForClientApproval({
+      name,
+      email: email.toLowerCase(),
+      associationName,
+      cui,
+      address,
+      phone,
+      packageName: pkg || "smart",
+    }).catch(console.error);
 
-    const response = NextResponse.json({ success: true });
-    response.cookies.set("vosmart_session", token, {
-      httpOnly: true, secure: process.env.NODE_ENV === "production",
-      sameSite: "lax", expires: expiresAt, path: "/",
+    return NextResponse.json({
+      success: true,
+      pendingApproval: true,
+      message: "Contul a fost creat si asteapta aprobarea administratorului.",
     });
-    return response;
   } catch (e) {
     console.error(e);
     return NextResponse.json({ error: "Eroare server" }, { status: 500 });
