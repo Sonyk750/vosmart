@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { notifyAdminForClientApproval } from "@/lib/email";
 import crypto from "crypto";
 
+export const runtime = "nodejs";
+
 function hashPassword(password: string): string {
   return crypto.createHash("sha256").update(password + process.env.NEXTAUTH_SECRET).digest("hex");
 }
@@ -29,15 +31,20 @@ export async function POST(req: NextRequest) {
       }
     });
 
-    notifyAdminForClientApproval({
-      name,
-      email: email.toLowerCase(),
-      associationName,
-      cui,
-      address,
-      phone,
-      packageName: pkg || "smart",
-    }).catch(console.error);
+    try {
+      await notifyAdminForClientApproval({
+        name,
+        email: email.toLowerCase(),
+        associationName,
+        cui,
+        address,
+        phone,
+        packageName: pkg || "smart",
+      });
+      console.log("Email aprobare client trimis catre administrator:", email.toLowerCase());
+    } catch (emailError) {
+      console.error("Eroare email aprobare client:", emailError);
+    }
 
     return NextResponse.json({
       success: true,
