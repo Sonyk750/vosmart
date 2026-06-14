@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
   // Toate documentele din același dosar
   const allDocs = await prisma.document.findMany({
     where: { associationId: doc.associationId, month: doc.month, year: doc.year },
-    select: { title: true, fileName: true, type: true },
+    select: { title: true, fileName: true, type: true, fileUrl: true },
     orderBy: { createdAt: "asc" },
   });
 
@@ -486,3 +486,4 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#fff;color:#1a1a2e;font-
 </body>
 </html>`;
 }
+

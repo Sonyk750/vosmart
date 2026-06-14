@@ -20,5 +20,6 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
 
   if (!association) redirect("/admin");
 
-  return <ClientDetailAdmin association={association} adminUser={user} />;
+  return <ClientDetailAdmin association={association as any} adminUser={user} />;
 }
+

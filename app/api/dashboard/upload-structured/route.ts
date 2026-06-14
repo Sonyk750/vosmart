@@ -330,7 +330,7 @@ IMPORTANT:
     // Extragem constatările ca findings
     const findingsMatch = reportText.match(/## III\. CONSTATĂRI([\s\S]*?)## IV\./);
     const findingsText = findingsMatch ? findingsMatch[1].trim() : "";
-    const findings = findingsText.split(/###\s+\d+\./).filter(Boolean).map(f => f.trim().split("\n")[0]).filter(Boolean);
+    const findings = findingsText.split(/###\s+\d+\./).filter(Boolean).map((f: string) => f.trim().split("\n")[0]).filter(Boolean);
 
     // Actualizăm documentul
     await prisma.document.update({
@@ -363,3 +363,4 @@ IMPORTANT:
     });
   }
 }
+
