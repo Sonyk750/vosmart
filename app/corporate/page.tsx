@@ -1,6 +1,8 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import Image from "next/image";
+import CardPaymentForm from "@/app/components/CardPaymentForm";
 
 const PACKAGES = [
   {
@@ -42,6 +44,15 @@ const PACKAGES = [
   },
 ];
 
+function PackageFromQuery({ onPackage }: { onPackage: (pkg: string) => void }) {
+  const searchParams = useSearchParams();
+  useEffect(() => {
+    const pkg = searchParams.get("package");
+    if (pkg && PACKAGES.some(p => p.key === pkg)) onPackage(pkg);
+  }, [searchParams, onPackage]);
+  return null;
+}
+
 export default function CorporatePage() {
   const [tab, setTab] = useState<"login" | "register">("register");
   const [selectedPackage, setSelectedPackage] = useState("business");
@@ -61,6 +72,8 @@ export default function CorporatePage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [paymentDone, setPaymentDone] = useState(false);
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -96,13 +109,20 @@ export default function CorporatePage() {
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Eroare"); return; }
-      setSuccess(true);
+      if (data.clientSecret) {
+        setClientSecret(data.clientSecret);
+      } else {
+        setSuccess(true);
+      }
     } catch { setError("Eroare de conexiune"); }
     finally { setLoading(false); }
   }
 
   return (
     <main className="min-h-screen bg-[#050814] text-white">
+      <Suspense fallback={null}>
+        <PackageFromQuery onPackage={setSelectedPackage} />
+      </Suspense>
       <div className="pointer-events-none fixed inset-0 -z-10">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,rgba(124,58,237,0.32),transparent_40%)]" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_right,rgba(6,182,212,0.20),transparent_40%)]" />
@@ -185,7 +205,31 @@ export default function CorporatePage() {
       {/* Formular */}
       <section className="px-5 pb-20 sm:px-6">
         <div className="mx-auto max-w-lg">
-          {success ? (
+          {paymentDone ? (
+            <div className="rounded-3xl border border-emerald-500/30 bg-emerald-500/10 p-10 text-center">
+              <div className="text-5xl mb-4">✅</div>
+              <h3 className="text-xl font-bold text-emerald-300 mb-2">Cont creat și plată confirmată!</h3>
+              <p className="text-slate-300 text-sm mb-6">
+                Activarea contului poate dura câteva minute. Te poți autentifica din portalul corporate.
+              </p>
+              <a href="/corporate/login"
+                className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-6 py-3 font-semibold transition hover:bg-violet-500 shadow-[0_0_25px_rgba(124,58,237,0.35)]">
+                Intră în portal →
+              </a>
+            </div>
+          ) : clientSecret ? (
+            <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-8">
+              <h3 className="text-lg font-semibold mb-1">Finalizează plata</h3>
+              <p className="text-xs text-slate-500 mb-4">
+                Pachet ales: <span className="text-violet-300 font-medium">{PACKAGES.find(p => p.key === selectedPackage)?.name} — {PACKAGES.find(p => p.key === selectedPackage)?.price} lei/lună</span>
+              </p>
+              <CardPaymentForm
+                clientSecret={clientSecret}
+                submitLabel={`Plătește ${PACKAGES.find(p => p.key === selectedPackage)?.price} lei`}
+                onSuccess={() => { setClientSecret(null); setPaymentDone(true); }}
+              />
+            </div>
+          ) : success ? (
             <div className="rounded-3xl border border-emerald-500/30 bg-emerald-500/10 p-10 text-center">
               <div className="text-5xl mb-4">✅</div>
               <h3 className="text-xl font-bold text-emerald-300 mb-2">Cerere trimisă cu succes!</h3>
@@ -258,11 +302,8 @@ export default function CorporatePage() {
 
                     <button type="submit" disabled={loading}
                       className="w-full rounded-xl bg-violet-600 px-6 py-4 font-semibold transition hover:bg-violet-500 shadow-[0_0_25px_rgba(124,58,237,0.35)] disabled:opacity-50">
-                      {loading ? "Se trimite cererea..." : "Trimite cererea de înregistrare →"}
+                      {loading ? "Se procesează..." : "Continuă spre plată →"}
                     </button>
-                    <p className="text-xs text-center text-slate-500">
-                      Contul va fi activat manual în maxim 24 ore după verificarea datelor.
-                    </p>
                   </form>
                 )}
               </div>

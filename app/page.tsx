@@ -212,10 +212,10 @@ export default function Home() {
 
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-12">
               {[
-                { name:"Starter", price:"250", assoc:"1 – 5 asociații", color:"cyan", features:["Până la 5 asociații cliente","Portal clienți dedicat","Analiză AI documente","Rapoarte automate","Logo propriu în portal","Suport email"] },
-                { name:"Business", price:"500", assoc:"5 – 15 asociații", color:"emerald", recommended:true, features:["Până la 15 asociații cliente","Portal clienți dedicat","Analiză AI documente","Rapoarte automate","Logo propriu în portal","Cenzori multipli","Suport prioritar"] },
-                { name:"Professional", price:"900", assoc:"15 – 50 asociații", color:"cyan", features:["Până la 50 asociații cliente","Portal clienți dedicat","Analiză AI documente","Rapoarte automate","Logo propriu în portal","Cenzori multipli","Suport dedicat"] },
-                { name:"Enterprise", price:"1500", assoc:"50+ asociații", color:"emerald", features:["Asociații nelimitate","Portal clienți dedicat","Analiză AI documente","Rapoarte automate","Logo propriu în portal","Cenzori multipli","API access","Manager cont dedicat"] },
+                { key:"starter", name:"Starter", price:"250", assoc:"1 – 5 asociații", color:"cyan", features:["Până la 5 asociații cliente","Portal clienți dedicat","Analiză AI documente","Rapoarte automate","Logo propriu în portal","Suport email"] },
+                { key:"business", name:"Business", price:"500", assoc:"5 – 15 asociații", color:"emerald", recommended:true, features:["Până la 15 asociații cliente","Portal clienți dedicat","Analiză AI documente","Rapoarte automate","Logo propriu în portal","Cenzori multipli","Suport prioritar"] },
+                { key:"professional", name:"Professional", price:"900", assoc:"15 – 50 asociații", color:"cyan", features:["Până la 50 asociații cliente","Portal clienți dedicat","Analiză AI documente","Rapoarte automate","Logo propriu în portal","Cenzori multipli","Suport dedicat"] },
+                { key:"enterprise", name:"Enterprise", price:"1500", assoc:"50+ asociații", color:"emerald", features:["Asociații nelimitate","Portal clienți dedicat","Analiză AI documente","Rapoarte automate","Logo propriu în portal","Cenzori multipli","API access","Manager cont dedicat"] },
               ].map((pkg)=>(
                 <div key={pkg.name} className={`relative rounded-[2rem] border p-8 transition hover:-translate-y-1
                   ${pkg.color==="emerald"
@@ -241,7 +241,7 @@ export default function Home() {
                       </li>
                     ))}
                   </ul>
-                  <a href="#contact"
+                  <a href={`/corporate?package=${pkg.key}`}
                     className={`inline-flex w-full justify-center rounded-xl px-6 py-3.5 font-semibold transition
                       ${pkg.color==="emerald"
                         ? "bg-emerald-600 hover:bg-emerald-500 shadow-[0_0_20px_rgba(52,211,153,0.3)]"
