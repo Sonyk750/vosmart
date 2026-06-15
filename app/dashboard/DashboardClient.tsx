@@ -19,6 +19,7 @@ interface User {
 }
 
 // Tipurile de documente obligatorii
+
 const DOC_TYPES = [
   { key: "lista_plata", label: "Listă de plată", required: true, multiple: false, multiSelect: false, description: "Lista de plată lunară a cheltuielilor" },
   { key: "explicatii_lista", label: "Explicațiile listei de plată", required: true, multiple: false, multiSelect: false, description: "Anexa cu explicațiile cheltuielilor" },
