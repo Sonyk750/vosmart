@@ -60,7 +60,7 @@ model Association {
   phone             String?
   package           String   @default("smart")
   corporateId       String?
-  maxDocuments      Int      @default(40)
+  maxDocuments      Int      @default(30)
   filesUploadedCount Int     @default(0)
   createdAt         DateTime @default(now())
 
