@@ -33,6 +33,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: `Documente obligatorii lipsă: ${missing.join(", ")}` }, { status: 400 });
     }
 
+    // Verificăm limita de documente per asociație
+    const association = await prisma.association.findUnique({
+      where: { id: user.association.id },
+      select: { filesUploadedCount: true, maxDocuments: true },
+    });
+    if (association && association.filesUploadedCount + files.length > association.maxDocuments) {
+      return NextResponse.json({
+        error: `Ați atins limita de ${association.maxDocuments} documente pentru asociația dvs. (${association.filesUploadedCount} încărcate). Vă rugăm contactați administratorul pentru a crește limita.`
+      }, { status: 403 });
+    }
+
     // Salvăm fișierele local
     const uploadDir = path.join(process.cwd(), "public", "uploads", user.association.id, period.replace("-", "_"));
     await mkdir(uploadDir, { recursive: true });
@@ -66,6 +77,12 @@ export async function POST(req: NextRequest) {
         year: parseInt(year),
         status: "analyzing",
       }
+    });
+
+    // Incrementăm contorul de documente încărcate
+    await prisma.association.update({
+      where: { id: user.association.id },
+      data: { filesUploadedCount: { increment: files.length } },
     });
 
     // Lansăm analiza AI în background

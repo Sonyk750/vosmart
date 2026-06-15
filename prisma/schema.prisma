@@ -61,6 +61,7 @@ model Association {
   package           String   @default("smart")
   corporateId       String?
   maxDocuments      Int      @default(40)
+  filesUploadedCount Int     @default(0)
   createdAt         DateTime @default(now())
 
   user              User              @relation(fields: [userId], references: [id], onDelete: Cascade)

@@ -15,7 +15,7 @@ interface AnalysisStatus {
 }
 interface User {
   id: string; name: string | null; email: string; role: string;
-  association: { id: string; name: string; package: string; cui: string | null; address: string | null; } | null;
+  association: { id: string; name: string; package: string; cui: string | null; address: string | null; maxDocuments: number; filesUploadedCount: number; } | null;
 }
 
 // Tipurile de documente obligatorii
@@ -303,6 +303,28 @@ export default function DashboardClient({ user }: { user: User }) {
             </div>
           ))}
         </div>
+
+        {/* Limită documente */}
+        {user.association && (() => {
+          const used = user.association.filesUploadedCount;
+          const max = user.association.maxDocuments;
+          const percent = max > 0 ? Math.min(100, (used / max) * 100) : 0;
+          const barColor = percent >= 90 ? "bg-red-500" : percent >= 70 ? "bg-yellow-500" : "bg-emerald-500";
+          return (
+            <div className="rounded-2xl border border-white/8 bg-white/[0.03] p-5 mb-8">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-slate-300">📄 Documente încărcate</span>
+                <span className="text-sm text-slate-400">{used} / {max}</span>
+              </div>
+              <div className="w-full bg-white/10 rounded-full h-2.5 overflow-hidden">
+                <div
+                  className={`h-2.5 rounded-full transition-all duration-500 ${barColor}`}
+                  style={{ width: `${percent}%` }}
+                />
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Tabs */}
         <div className="flex gap-2 mb-6 border-b border-white/5 pb-1 flex-wrap">
