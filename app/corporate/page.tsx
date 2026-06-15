@@ -3,6 +3,7 @@ import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Image from "next/image";
 import CardPaymentForm from "@/app/components/CardPaymentForm";
+import { useCuiAutofill } from "@/app/hooks/useCuiAutofill";
 
 const PACKAGES = [
   {
@@ -74,6 +75,12 @@ export default function CorporatePage() {
   const [password, setPassword] = useState("");
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [paymentDone, setPaymentDone] = useState(false);
+
+  const cuiStatus = useCuiAutofill(cui, data => {
+    setCompanyName(data.denumire);
+    setAddress(data.adresa);
+    if (data.telefon && !phone) setPhone(data.telefon);
+  });
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -279,8 +286,13 @@ export default function CorporatePage() {
                       <div className="space-y-3">
                         <input type="text" required value={companyName} onChange={e => setCompanyName(e.target.value)}
                           placeholder="Numele firmei de cenzorat *" className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-violet-500 transition" />
-                        <input type="text" value={cui} onChange={e => setCui(e.target.value)}
-                          placeholder="CUI / Cod fiscal" className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-violet-500 transition" />
+                        <div>
+                          <input type="text" value={cui} onChange={e => setCui(e.target.value)}
+                            placeholder="CUI / Cod fiscal" className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-violet-500 transition" />
+                          {cuiStatus === "loading" && <p className="mt-1.5 text-xs text-slate-500">Se caută firma după CUI...</p>}
+                          {cuiStatus === "found" && <p className="mt-1.5 text-xs text-emerald-400">Date completate automat din ANAF</p>}
+                          {cuiStatus === "notfound" && <p className="mt-1.5 text-xs text-slate-500">Firma nu a fost găsită în ANAF — completează manual</p>}
+                        </div>
                         <input type="text" value={address} onChange={e => setAddress(e.target.value)}
                           placeholder="Adresa firmei" className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-violet-500 transition" />
                         <input type="text" value={phone} onChange={e => setPhone(e.target.value)}

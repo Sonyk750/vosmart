@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import Image from "next/image";
+import { useCuiAutofill } from "@/app/hooks/useCuiAutofill";
 
 export default function ClientiPage() {
   const [tab, setTab] = useState<"login" | "register">("login");
@@ -21,6 +22,12 @@ export default function ClientiPage() {
   const [regAddress, setRegAddress] = useState("");
   const [regPhone, setRegPhone] = useState("");
   const [regPackage, setRegPackage] = useState("smart");
+
+  const cuiStatus = useCuiAutofill(regCUI, data => {
+    setRegAssocName(data.denumire);
+    setRegAddress(data.adresa);
+    if (data.telefon && !regPhone) setRegPhone(data.telefon);
+  });
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -163,9 +170,14 @@ export default function ClientiPage() {
                   <input type="text" required value={regAssocName} onChange={e => setRegAssocName(e.target.value)}
                     placeholder="Numele asociației"
                     className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-violet-500 transition" />
-                  <input type="text" value={regCUI} onChange={e => setRegCUI(e.target.value)}
-                    placeholder="CUI / Cod fiscal"
-                    className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-violet-500 transition" />
+                  <div>
+                    <input type="text" value={regCUI} onChange={e => setRegCUI(e.target.value)}
+                      placeholder="CUI / Cod fiscal"
+                      className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-violet-500 transition" />
+                    {cuiStatus === "loading" && <p className="mt-1.5 text-xs text-slate-500">Se caută asociația după CUI...</p>}
+                    {cuiStatus === "found" && <p className="mt-1.5 text-xs text-emerald-400">Date completate automat din ANAF</p>}
+                    {cuiStatus === "notfound" && <p className="mt-1.5 text-xs text-slate-500">Nu a fost găsit în ANAF — completează manual</p>}
+                  </div>
                   <input type="text" value={regAddress} onChange={e => setRegAddress(e.target.value)}
                     placeholder="Adresa asociației"
                     className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-violet-500 transition" />
