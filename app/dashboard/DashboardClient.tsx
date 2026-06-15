@@ -55,6 +55,7 @@ export default function DashboardClient({ user }: { user: User }) {
   const [uploadMsg, setUploadMsg] = useState("");
   const [uploadProgress, setUploadProgress] = useState("");
   const [docFiles, setDocFiles] = useState<DocFile[]>([]);
+  const [uploadedCount, setUploadedCount] = useState(user.association?.filesUploadedCount ?? 0);
   const [periodMonth, setPeriodMonth] = useState("");
   const [periodYear, setPeriodYear] = useState(new Date().getFullYear().toString());
   const period = periodMonth && periodYear ? `${periodYear}-${periodMonth}` : "";
@@ -209,6 +210,7 @@ export default function DashboardClient({ user }: { user: User }) {
       const data = await res.json();
       if (res.ok) {
         setUploadMsg("✓ Documentele au fost trimise! AI analizează dosarul...");
+        setUploadedCount(prev => prev + docFiles.length);
         setDocFiles([]);
         setPeriodMonth("");
         setPeriodYear(new Date().getFullYear().toString());
@@ -306,7 +308,7 @@ export default function DashboardClient({ user }: { user: User }) {
 
         {/* Limită documente */}
         {user.association && (() => {
-          const used = user.association.filesUploadedCount;
+          const used = uploadedCount + docFiles.length;
           const max = user.association.maxDocuments;
           const percent = max > 0 ? Math.min(100, (used / max) * 100) : 0;
           const barColor = percent >= 90 ? "bg-red-500" : percent >= 70 ? "bg-yellow-500" : "bg-emerald-500";
