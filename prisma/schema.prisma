@@ -47,6 +47,11 @@ model CorporateAccount {
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
+  stripeCustomerId     String?   @unique
+  stripeSubscriptionId String?   @unique
+  subscriptionStatus   String?   // active | incomplete | past_due | canceled | unpaid | trialing
+  currentPeriodEnd     DateTime?
+
   user         User          @relation("CorporateOwner", fields: [userId], references: [id], onDelete: Cascade)
   associations Association[]
 }
@@ -64,11 +69,33 @@ model Association {
   filesUploadedCount Int     @default(0)
   createdAt         DateTime @default(now())
 
+  stripeCustomerId     String?   @unique
+  stripeSubscriptionId String?   @unique
+  subscriptionStatus   String?   // active | incomplete | past_due | canceled | unpaid | trialing
+  currentPeriodEnd     DateTime?
+
   user              User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   corporate         CorporateAccount? @relation(fields: [corporateId], references: [id])
   documents         Document[]
   reports           Report[]
   allocations       CenzorAllocation[]
+  documentAddonPurchases DocumentAddonPurchase[]
+}
+
+model DocumentAddonPurchase {
+  id                    String    @id @default(cuid())
+  associationId         String
+  stripePaymentIntentId String    @unique
+  amount                Int       // bani, ex. 2500 = 25.00 RON
+  currency              String    @default("ron")
+  documentsAdded        Int
+  status                String    @default("pending") // pending | completed | failed
+  createdAt             DateTime  @default(now())
+  completedAt           DateTime?
+
+  association Association @relation(fields: [associationId], references: [id], onDelete: Cascade)
+
+  @@index([associationId])
 }
 
 model CenzorAllocation {

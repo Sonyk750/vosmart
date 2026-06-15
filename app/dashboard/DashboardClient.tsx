@@ -1,6 +1,9 @@
 "use client";
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
+import CardPaymentForm from "@/app/components/CardPaymentForm";
+import { ASSOCIATION_PACKAGES, DOCUMENT_ADDON, AssociationPackage } from "@/lib/billing";
 
 interface Report {
   id: string; title: string; month: string | null; year: number | null;
@@ -15,7 +18,11 @@ interface AnalysisStatus {
 }
 interface User {
   id: string; name: string | null; email: string; role: string;
-  association: { id: string; name: string; package: string; cui: string | null; address: string | null; maxDocuments: number; filesUploadedCount: number; } | null;
+  association: {
+    id: string; name: string; package: string; cui: string | null; address: string | null;
+    maxDocuments: number; filesUploadedCount: number;
+    subscriptionStatus: string | null; currentPeriodEnd: string | null;
+  } | null;
 }
 
 // Tipurile de documente obligatorii
@@ -48,7 +55,8 @@ interface DocFile {
 let fileCounter = 0;
 
 export default function DashboardClient({ user }: { user: User }) {
-  const [tab, setTab] = useState<"rapoarte" | "documente" | "upload">("rapoarte");
+  const router = useRouter();
+  const [tab, setTab] = useState<"rapoarte" | "documente" | "upload" | "abonament">("rapoarte");
   const [reports, setReports] = useState<Report[]>([]);
   const [documents, setDocuments] = useState<Document[]>([]);
   const [uploading, setUploading] = useState(false);
@@ -64,6 +72,17 @@ export default function DashboardClient({ user }: { user: User }) {
   const [fakeProgress, setFakeProgress] = useState(0);
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
   const progressRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Achiziție documente suplimentare
+  const [showAddonModal, setShowAddonModal] = useState(false);
+  const [addonClientSecret, setAddonClientSecret] = useState("");
+  const [addonLoading, setAddonLoading] = useState(false);
+  const [addonMsg, setAddonMsg] = useState("");
+
+  // Abonament asociație
+  const [subscribing, setSubscribing] = useState(false);
+  const [subscribeClientSecret, setSubscribeClientSecret] = useState("");
+  const [subMsg, setSubMsg] = useState("");
 
   useEffect(() => {
     if (tab === "rapoarte") fetchReports();
@@ -233,6 +252,56 @@ export default function DashboardClient({ user }: { user: User }) {
     window.location.href = "/";
   }
 
+  async function startAddonPurchase() {
+    setAddonLoading(true);
+    setAddonMsg("");
+    try {
+      const res = await fetch("/api/billing/document-addon", { method: "POST" });
+      const data = await res.json();
+      if (res.ok) {
+        setAddonClientSecret(data.clientSecret);
+        setShowAddonModal(true);
+      } else {
+        setAddonMsg("✗ " + (data.error || "Eroare la inițierea plății"));
+      }
+    } catch {
+      setAddonMsg("✗ Eroare de conexiune");
+    } finally {
+      setAddonLoading(false);
+    }
+  }
+
+  function handleAddonSuccess() {
+    setShowAddonModal(false);
+    setAddonClientSecret("");
+    setAddonMsg("✓ Plata a fost procesată. Limita de documente va fi actualizată în câteva minute.");
+    setTimeout(() => router.refresh(), 3000);
+  }
+
+  async function startSubscription() {
+    setSubscribing(true);
+    setSubMsg("");
+    try {
+      const res = await fetch("/api/billing/subscribe", { method: "POST" });
+      const data = await res.json();
+      if (res.ok) {
+        setSubscribeClientSecret(data.clientSecret);
+      } else {
+        setSubMsg("✗ " + (data.error || "Eroare la inițierea plății"));
+      }
+    } catch {
+      setSubMsg("✗ Eroare de conexiune");
+    } finally {
+      setSubscribing(false);
+    }
+  }
+
+  function handleSubscribeSuccess() {
+    setSubscribeClientSecret("");
+    setSubMsg("✓ Plata a fost procesată. Abonamentul va fi activat în câteva minute.");
+    setTimeout(() => router.refresh(), 3000);
+  }
+
   const statusBadge = (status: string) => {
     const map: Record<string, [string, string]> = {
       published: ["bg-emerald-500/15 text-emerald-300 border border-emerald-500/20", "✓ Publicat"],
@@ -252,6 +321,19 @@ export default function DashboardClient({ user }: { user: User }) {
         {label}
       </span>
     );
+  };
+
+  const subscriptionStatusBadge = (status: string | null) => {
+    const map: Record<string, [string, string]> = {
+      active: ["bg-emerald-500/15 text-emerald-300 border border-emerald-500/20", "✓ Activ"],
+      trialing: ["bg-cyan-500/15 text-cyan-300 border border-cyan-500/20", "Perioadă de probă"],
+      incomplete: ["bg-yellow-500/15 text-yellow-300 border border-yellow-500/20", "⏳ Incomplet"],
+      past_due: ["bg-red-500/15 text-red-300 border border-red-500/20", "Plată restantă"],
+      canceled: ["bg-slate-500/15 text-slate-300", "Anulat"],
+      unpaid: ["bg-red-500/15 text-red-300 border border-red-500/20", "Neplătit"],
+    };
+    const [cls, label] = (status && map[status]) || ["bg-slate-500/15 text-slate-300", "Fără abonament"];
+    return <span className={`rounded-full px-3 py-1 text-xs font-medium ${cls}`}>{label}</span>;
   };
 
   return (
@@ -324,6 +406,20 @@ export default function DashboardClient({ user }: { user: User }) {
                   style={{ width: `${percent}%` }}
                 />
               </div>
+              {percent >= 80 && (
+                <div className="mt-3 flex items-center justify-between gap-3 flex-wrap">
+                  <p className="text-xs text-yellow-300">
+                    {percent >= 100 ? "Ai atins limita de documente pentru pachetul tău." : "Te apropii de limita de documente pentru pachetul tău."}
+                  </p>
+                  <button onClick={startAddonPurchase} disabled={addonLoading}
+                    className="rounded-xl bg-violet-600 px-4 py-2 text-xs font-semibold transition hover:bg-violet-500 disabled:opacity-50 whitespace-nowrap">
+                    {addonLoading ? "Se încarcă..." : `+ Cumpără ${DOCUMENT_ADDON.documents} documente`}
+                  </button>
+                </div>
+              )}
+              {addonMsg && (
+                <p className={`mt-2 text-xs ${addonMsg.startsWith("✓") ? "text-emerald-400" : "text-red-400"}`}>{addonMsg}</p>
+              )}
             </div>
           );
         })()}
@@ -334,6 +430,7 @@ export default function DashboardClient({ user }: { user: User }) {
             { key: "rapoarte", label: "📋 Rapoartele mele" },
             { key: "documente", label: "📁 Dosare trimise" },
             { key: "upload", label: "⬆️ Trimite dosar lunar" },
+            { key: "abonament", label: "💳 Abonamentul meu" },
           ].map(t => (
             <button key={t.key} onClick={() => setTab(t.key as any)}
               className={`px-4 py-2.5 rounded-xl text-sm font-medium transition ${tab === t.key ? "bg-violet-600 text-white shadow-[0_0_20px_rgba(124,58,237,0.3)]" : "text-slate-400 hover:text-white hover:bg-white/[0.05]"}`}>
@@ -618,7 +715,75 @@ export default function DashboardClient({ user }: { user: User }) {
             </div>
           </div>
         )}
+
+        {/* ABONAMENTUL MEU */}
+        {tab === "abonament" && user.association && (() => {
+          const assoc = user.association;
+          const pkg = ASSOCIATION_PACKAGES[assoc.package as AssociationPackage] as { name: string; priceRon: number } | undefined;
+          const status = assoc.subscriptionStatus;
+          const isActive = status === "active" || status === "trialing";
+          return (
+            <div className="max-w-2xl">
+              <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6">
+                <div className="flex items-start justify-between gap-4 flex-wrap mb-2">
+                  <div>
+                    <p className="text-sm text-slate-400">Pachetul tău</p>
+                    <p className="text-xl font-bold">{pkg ? pkg.name : assoc.package}</p>
+                    {pkg && <p className="text-sm text-violet-300">{pkg.priceRon} lei/lună</p>}
+                  </div>
+                  {subscriptionStatusBadge(status)}
+                </div>
+                {assoc.currentPeriodEnd && (
+                  <p className="text-xs text-slate-500">
+                    Valabil până la {new Date(assoc.currentPeriodEnd).toLocaleDateString("ro-RO")}
+                  </p>
+                )}
+
+                {!isActive && (
+                  <div className="mt-5 border-t border-white/5 pt-5">
+                    {subscribeClientSecret ? (
+                      <CardPaymentForm
+                        clientSecret={subscribeClientSecret}
+                        onSuccess={handleSubscribeSuccess}
+                        submitLabel={`Activează — ${pkg ? pkg.priceRon : ""} lei/lună`}
+                      />
+                    ) : (
+                      <button onClick={startSubscription} disabled={subscribing}
+                        className="w-full rounded-xl bg-violet-600 px-6 py-3.5 font-semibold transition hover:bg-violet-500 disabled:opacity-50">
+                        {subscribing ? "Se încarcă..." : "Activează abonamentul"}
+                      </button>
+                    )}
+                    {subMsg && (
+                      <p className={`mt-3 text-sm ${subMsg.startsWith("✓") ? "text-emerald-400" : "text-red-400"}`}>{subMsg}</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })()}
       </div>
+
+      {/* Modal achiziție documente suplimentare */}
+      {showAddonModal && addonClientSecret && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
+          <div className="rounded-2xl border border-white/10 bg-[#0a0e1f] p-6 w-full max-w-md">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">Cumpără documente suplimentare</h3>
+              <button onClick={() => { setShowAddonModal(false); setAddonClientSecret(""); }}
+                className="text-slate-400 hover:text-white">✕</button>
+            </div>
+            <p className="text-sm text-slate-400 mb-4">
+              +{DOCUMENT_ADDON.documents} documente pentru {DOCUMENT_ADDON.priceRon} lei (plată unică)
+            </p>
+            <CardPaymentForm
+              clientSecret={addonClientSecret}
+              onSuccess={handleAddonSuccess}
+              submitLabel={`Plătește ${DOCUMENT_ADDON.priceRon} lei`}
+            />
+          </div>
+        </div>
+      )}
     </main>
   );
 }

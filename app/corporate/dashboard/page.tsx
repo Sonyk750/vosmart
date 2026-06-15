@@ -51,7 +51,14 @@ export default async function CorporateDashboardPage() {
       );
     }
 
-    return <CorporateDashboard user={session.user} corporate={session.user.corporateAccount} />;
+    const { currentPeriodEnd, ...corporateRest } = session.user.corporateAccount;
+
+    return (
+      <CorporateDashboard
+        user={session.user}
+        corporate={{ ...corporateRest, currentPeriodEnd: currentPeriodEnd?.toISOString() ?? null }}
+      />
+    );
   } catch (e) {
     console.error(e);
     redirect("/corporate");

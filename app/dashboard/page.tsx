@@ -16,5 +16,16 @@ export default async function DashboardPage() {
 
   if (!session || session.expiresAt < new Date()) redirect("/clienti");
 
-  return <DashboardClient user={session.user} />;
+  const { association, ...user } = session.user;
+
+  return (
+    <DashboardClient
+      user={{
+        ...user,
+        association: association
+          ? { ...association, currentPeriodEnd: association.currentPeriodEnd?.toISOString() ?? null }
+          : null,
+      }}
+    />
+  );
 }

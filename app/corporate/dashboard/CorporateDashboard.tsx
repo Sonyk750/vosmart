@@ -1,13 +1,9 @@
 "use client";
 import { useState, useRef } from "react";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
-
-const PACKAGE_NAMES: Record<string, string> = {
-  starter: "Starter", business: "Business", professional: "Professional", enterprise: "Enterprise"
-};
-const PACKAGE_PRICES: Record<string, string> = {
-  starter: "250", business: "500", professional: "900", enterprise: "1500"
-};
+import CardPaymentForm from "@/app/components/CardPaymentForm";
+import { CORPORATE_PACKAGES, CorporatePackage } from "@/lib/billing";
 
 interface Association {
   id: string; name: string; cui: string | null; address: string | null;
@@ -18,12 +14,15 @@ interface Association {
 interface Corporate {
   id: string; companyName: string; package: string; maxAssoc: number;
   status: string; logoUrl: string | null; cui: string | null;
+  subscriptionStatus: string | null; currentPeriodEnd: string | null;
   associations: Association[];
 }
 interface User { id: string; name: string | null; email: string; role: string; }
 
 export default function CorporateDashboard({ user, corporate }: { user: User; corporate: Corporate }) {
-  const [tab, setTab] = useState<"overview" | "clienti" | "adauga">("overview");
+  const router = useRouter();
+  const [tab, setTab] = useState<"overview" | "clienti" | "adauga" | "abonament">("overview");
+  const pkg = CORPORATE_PACKAGES[corporate.package as CorporatePackage] as { name: string; priceRon: number; maxAssoc: number } | undefined;
   const [associations, setAssociations] = useState<Association[]>(corporate.associations);
   const [selectedAssoc, setSelectedAssoc] = useState<Association | null>(null);
   const [draftText, setDraftText] = useState("");
@@ -46,9 +45,38 @@ export default function CorporateDashboard({ user, corporate }: { user: User; co
 
   const canAddMore = associations.length < corporate.maxAssoc;
 
+  // Abonament corporate
+  const [subscribing, setSubscribing] = useState(false);
+  const [subscribeClientSecret, setSubscribeClientSecret] = useState("");
+  const [subMsg, setSubMsg] = useState("");
+
   async function handleLogout() {
     await fetch("/api/auth/logout", { method: "POST" });
     window.location.href = "/corporate";
+  }
+
+  async function startSubscription() {
+    setSubscribing(true);
+    setSubMsg("");
+    try {
+      const res = await fetch("/api/billing/subscribe", { method: "POST" });
+      const data = await res.json();
+      if (res.ok) {
+        setSubscribeClientSecret(data.clientSecret);
+      } else {
+        setSubMsg("✗ " + (data.error || "Eroare la inițierea plății"));
+      }
+    } catch {
+      setSubMsg("✗ Eroare de conexiune");
+    } finally {
+      setSubscribing(false);
+    }
+  }
+
+  function handleSubscribeSuccess() {
+    setSubscribeClientSecret("");
+    setSubMsg("✓ Plata a fost procesată. Abonamentul va fi activat în câteva minute.");
+    setTimeout(() => router.refresh(), 3000);
   }
 
   async function createClient(e: React.FormEvent) {
@@ -138,6 +166,19 @@ export default function CorporateDashboard({ user, corporate }: { user: User; co
     return <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${cls}`}>{label}</span>;
   };
 
+  const subscriptionStatusBadge = (status: string | null) => {
+    const map: Record<string, [string, string]> = {
+      active: ["bg-emerald-500/15 text-emerald-300 border border-emerald-500/20", "✓ Activ"],
+      trialing: ["bg-cyan-500/15 text-cyan-300 border border-cyan-500/20", "Perioadă de probă"],
+      incomplete: ["bg-yellow-500/15 text-yellow-300 border border-yellow-500/20", "⏳ Incomplet"],
+      past_due: ["bg-red-500/15 text-red-300 border border-red-500/20", "Plată restantă"],
+      canceled: ["bg-slate-500/15 text-slate-300", "Anulat"],
+      unpaid: ["bg-red-500/15 text-red-300 border border-red-500/20", "Neplătit"],
+    };
+    const [cls, label] = (status && map[status]) || ["bg-slate-500/15 text-slate-300", "Fără abonament"];
+    return <span className={`rounded-full px-3 py-1 text-xs font-medium ${cls}`}>{label}</span>;
+  };
+
   return (
     <main className="min-h-screen bg-[#050814] text-white">
       <div className="pointer-events-none fixed inset-0 -z-10">
@@ -157,7 +198,7 @@ export default function CorporateDashboard({ user, corporate }: { user: User; co
             )}
             <div className="hidden sm:block">
               <p className="text-sm font-semibold">{corporate.companyName}</p>
-              <p className="text-xs text-slate-400">{PACKAGE_NAMES[corporate.package]} — {PACKAGE_PRICES[corporate.package]} lei/lună</p>
+              <p className="text-xs text-slate-400">{pkg ? `${pkg.name} — ${pkg.priceRon} lei/lună` : corporate.package}</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -199,6 +240,7 @@ export default function CorporateDashboard({ user, corporate }: { user: User; co
             { key: "overview", label: "📊 Prezentare" },
             { key: "clienti", label: `👥 Clienți (${associations.length})` },
             { key: "adauga", label: "➕ Adaugă client" },
+            { key: "abonament", label: "💳 Abonament" },
           ].map(t => (
             <button key={t.key} onClick={() => setTab(t.key as any)}
               className={`px-4 py-2.5 rounded-xl text-sm font-medium transition ${tab === t.key ? "bg-violet-600 text-white shadow-[0_0_20px_rgba(124,58,237,0.3)]" : "text-slate-400 hover:text-white hover:bg-white/[0.05]"}`}>
@@ -215,8 +257,8 @@ export default function CorporateDashboard({ user, corporate }: { user: User; co
               <div className="flex items-center justify-between flex-wrap gap-4">
                 <div>
                   <p className="text-sm text-slate-400">Pachet activ</p>
-                  <p className="text-xl font-bold">{PACKAGE_NAMES[corporate.package]}</p>
-                  <p className="text-sm text-violet-300">{PACKAGE_PRICES[corporate.package]} lei/lună</p>
+                  <p className="text-xl font-bold">{pkg ? pkg.name : corporate.package}</p>
+                  {pkg && <p className="text-sm text-violet-300">{pkg.priceRon} lei/lună</p>}
                 </div>
                 <div className="text-right">
                   <p className="text-sm text-slate-400">Asociații folosite</p>
@@ -397,7 +439,7 @@ export default function CorporateDashboard({ user, corporate }: { user: User; co
               <div className="rounded-3xl border border-red-500/20 bg-red-500/5 p-8 text-center">
                 <div className="text-4xl mb-3">🔒</div>
                 <p className="font-semibold text-red-300 mb-2">Limită atinsă</p>
-                <p className="text-sm text-slate-400">Ai atins limita de {corporate.maxAssoc} asociații pentru pachetul {PACKAGE_NAMES[corporate.package]}.</p>
+                <p className="text-sm text-slate-400">Ai atins limita de {corporate.maxAssoc} asociații pentru pachetul {pkg ? pkg.name : corporate.package}.</p>
                 <p className="text-sm text-slate-400 mt-2">Contactează VoSmart pentru upgrade la un pachet superior.</p>
               </div>
             ) : (
@@ -452,6 +494,51 @@ export default function CorporateDashboard({ user, corporate }: { user: User; co
             )}
           </div>
         )}
+
+        {/* ABONAMENT */}
+        {tab === "abonament" && (() => {
+          const status = corporate.subscriptionStatus;
+          const isActive = status === "active" || status === "trialing";
+          return (
+            <div className="max-w-2xl">
+              <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6">
+                <div className="flex items-start justify-between gap-4 flex-wrap mb-2">
+                  <div>
+                    <p className="text-sm text-slate-400">Pachetul tău</p>
+                    <p className="text-xl font-bold">{pkg ? pkg.name : corporate.package}</p>
+                    {pkg && <p className="text-sm text-violet-300">{pkg.priceRon} lei/lună</p>}
+                  </div>
+                  {subscriptionStatusBadge(status)}
+                </div>
+                {corporate.currentPeriodEnd && (
+                  <p className="text-xs text-slate-500">
+                    Valabil până la {new Date(corporate.currentPeriodEnd).toLocaleDateString("ro-RO")}
+                  </p>
+                )}
+
+                {!isActive && (
+                  <div className="mt-5 border-t border-white/5 pt-5">
+                    {subscribeClientSecret ? (
+                      <CardPaymentForm
+                        clientSecret={subscribeClientSecret}
+                        onSuccess={handleSubscribeSuccess}
+                        submitLabel={`Activează — ${pkg ? pkg.priceRon : ""} lei/lună`}
+                      />
+                    ) : (
+                      <button onClick={startSubscription} disabled={subscribing}
+                        className="w-full rounded-xl bg-violet-600 px-6 py-3.5 font-semibold transition hover:bg-violet-500 disabled:opacity-50">
+                        {subscribing ? "Se încarcă..." : "Activează abonamentul"}
+                      </button>
+                    )}
+                    {subMsg && (
+                      <p className={`mt-3 text-sm ${subMsg.startsWith("✓") ? "text-emerald-400" : "text-red-400"}`}>{subMsg}</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })()}
       </div>
 
       {/* Footer cu VoSmart */}
