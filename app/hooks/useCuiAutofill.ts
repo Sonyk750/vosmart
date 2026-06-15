@@ -5,6 +5,8 @@ export type AnafCompanyData = {
   denumire: string;
   adresa: string;
   telefon: string;
+  oras: string;
+  strada: string;
 };
 
 export type CuiLookupStatus = "idle" | "loading" | "found" | "notfound" | "error";

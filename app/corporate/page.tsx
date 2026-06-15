@@ -68,7 +68,8 @@ export default function CorporatePage() {
   // Register
   const [companyName, setCompanyName] = useState("");
   const [cui, setCui] = useState("");
-  const [address, setAddress] = useState("");
+  const [city, setCity] = useState("");
+  const [street, setStreet] = useState("");
   const [phone, setPhone] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -78,7 +79,12 @@ export default function CorporatePage() {
 
   const cuiStatus = useCuiAutofill(cui, data => {
     setCompanyName(data.denumire);
-    setAddress(data.adresa);
+    if (data.oras || data.strada) {
+      setCity(data.oras);
+      setStreet(data.strada);
+    } else {
+      setStreet(data.adresa);
+    }
     if (data.telefon && !phone) setPhone(data.telefon);
   });
 
@@ -112,7 +118,7 @@ export default function CorporatePage() {
       const res = await fetch("/api/corporate/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ companyName, cui, address, phone, name, email, password, package: selectedPackage }),
+        body: JSON.stringify({ companyName, cui, address: [street, city].filter(Boolean).join(", "), phone, name, email, password, package: selectedPackage }),
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Eroare"); return; }
@@ -293,8 +299,10 @@ export default function CorporatePage() {
                           {cuiStatus === "found" && <p className="mt-1.5 text-xs text-emerald-400">Date completate automat din ANAF</p>}
                           {cuiStatus === "notfound" && <p className="mt-1.5 text-xs text-slate-500">Firma nu a fost găsită în ANAF — completează manual</p>}
                         </div>
-                        <input type="text" value={address} onChange={e => setAddress(e.target.value)}
-                          placeholder="Adresa firmei" className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-violet-500 transition" />
+                        <input type="text" value={city} onChange={e => setCity(e.target.value)}
+                          placeholder="Oraș" className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-violet-500 transition" />
+                        <input type="text" value={street} onChange={e => setStreet(e.target.value)}
+                          placeholder="Stradă și număr" className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-violet-500 transition" />
                         <input type="text" value={phone} onChange={e => setPhone(e.target.value)}
                           placeholder="Telefon" className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-violet-500 transition" />
                       </div>

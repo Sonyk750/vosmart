@@ -16,14 +16,20 @@ export async function GET(req: NextRequest) {
     if (!res.ok) return NextResponse.json({ found: false });
 
     const data = await res.json();
-    const general = data?.found?.[0]?.date_generale;
+    const result = data?.found?.[0];
+    const general = result?.date_generale;
     if (!general) return NextResponse.json({ found: false });
+
+    const sediu = result?.adresa_sediu_social;
+    const strada = [sediu?.sdenumire_Strada, sediu?.snumar_Strada].filter(Boolean).join(" ");
 
     return NextResponse.json({
       found: true,
       denumire: general.denumire ?? "",
       adresa: general.adresa ?? "",
       telefon: general.telefon ?? "",
+      oras: sediu?.sdenumire_Localitate ?? "",
+      strada: [strada, sediu?.sdetalii_Adresa].filter(Boolean).join(", "),
     });
   } catch (e) {
     console.error("Eroare cautare CUI in ANAF:", e);

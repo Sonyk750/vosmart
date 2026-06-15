@@ -19,13 +19,19 @@ export default function ClientiPage() {
   const [regPassword, setRegPassword] = useState("");
   const [regAssocName, setRegAssocName] = useState("");
   const [regCUI, setRegCUI] = useState("");
-  const [regAddress, setRegAddress] = useState("");
+  const [regCity, setRegCity] = useState("");
+  const [regStreet, setRegStreet] = useState("");
   const [regPhone, setRegPhone] = useState("");
   const [regPackage, setRegPackage] = useState("smart");
 
   const cuiStatus = useCuiAutofill(regCUI, data => {
     setRegAssocName(data.denumire);
-    setRegAddress(data.adresa);
+    if (data.oras || data.strada) {
+      setRegCity(data.oras);
+      setRegStreet(data.strada);
+    } else {
+      setRegStreet(data.adresa);
+    }
     if (data.telefon && !regPhone) setRegPhone(data.telefon);
   });
 
@@ -66,7 +72,7 @@ export default function ClientiPage() {
         body: JSON.stringify({
           name: regName, email: regEmail, password: regPassword,
           associationName: regAssocName, cui: regCUI,
-          address: regAddress, phone: regPhone, package: regPackage,
+          address: [regStreet, regCity].filter(Boolean).join(", "), phone: regPhone, package: regPackage,
         }),
       });
       const data = await res.json();
@@ -178,8 +184,11 @@ export default function ClientiPage() {
                     {cuiStatus === "found" && <p className="mt-1.5 text-xs text-emerald-400">Date completate automat din ANAF</p>}
                     {cuiStatus === "notfound" && <p className="mt-1.5 text-xs text-slate-500">Nu a fost găsit în ANAF — completează manual</p>}
                   </div>
-                  <input type="text" value={regAddress} onChange={e => setRegAddress(e.target.value)}
-                    placeholder="Adresa asociației"
+                  <input type="text" value={regCity} onChange={e => setRegCity(e.target.value)}
+                    placeholder="Oraș"
+                    className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-violet-500 transition" />
+                  <input type="text" value={regStreet} onChange={e => setRegStreet(e.target.value)}
+                    placeholder="Stradă și număr"
                     className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-violet-500 transition" />
                   <input type="text" value={regPhone} onChange={e => setRegPhone(e.target.value)}
                     placeholder="Telefon"
