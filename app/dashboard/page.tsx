@@ -11,7 +11,7 @@ export default async function DashboardPage() {
 
   const session = await prisma.session.findUnique({
     where: { token },
-    include: { user: { include: { association: true } } },
+    include: { user: { include: { association: { include: { corporate: { select: { package: true, status: true } } } } } } },
   });
 
   if (!session || session.expiresAt < new Date()) redirect("/clienti");

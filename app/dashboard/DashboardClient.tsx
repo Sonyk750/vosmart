@@ -3,7 +3,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import CardPaymentForm from "@/app/components/CardPaymentForm";
-import { ASSOCIATION_PACKAGES, DOCUMENT_ADDON, AssociationPackage } from "@/lib/billing";
+import { ASSOCIATION_PACKAGES, DOCUMENT_ADDON, AssociationPackage, CORPORATE_PACKAGES, CorporatePackage } from "@/lib/billing";
 
 interface Report {
   id: string; title: string; month: string | null; year: number | null;
@@ -22,6 +22,7 @@ interface User {
     id: string; name: string; package: string; cui: string | null; address: string | null;
     maxDocuments: number; filesUploadedCount: number;
     subscriptionStatus: string | null; currentPeriodEnd: string | null;
+    corporate?: { package: string; status: string } | null;
   } | null;
 }
 
@@ -355,8 +356,13 @@ export default function DashboardClient({ user }: { user: User }) {
               <p className="text-sm font-semibold">{user.name || user.email}</p>
               <p className="text-xs text-slate-400">{user.association?.name}</p>
             </div>
-            <span className={`rounded-full px-3 py-1 text-xs font-medium hidden sm:inline ${user.association?.package === "premium" ? "bg-violet-500/15 text-violet-300" : "bg-cyan-500/15 text-cyan-300"}`}>
-              {user.association?.package === "premium" ? "Premium" : "Smart"}
+            <span className={`rounded-full px-3 py-1 text-xs font-medium hidden sm:inline ${
+              user.association?.corporate?.package === "trial" ? "bg-amber-500/15 text-amber-300" :
+              user.association?.package === "premium" ? "bg-violet-500/15 text-violet-300" :
+              "bg-cyan-500/15 text-cyan-300"
+            }`}>
+              {user.association?.corporate?.package === "trial" ? "Trial Gratuit" :
+               user.association?.package === "premium" ? "Premium" : "Smart"}
             </span>
             <button onClick={handleLogout}
               className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2 text-sm text-slate-300 transition hover:bg-white/[0.08]">
@@ -719,6 +725,63 @@ export default function DashboardClient({ user }: { user: User }) {
         {/* ABONAMENTUL MEU */}
         {tab === "abonament" && user.association && (() => {
           const assoc = user.association;
+          const isCorporateTrial = assoc.corporate?.package === "trial";
+
+          if (isCorporateTrial) {
+            const upgradePackages = (["starter", "business", "professional", "enterprise"] as CorporatePackage[]).map(k => ({
+              key: k, ...CORPORATE_PACKAGES[k]
+            }));
+            return (
+              <div className="max-w-3xl">
+                {/* Banner trial */}
+                <div className="rounded-2xl border border-amber-500/30 bg-amber-500/8 p-6 mb-6">
+                  <div className="flex items-center gap-3 mb-3">
+                    <span className="rounded-full bg-amber-500/20 px-3 py-1 text-xs font-semibold text-amber-300 uppercase tracking-wider">Mod Trial Gratuit</span>
+                  </div>
+                  <p className="text-slate-300 text-sm leading-relaxed mb-3">
+                    Folosiți platforma VoSmart în <strong className="text-amber-300">modul Trial</strong>.
+                    Aveți acces limitat la <strong className="text-white">1 asociație</strong>, <strong className="text-white">5 documente</strong> și <strong className="text-white">1 raport AI</strong>.
+                  </p>
+                  <div className="grid grid-cols-3 gap-3 text-center">
+                    {[["1", "asociație"], ["5", "documente"], ["1", "raport AI"]].map(([n, l]) => (
+                      <div key={l} className="rounded-xl bg-amber-500/10 border border-amber-500/20 p-3">
+                        <p className="text-xl font-bold text-amber-300">{n}</p>
+                        <p className="text-xs text-slate-400">{l}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Upgrade packages */}
+                <p className="text-sm text-slate-400 mb-4 font-medium">Alegeți un plan pentru acces complet:</p>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {upgradePackages.map(pk => (
+                    <div key={pk.key} className={`rounded-2xl border p-5 flex flex-col gap-3 ${pk.key === "business" ? "border-violet-500/50 bg-violet-500/8" : "border-white/10 bg-white/[0.03]"}`}>
+                      {pk.key === "business" && (
+                        <span className="self-start rounded-full bg-violet-500/20 px-2 py-0.5 text-[10px] font-semibold text-violet-300 uppercase tracking-wider">Recomandat</span>
+                      )}
+                      <div>
+                        <p className="font-bold text-lg">{pk.name}</p>
+                        <p className="text-2xl font-bold text-white mt-1">{pk.priceRon} <span className="text-sm font-normal text-slate-400">lei/lună</span></p>
+                        <p className="text-sm text-slate-400 mt-1">
+                          {pk.maxAssoc === 9999 ? "Asociații nelimitate" : `Până la ${pk.maxAssoc} asociații`}
+                        </p>
+                      </div>
+                      <a href={`/corporate?package=${pk.key}`}
+                        className={`w-full rounded-xl px-4 py-2.5 text-sm font-semibold text-center transition ${pk.key === "business" ? "bg-violet-600 hover:bg-violet-500 text-white" : "border border-white/15 hover:bg-white/8 text-slate-300"}`}>
+                        Upgrade la {pk.name} →
+                      </a>
+                    </div>
+                  ))}
+                </div>
+                <p className="mt-4 text-xs text-slate-500 text-center">
+                  Pentru upgrade contactați <a href="mailto:office@vosmart.ro" className="text-violet-400">office@vosmart.ro</a> sau accesați <a href="/corporate/dashboard" className="text-violet-400">panoul corporate</a>.
+                </p>
+              </div>
+            );
+          }
+
+          // Non-trial (asociație normală)
           const pkg = ASSOCIATION_PACKAGES[assoc.package as AssociationPackage] as { name: string; priceRon: number } | undefined;
           const status = assoc.subscriptionStatus;
           const isActive = status === "active" || status === "trialing";
@@ -738,24 +801,18 @@ export default function DashboardClient({ user }: { user: User }) {
                     Valabil până la {new Date(assoc.currentPeriodEnd).toLocaleDateString("ro-RO")}
                   </p>
                 )}
-
                 {!isActive && (
                   <div className="mt-5 border-t border-white/5 pt-5">
                     {subscribeClientSecret ? (
-                      <CardPaymentForm
-                        clientSecret={subscribeClientSecret}
-                        onSuccess={handleSubscribeSuccess}
-                        submitLabel={`Activează — ${pkg ? pkg.priceRon : ""} lei/lună`}
-                      />
+                      <CardPaymentForm clientSecret={subscribeClientSecret} onSuccess={handleSubscribeSuccess}
+                        submitLabel={`Activează — ${pkg ? pkg.priceRon : ""} lei/lună`} />
                     ) : (
                       <button onClick={startSubscription} disabled={subscribing}
                         className="w-full rounded-xl bg-violet-600 px-6 py-3.5 font-semibold transition hover:bg-violet-500 disabled:opacity-50">
                         {subscribing ? "Se încarcă..." : "Activează abonamentul"}
                       </button>
                     )}
-                    {subMsg && (
-                      <p className={`mt-3 text-sm ${subMsg.startsWith("✓") ? "text-emerald-400" : "text-red-400"}`}>{subMsg}</p>
-                    )}
+                    {subMsg && <p className={`mt-3 text-sm ${subMsg.startsWith("✓") ? "text-emerald-400" : "text-red-400"}`}>{subMsg}</p>}
                   </div>
                 )}
               </div>
