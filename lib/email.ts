@@ -1,11 +1,16 @@
 import nodemailer from "nodemailer";
 
 function createTransporter() {
+  const port = Number(process.env.SMTP_PORT || 465);
   return nodemailer.createTransport({
     host: process.env.SMTP_HOST,
-    port: Number(process.env.SMTP_PORT || 465),
-    secure: process.env.SMTP_SECURE !== "false",
+    port,
+    secure: port === 465, // 465 = SSL, 587 = STARTTLS
     auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+    tls: { rejectUnauthorized: false }, // permite certificate self-signed
+    connectionTimeout: 10000,
+    greetingTimeout: 10000,
+    socketTimeout: 15000,
   });
 }
 

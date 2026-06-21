@@ -60,6 +60,7 @@ export default function CorporatePage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [isTrial, setIsTrial] = useState(false);
+  const [emailError, setEmailError] = useState<string[]>([]);
 
   // Login
   const [loginEmail, setLoginEmail] = useState("");
@@ -124,7 +125,8 @@ export default function CorporatePage() {
       if (data.isTrial) {
         setIsTrial(true);
         setSuccess(true);
-        return; // account needs email verification
+        if (data.emailErrors?.length) setEmailError(data.emailErrors);
+        return;
       }
 
       if (data.clientSecret) {
@@ -288,6 +290,13 @@ export default function CorporatePage() {
                   <p>2. Apăsați butonul de activare din email</p>
                   <p>3. Veți fi redirecționat spre portal și puteți intra cu datele create</p>
                 </div>
+                {emailError.length > 0 && (
+                  <div className="mt-4 rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-left">
+                    <p className="text-sm font-semibold text-red-300 mb-1">⚠️ Emailul de verificare nu a putut fi trimis</p>
+                    {emailError.map((e, i) => <p key={i} className="text-xs text-red-400">{e}</p>)}
+                    <p className="text-xs text-slate-400 mt-2">Contactați <a href="mailto:office@vosmart.ro" className="text-violet-400">office@vosmart.ro</a> pentru activare manuală.</p>
+                  </div>
+                )}
                 <div className="mt-4 pt-4 border-t border-white/5">
                   <p className="text-xs text-slate-500 mb-3">Vrei un plan complet fără limitări trial?</p>
                   <div className="flex flex-wrap gap-2 justify-center">

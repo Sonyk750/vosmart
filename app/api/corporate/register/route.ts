@@ -61,27 +61,46 @@ export async function POST(req: NextRequest) {
     });
 
     if (isTrial) {
-      // Generate verification token and send emails
       const token = createVerificationToken(user.corporateAccount!.id);
       const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://vosmart.ro";
       const verificationLink = `${appUrl}/corporate/verify?token=${encodeURIComponent(token)}`;
 
-      sendTrialVerificationEmail({
-        name,
-        email: email.toLowerCase(),
-        companyName,
-        verificationLink,
-      }).catch(console.error);
+      const emailErrors: string[] = [];
 
-      notifyAdminForTrialRegistration({
-        name,
-        email: email.toLowerCase(),
-        companyName,
-        phone,
-        address,
-      }).catch(console.error);
+      try {
+        await sendTrialVerificationEmail({
+          name,
+          email: email.toLowerCase(),
+          companyName,
+          verificationLink,
+        });
+      } catch (e: any) {
+        console.error("Eroare email verificare trial:", e);
+        emailErrors.push(`Email verificare: ${e?.message || "eroare necunoscuta"}`);
+      }
 
-      return NextResponse.json({ success: true, isTrial: true, pending: true });
+      try {
+        await notifyAdminForTrialRegistration({
+          name,
+          email: email.toLowerCase(),
+          companyName,
+          phone,
+          address,
+        });
+      } catch (e: any) {
+        console.error("Eroare email admin trial:", e);
+        emailErrors.push(`Email admin: ${e?.message || "eroare necunoscuta"}`);
+      }
+
+      return NextResponse.json({
+        success: true,
+        isTrial: true,
+        pending: true,
+        emailSent: emailErrors.length === 0,
+        emailErrors: emailErrors.length > 0 ? emailErrors : undefined,
+        // trimitem linkul si in raspuns pentru debug (doar in dev)
+        ...(process.env.NODE_ENV !== "production" ? { verificationLink } : {}),
+      });
     }
 
     // Paid plan notifications

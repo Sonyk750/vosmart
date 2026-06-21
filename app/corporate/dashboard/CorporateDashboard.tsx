@@ -19,10 +19,20 @@ interface Corporate {
 }
 interface User { id: string; name: string | null; email: string; role: string; }
 
+const ALL_PACKAGES: CorporatePackage[] = ["trial", "starter", "business", "professional", "enterprise"];
+
 export default function CorporateDashboard({ user, corporate, isAdmin = false }: { user: User; corporate: Corporate; isAdmin?: boolean }) {
   const router = useRouter();
   const [tab, setTab] = useState<"overview" | "clienti" | "adauga" | "abonament">("overview");
-  const pkg = CORPORATE_PACKAGES[corporate.package as CorporatePackage] as { name: string; priceRon: number; maxAssoc: number } | undefined;
+
+  // Admin: comutare între pachete pentru testare
+  const [previewPackage, setPreviewPackage] = useState<CorporatePackage>(
+    isAdmin ? (corporate.package as CorporatePackage) : (corporate.package as CorporatePackage)
+  );
+  const effectivePackageKey: CorporatePackage = isAdmin ? previewPackage : (corporate.package as CorporatePackage);
+  const pkg = CORPORATE_PACKAGES[effectivePackageKey] as { name: string; priceRon: number; maxAssoc: number } | undefined;
+  const effectiveMaxAssoc: number = isAdmin ? (pkg?.maxAssoc ?? corporate.maxAssoc) : corporate.maxAssoc;
+
   const [associations, setAssociations] = useState<Association[]>(corporate.associations);
   const [selectedAssoc, setSelectedAssoc] = useState<Association | null>(null);
   const [draftText, setDraftText] = useState("");
@@ -43,7 +53,7 @@ export default function CorporateDashboard({ user, corporate, isAdmin = false }:
   const [creating, setCreating] = useState(false);
   const [createMsg, setCreateMsg] = useState("");
 
-  const canAddMore = associations.length < corporate.maxAssoc;
+  const canAddMore = associations.length < effectiveMaxAssoc;
 
   // Abonament corporate
   const [subscribing, setSubscribing] = useState(false);
@@ -202,7 +212,7 @@ export default function CorporateDashboard({ user, corporate, isAdmin = false }:
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <span className="text-xs text-slate-500 hidden sm:block">{associations.length}/{corporate.maxAssoc === 9999 ? "∞" : corporate.maxAssoc} asociații</span>
+            <span className="text-xs text-slate-500 hidden sm:block">{associations.length}/{effectiveMaxAssoc === 9999 ? "∞" : effectiveMaxAssoc} asociații</span>
             <a href="/" className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-1.5 text-xs text-slate-300 transition hover:bg-white/[0.08]">← Site</a>
             <button onClick={handleLogout}
               className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-1.5 text-xs text-slate-300 transition hover:bg-white/[0.08]">
@@ -212,17 +222,54 @@ export default function CorporateDashboard({ user, corporate, isAdmin = false }:
         </div>
       </header>
 
+      {/* Admin package switcher */}
+      {isAdmin && (
+        <div className="border-b border-amber-500/20 bg-amber-500/5">
+          <div className="mx-auto max-w-7xl px-5 py-3 sm:px-6">
+            <div className="flex items-center gap-3 flex-wrap">
+              <span className="text-xs text-amber-400 font-semibold uppercase tracking-wider shrink-0">
+                🔧 Mod test admin — pachet simulat:
+              </span>
+              <div className="flex gap-2 flex-wrap">
+                {ALL_PACKAGES.map(pk => {
+                  const pkInfo = CORPORATE_PACKAGES[pk];
+                  const isSelected = previewPackage === pk;
+                  return (
+                    <button key={pk} onClick={() => setPreviewPackage(pk)}
+                      className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+                        isSelected
+                          ? "bg-amber-500 text-black shadow-[0_0_12px_rgba(245,158,11,0.5)]"
+                          : "border border-amber-500/25 text-amber-300 hover:bg-amber-500/15"
+                      }`}>
+                      {pkInfo.name}
+                      {pkInfo.priceRon > 0 && <span className="ml-1 opacity-60">{pkInfo.priceRon}L</span>}
+                      {pkInfo.priceRon === 0 && <span className="ml-1 opacity-60">gratuit</span>}
+                    </button>
+                  );
+                })}
+              </div>
+              <span className="text-xs text-slate-500 ml-auto hidden md:block">
+                Max asociații: <strong className="text-amber-300">{effectiveMaxAssoc === 9999 ? "∞" : effectiveMaxAssoc}</strong>
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="mx-auto max-w-7xl px-5 py-8 sm:px-6">
         <div className="mb-6">
           <h1 className="text-2xl font-bold">Panou {corporate.companyName}</h1>
-          <p className="text-slate-400 mt-1 text-sm">Gestionare clienți și rapoarte</p>
+          <p className="text-slate-400 mt-1 text-sm">
+            Gestionare clienți și rapoarte
+            {isAdmin && <span className="ml-2 text-amber-400">· Pachet simulat: <strong>{pkg?.name}</strong></span>}
+          </p>
         </div>
 
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           {[
             ["👥", "Clienți activi", associations.length.toString()],
-            ["📋", "Locuri disponibile", corporate.maxAssoc === 9999 ? "∞" : (corporate.maxAssoc - associations.length).toString()],
+            ["📋", "Locuri disponibile", effectiveMaxAssoc === 9999 ? "∞" : (effectiveMaxAssoc - associations.length).toString()],
             ["📄", "Doc. de revizuit", associations.reduce((a, c) => a + c.documents.filter((d: any) => d.status === "analyzed").length, 0).toString()],
             ["✅", "Rapoarte publicate", associations.reduce((a, c) => a + c.reports.filter((r: any) => r.status === "published").length, 0).toString()],
           ].map(([icon, label, value]) => (
@@ -262,12 +309,12 @@ export default function CorporateDashboard({ user, corporate, isAdmin = false }:
                 </div>
                 <div className="text-right">
                   <p className="text-sm text-slate-400">Asociații folosite</p>
-                  <p className="text-3xl font-bold">{associations.length}<span className="text-lg text-slate-400">/{corporate.maxAssoc === 9999 ? "∞" : corporate.maxAssoc}</span></p>
+                  <p className="text-3xl font-bold">{associations.length}<span className="text-lg text-slate-400">/{effectiveMaxAssoc === 9999 ? "∞" : effectiveMaxAssoc}</span></p>
                 </div>
               </div>
               <div className="mt-4 w-full bg-white/10 rounded-full h-2">
                 <div className="h-2 rounded-full bg-gradient-to-r from-violet-500 to-cyan-500 transition-all"
-                  style={{ width: corporate.maxAssoc === 9999 ? "30%" : `${Math.min(100, (associations.length / corporate.maxAssoc) * 100)}%` }} />
+                  style={{ width: effectiveMaxAssoc === 9999 ? "30%" : `${Math.min(100, (associations.length / effectiveMaxAssoc) * 100)}%` }} />
               </div>
             </div>
 
@@ -439,7 +486,7 @@ export default function CorporateDashboard({ user, corporate, isAdmin = false }:
               <div className="rounded-3xl border border-red-500/20 bg-red-500/5 p-8 text-center">
                 <div className="text-4xl mb-3">🔒</div>
                 <p className="font-semibold text-red-300 mb-2">Limită atinsă</p>
-                <p className="text-sm text-slate-400">Ai atins limita de {corporate.maxAssoc} asociații pentru pachetul {pkg ? pkg.name : corporate.package}.</p>
+                <p className="text-sm text-slate-400">Ai atins limita de {effectiveMaxAssoc} asociații pentru pachetul {pkg ? pkg.name : corporate.package}.</p>
                 <p className="text-sm text-slate-400 mt-2">Contactează VoSmart pentru upgrade la un pachet superior.</p>
               </div>
             ) : (
