@@ -475,7 +475,7 @@ export default function CorporateDashboard({ user, corporate, isAdmin = false }:
                 <div className={`shrink-0 rounded-xl border px-3 py-2 text-right ${
                   atLimit ? "border-red-500/40 bg-red-500/10" : filesUsed >= filesMax - 1 ? "border-yellow-500/40 bg-yellow-500/10" : "border-white/10 bg-white/[0.03]"
                 }`}>
-                  <p className="text-[10px] uppercase tracking-wider text-slate-500">Dosare trimise</p>
+                  <p className="text-[10px] uppercase tracking-wider text-slate-500">Dosare / Limită</p>
                   <p className={`text-lg font-bold ${atLimit ? "text-red-400" : filesUsed >= filesMax - 1 ? "text-yellow-400" : "text-white"}`}>
                     {filesUsed}<span className="text-slate-600 text-sm font-normal">/{filesMax}</span>
                   </p>

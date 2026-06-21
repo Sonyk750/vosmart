@@ -19,5 +19,13 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
 
   await prisma.document.delete({ where: { id } });
 
+  // Decrementăm contorul de dosare la ștergere
+  if (doc.associationId) {
+    await prisma.association.update({
+      where: { id: doc.associationId },
+      data: { filesUploadedCount: { decrement: 1 } },
+    });
+  }
+
   return NextResponse.json({ success: true });
 }

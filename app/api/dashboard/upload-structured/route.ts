@@ -70,10 +70,18 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    if (association && association.filesUploadedCount + files.length > association.maxDocuments) {
+    if (association && association.filesUploadedCount >= association.maxDocuments) {
       return NextResponse.json({
-        error: `Ați atins limita de ${association.maxDocuments} documente pentru asociația dvs. (${association.filesUploadedCount} încărcate). Vă rugăm contactați administratorul pentru a crește limita.`
+        error: `Ați atins limita de ${association.maxDocuments} dosare pentru asociația dvs. Contactați administratorul pentru a crește limita.`
       }, { status: 403 });
+    }
+
+    // Verificăm dimensiunea totală a fișierelor (max 20MB per dosar)
+    const totalSizeBytes = files.reduce((sum, f) => sum + f.size, 0);
+    if (totalSizeBytes > 20 * 1024 * 1024) {
+      return NextResponse.json({
+        error: `Dimensiunea totală a fișierelor (${Math.round(totalSizeBytes / 1024 / 1024)}MB) depășește limita de 20MB. Comprimați fișierele și reîncercați.`
+      }, { status: 413 });
     }
 
     // Citim fișierele în memorie (buffer); scrierea pe disc e opțională — pe Vercel filesystem-ul e read-only
@@ -122,10 +130,10 @@ export async function POST(req: NextRequest) {
       }
     });
 
-    // Incrementăm contorul de documente încărcate
+    // Incrementăm contorul cu 1 dosar (nu cu numărul de fișiere)
     await prisma.association.update({
       where: { id: associationId },
-      data: { filesUploadedCount: { increment: files.length } },
+      data: { filesUploadedCount: { increment: 1 } },
     });
 
     // Await explicit — pe Vercel funcția e tăiată după response, deci analiza trebuie terminată înainte
@@ -373,8 +381,8 @@ IMPORTANT:
         "anthropic-beta": "pdfs-2024-09-25",
       },
       body: JSON.stringify({
-        model: "claude-sonnet-4-6",
-        max_tokens: 6000,
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 5000,
         messages: [{ role: "user", content: contentParts }],
       }),
     });
@@ -420,11 +428,13 @@ IMPORTANT:
     });
 
   } catch (e: any) {
-    const errMsg = e?.message || String(e);
-    console.error("[AI] Eroare analiza:", errMsg);
+    const raw = e?.message || String(e);
+    // Eliminăm HTML din răspunsurile de eroare (ex: 504 Gateway Timeout page)
+    const clean = raw.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 300);
+    console.error("[AI] Eroare analiza:", clean);
     await prisma.document.update({
       where: { id: documentId },
-      data: { status: "error", aiSummary: errMsg.slice(0, 500) }
+      data: { status: "error", aiSummary: clean }
     });
   }
 }
