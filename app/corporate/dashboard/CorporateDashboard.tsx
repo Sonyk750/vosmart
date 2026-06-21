@@ -246,6 +246,87 @@ export default function CorporateDashboard({ user, corporate, isAdmin = false }:
     setConfirmDeleteDocId(null);
   }
 
+  function printReportAsPDF(title: string, content: string) {
+    const escape = (s: string) => s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+
+    function mdToHtml(md: string): string {
+      const lines = md.split("\n");
+      let html = "";
+      let inTable = false;
+      let tableHtml = "";
+
+      for (let i = 0; i < lines.length; i++) {
+        let line = lines[i];
+
+        // Tabele markdown
+        if (line.startsWith("|")) {
+          if (!inTable) { inTable = true; tableHtml = "<table><tbody>"; }
+          const isHeader = lines[i+1]?.startsWith("|") && lines[i+1]?.includes("---");
+          const isSep = line.replace(/[\s|:-]/g,"") === "";
+          if (isSep) continue;
+          const cells = line.split("|").filter((_,idx,arr) => idx > 0 && idx < arr.length-1);
+          const tag = isHeader ? "th" : "td";
+          tableHtml += "<tr>" + cells.map(c => `<${tag}>${mdInline(c.trim())}</${tag}>`).join("") + "</tr>";
+          continue;
+        } else if (inTable) {
+          html += tableHtml + "</tbody></table>";
+          inTable = false; tableHtml = "";
+        }
+
+        if (/^#{3} (.+)/.test(line)) { html += `<h3>${mdInline(line.replace(/^### /,""))}</h3>`; continue; }
+        if (/^#{2} (.+)/.test(line)) { html += `<h2>${mdInline(line.replace(/^## /,""))}</h2>`; continue; }
+        if (/^#{1} (.+)/.test(line)) { html += `<h1>${mdInline(line.replace(/^# /,""))}</h1>`; continue; }
+        if (/^---+$/.test(line)) { html += "<hr>"; continue; }
+        if (/^[-*] (.+)/.test(line)) { html += `<li>${mdInline(line.replace(/^[-*] /,""))}</li>`; continue; }
+        if (line.trim() === "") { html += "<br>"; continue; }
+        html += `<p>${mdInline(line)}</p>`;
+      }
+      if (inTable) html += tableHtml + "</tbody></table>";
+      return html;
+    }
+
+    function mdInline(s: string): string {
+      return escape(s)
+        .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+        .replace(/\*(.+?)\*/g, "<em>$1</em>")
+        .replace(/`(.+?)`/g, "<code>$1</code>");
+    }
+
+    const body = mdToHtml(content);
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${escape(title)}</title>
+<style>
+  body{font-family:Arial,sans-serif;max-width:900px;margin:0 auto;padding:32px;color:#111;font-size:13px;line-height:1.6}
+  h1{font-size:16px;font-weight:700;border-bottom:2px solid #7c3aed;padding-bottom:6px;margin-top:24px;color:#1a1a2e}
+  h2{font-size:14px;font-weight:700;color:#1a1a2e;margin-top:20px;border-left:3px solid #7c3aed;padding-left:8px}
+  h3{font-size:13px;font-weight:700;color:#374151;margin-top:14px}
+  table{border-collapse:collapse;width:100%;margin:10px 0;font-size:11px}
+  th{background:#f0ebff;font-weight:700;text-align:left;padding:5px 8px;border:1px solid #ccc}
+  td{padding:4px 8px;border:1px solid #ddd;vertical-align:top}
+  tr:nth-child(even) td{background:#fafafa}
+  hr{border:none;border-top:1px solid #ddd;margin:16px 0}
+  li{margin:2px 0;padding-left:4px}
+  strong{font-weight:700}
+  em{font-style:italic}
+  code{background:#f3f0ff;padding:1px 4px;border-radius:3px;font-size:11px}
+  br{display:block;margin:2px 0}
+  @media print{body{padding:16px}button{display:none}}
+</style></head>
+<body>
+<div style="text-align:center;margin-bottom:24px;padding-bottom:16px;border-bottom:2px solid #7c3aed">
+  <img src="/logo-vosmart.png" alt="VoSmart" style="height:36px;margin-bottom:8px;display:block;margin:0 auto 8px">
+  <div style="font-size:11px;color:#666">vosmart.ro · Raport generat automat cu AI</div>
+</div>
+${body}
+<div style="margin-top:32px;padding-top:12px;border-top:1px solid #ddd;font-size:10px;color:#888;text-align:center">
+  Document generat automat de platforma VoSmart · ${new Date().toLocaleDateString("ro-RO")}
+</div>
+<script>window.onload=()=>{window.print()}</script>
+</body></html>`;
+
+    const w = window.open("","_blank");
+    if (w) { w.document.write(html); w.document.close(); }
+  }
+
   async function handleLogout() {
     await fetch("/api/auth/logout", { method: "POST" });
     window.location.href = "/corporate";
@@ -922,17 +1003,9 @@ export default function CorporateDashboard({ user, corporate, isAdmin = false }:
                         </button>
                         {content && (
                           <button
-                            onClick={() => {
-                              const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
-                              const url = URL.createObjectURL(blob);
-                              const a = document.createElement("a");
-                              a.href = url;
-                              a.download = `${report.title.replace(/\s+/g, "_")}.txt`;
-                              a.click();
-                              URL.revokeObjectURL(url);
-                            }}
-                            className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2.5 text-sm text-slate-300 hover:bg-white/[0.08] transition">
-                            ⬇ Descarcă
+                            onClick={() => printReportAsPDF(report.title, content)}
+                            className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-2.5 text-sm font-semibold text-emerald-300 hover:bg-emerald-500/20 transition">
+                            📥 Descarcă PDF
                           </button>
                         )}
                       </div>
