@@ -61,6 +61,7 @@ export default function CorporateDashboard({ user, corporate, isAdmin = false }:
   const [reports, setReports] = useState<any[]>([]);
   const [deletingDocId, setDeletingDocId] = useState<string | null>(null);
   const [confirmDeleteDocId, setConfirmDeleteDocId] = useState<string | null>(null);
+  const [openReportId, setOpenReportId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchDocuments();
@@ -955,9 +956,7 @@ ${body}
         })()}
 
         {/* RAPOARTE */}
-        {tab === "rapoarte" && (() => {
-          const [openReportId, setOpenReportId] = (useState as any)(null);
-          return (
+        {tab === "rapoarte" && (
           <div className="space-y-4">
             <h2 className="text-lg font-semibold">Rapoartele mele</h2>
             {reports.length === 0 ? (
@@ -1029,8 +1028,7 @@ ${body}
               </div>
             )}
           </div>
-          );
-        })()}
+        )}
 
         {/* ABONAMENT */}
         {tab === "abonament" && (() => {
