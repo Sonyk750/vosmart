@@ -425,7 +425,9 @@ IMPORTANT:
     await prisma.report.create({
       data: {
         associationId,
-        title: `Raport cenzor ${monthName} ${year}`,
+        title: associationName
+          ? `Raport cenzor ${monthName} ${year} — ${associationName}`
+          : `Raport cenzor ${monthName} ${year}`,
         month: monthName,
         year: parseInt(year),
         aiDraft: reportText,

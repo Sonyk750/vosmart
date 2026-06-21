@@ -71,7 +71,15 @@ export default function CorporateDashboard({ user, corporate, isAdmin = false }:
   // Auto-polling cât timp există documente în analiză
   useEffect(() => {
     const hasAnalyzing = documents.some((d: any) => d.status === "analyzing");
-    if (!hasAnalyzing) return;
+    if (!hasAnalyzing) {
+      // Analiza s-a terminat — resetăm bara de progres
+      if (analysisProgress > 0) {
+        setAnalysisProgress(100);
+        setAnalysisStep("Raport generat!");
+        setTimeout(() => { setAnalysisProgress(0); setAnalysisStep(""); setAnalysisDossierName(""); }, 2500);
+      }
+      return;
+    }
     const interval = setInterval(() => {
       fetchDocuments();
       fetchReports();
@@ -216,22 +224,21 @@ export default function CorporateDashboard({ user, corporate, isAdmin = false }:
     stopAnalysisProgress();
 
     if (res.ok) {
-      setAnalysisProgress(100);
-      setAnalysisStep("Dosar trimis!");
-      setUploadMsg("✓ Dosar trimis! Analiza AI rulează în fundal — rezultatul apare în câteva secunde.");
+      setAnalysisProgress(92);
+      setAnalysisStep("Analiză AI în fundal...");
+      setUploadMsg("✓ Dosar trimis! Analiza AI rulează — raportul apare automat când e gata.");
       setUploadFiles(prev => prev.map(f => ({ ...f, file: null })));
       setInvoiceFiles([]);
       setZipFile(null); setZipExtracted([]);
       setUploadMonth(""); setAssocName("");
       fetchDocuments(); fetchReports();
       router.refresh();
-      setTimeout(() => { setAnalysisProgress(0); setAnalysisStep(""); }, 3000);
       // Auto-refresh la 15s și 40s ca să prindă rezultatul analizei
       setTimeout(() => { fetchDocuments(); fetchReports(); router.refresh(); }, 15000);
       setTimeout(() => { fetchDocuments(); fetchReports(); router.refresh(); }, 40000);
     } else {
       setUploadMsg("✗ " + (data.error || "Eroare la upload"));
-      setTimeout(() => { setAnalysisProgress(0); setAnalysisStep(""); }, 3000);
+      setAnalysisProgress(0); setAnalysisStep("");
     }
     setUploading(false);
   }
@@ -838,29 +845,35 @@ ${body}
                 </button>
               </form>
 
-              {/* Bara progres analiză — apare DOAR după apăsarea butonului */}
-              {uploading && (
-                <div className="mt-4 rounded-xl border border-violet-500/20 bg-violet-500/5 p-4">
-                  <div className="mb-2">
-                    <p className="text-xs text-slate-500 uppercase tracking-wider mb-0.5">Se analizează dosar</p>
-                    <p className="text-sm font-semibold text-violet-200">{analysisDossierName}</p>
-                  </div>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs text-violet-300">{analysisStep}</span>
-                    <span className="text-sm font-bold text-violet-200">{analysisProgress}%</span>
-                  </div>
-                  <div className="h-2.5 rounded-full bg-white/8 overflow-hidden">
-                    <div className="h-full rounded-full transition-all duration-700 relative"
-                      style={{ width: `${analysisProgress}%`, background: "linear-gradient(90deg,#7c3aed,#06b6d4)" }}>
-                      <div className="absolute inset-0 animate-pulse opacity-40 rounded-full"
-                        style={{ background: "linear-gradient(90deg,transparent,rgba(255,255,255,0.4),transparent)" }} />
+              {/* Bara progres analiză — apare după submit și cât timp există documente în analiză */}
+              {(uploading || analysisProgress > 0 || documents.some((d: any) => d.status === "analyzing")) && (() => {
+                const isAnalyzing = documents.some((d: any) => d.status === "analyzing");
+                const displayProgress = isAnalyzing && analysisProgress === 0 ? 92 : analysisProgress;
+                const displayStep = isAnalyzing && !analysisStep ? "Analiză AI în fundal..." : analysisStep;
+                const displayName = analysisDossierName || documents.find((d: any) => d.status === "analyzing")?.title || "";
+                return (
+                  <div className="mt-4 rounded-xl border border-violet-500/20 bg-violet-500/5 p-4">
+                    <div className="mb-2">
+                      <p className="text-xs text-slate-500 uppercase tracking-wider mb-0.5">Se analizează dosar</p>
+                      <p className="text-sm font-semibold text-violet-200">{displayName}</p>
+                    </div>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs text-violet-300">{displayStep}</span>
+                      <span className="text-sm font-bold text-violet-200">{displayProgress}%</span>
+                    </div>
+                    <div className="h-2.5 rounded-full bg-white/8 overflow-hidden">
+                      <div className="h-full rounded-full transition-all duration-700 relative"
+                        style={{ width: `${displayProgress}%`, background: "linear-gradient(90deg,#7c3aed,#06b6d4)" }}>
+                        <div className="absolute inset-0 animate-pulse opacity-40 rounded-full"
+                          style={{ background: "linear-gradient(90deg,transparent,rgba(255,255,255,0.4),transparent)" }} />
+                      </div>
+                    </div>
+                    <div className="flex justify-between mt-1.5 text-[10px] text-slate-600">
+                      <span>Pregătire</span><span>Procesare</span><span>Analiză AI</span><span>Raport</span><span>Complet</span>
                     </div>
                   </div>
-                  <div className="flex justify-between mt-1.5 text-[10px] text-slate-600">
-                    <span>Pregătire</span><span>Procesare</span><span>Analiză AI</span><span>Raport</span><span>Complet</span>
-                  </div>
-                </div>
-              )}
+                );
+              })()}
             </div>
 
             {/* Dosarele mele */}
