@@ -65,32 +65,19 @@ export async function POST(req: NextRequest) {
       const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://vosmart.ro";
       const verificationLink = `${appUrl}/corporate/verify?token=${encodeURIComponent(token)}`;
 
+      const [verificationResult, adminResult] = await Promise.allSettled([
+        sendTrialVerificationEmail({ name, email: email.toLowerCase(), companyName, verificationLink }),
+        notifyAdminForTrialRegistration({ name, email: email.toLowerCase(), companyName, phone, address, verificationLink }),
+      ]);
+
       const emailErrors: string[] = [];
-
-      try {
-        await sendTrialVerificationEmail({
-          name,
-          email: email.toLowerCase(),
-          companyName,
-          verificationLink,
-        });
-      } catch (e: any) {
-        console.error("Eroare email verificare trial:", e);
-        emailErrors.push(`Email verificare: ${e?.message || "eroare necunoscuta"}`);
+      if (verificationResult.status === "rejected") {
+        console.error("Eroare email verificare trial:", verificationResult.reason);
+        emailErrors.push(`Email verificare: ${verificationResult.reason?.message || "eroare necunoscuta"}`);
       }
-
-      try {
-        await notifyAdminForTrialRegistration({
-          name,
-          email: email.toLowerCase(),
-          companyName,
-          phone,
-          address,
-          verificationLink,
-        });
-      } catch (e: any) {
-        console.error("Eroare email admin trial:", e);
-        emailErrors.push(`Email admin: ${e?.message || "eroare necunoscuta"}`);
+      if (adminResult.status === "rejected") {
+        console.error("Eroare email admin trial:", adminResult.reason);
+        emailErrors.push(`Email admin: ${adminResult.reason?.message || "eroare necunoscuta"}`);
       }
 
       return NextResponse.json({
