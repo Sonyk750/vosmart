@@ -86,6 +86,7 @@ export async function POST(req: NextRequest) {
           companyName,
           phone,
           address,
+          verificationLink,
         });
       } catch (e: any) {
         console.error("Eroare email admin trial:", e);

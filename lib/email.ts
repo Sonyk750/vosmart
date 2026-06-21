@@ -185,52 +185,83 @@ export async function sendTrialVerificationEmail(data: {
 
   const from = process.env.EMAIL_FROM || process.env.SMTP_USER!;
 
+  const textBody = `Buna ziua, ${data.name},
+
+Ati solicitat activarea unui cont Trial Gratuit pe platforma VoSmart Corporate pentru firma ${data.companyName}.
+
+Pentru a va activa contul, accesati linkul de mai jos (valabil 48 de ore):
+
+${data.verificationLink}
+
+Contul Trial include:
+- 1 asociatie clienta
+- Upload documente (max 5 fisiere: lista, explicatii, distributie, 2 facturi, extras cont)
+- 1 raport de cenzor generat cu AI
+
+Daca nu ati solicitat acest cont, ignorati acest email.
+
+Cu stima,
+Echipa VoSmart
+office@vosmart.ro | 0756 362 828`;
+
   await createTransporter().sendMail({
     from,
     to: data.email,
-    subject: "VoSmart — Confirmați adresa de email pentru a activa contul Trial",
-    html: `
-      <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:0;background:#0a0e1f;color:#e2e8f0">
-        <div style="background:linear-gradient(135deg,#d97706,#f59e0b);padding:40px 32px;border-radius:16px 16px 0 0;text-align:center">
-          <div style="font-size:48px;margin-bottom:12px">✉️</div>
-          <h1 style="margin:0;font-size:24px;color:#ffffff;font-weight:700">Confirmați adresa de email</h1>
-          <p style="margin:8px 0 0;color:#fef3c7;font-size:14px">VoSmart Corporate — Trial Gratuit</p>
-        </div>
-        <div style="padding:32px;background:#0f1629;border-radius:0 0 16px 16px">
-          <p style="font-size:16px;margin:0 0 16px">Bună ziua, <strong style="color:#fbbf24">${data.name}</strong>,</p>
-          <p style="color:#94a3b8;line-height:1.7;margin:0 0 24px">
-            Ați solicitat activarea unui cont Trial Gratuit pe platforma VoSmart Corporate pentru firma
-            <strong style="color:#f1f5f9">${data.companyName}</strong>.
-          </p>
-          <p style="color:#94a3b8;line-height:1.7;margin:0 0 28px">
-            Pentru a vă activa contul, vă rugăm să confirmați adresa de email apăsând butonul de mai jos.
-            Linkul este valabil <strong style="color:#fbbf24">48 de ore</strong>.
-          </p>
-          <div style="text-align:center;margin:32px 0">
-            <a href="${data.verificationLink}"
-              style="display:inline-block;background:linear-gradient(135deg,#d97706,#f59e0b);color:#000;text-decoration:none;padding:16px 36px;border-radius:12px;font-weight:700;font-size:16px;letter-spacing:0.01em">
-              ✓ Activează contul Trial
-            </a>
-          </div>
-          <div style="background:#1e293b;border:1px solid #334155;border-radius:12px;padding:16px;margin-bottom:24px">
-            <p style="margin:0 0 8px;font-size:12px;color:#64748b">Contul Trial include:</p>
-            <ul style="margin:0;padding-left:16px;color:#94a3b8;font-size:14px;line-height:1.8">
-              <li>1 asociație clientă</li>
-              <li>Upload documente (max 5 fișiere: listă, explicații, distribuție, 2 facturi, extras cont)</li>
-              <li>1 raport de cenzor generat cu AI</li>
-            </ul>
-          </div>
-          <p style="color:#64748b;font-size:13px;line-height:1.6;margin:0 0 16px">
-            Dacă nu ați solicitat acest cont, ignorați acest email. Dacă linkul nu funcționează, copiați URL-ul:<br>
-            <span style="color:#94a3b8;word-break:break-all;font-size:12px">${data.verificationLink}</span>
-          </p>
-          <p style="color:#64748b;font-size:13px;margin:0;border-top:1px solid #1e293b;padding-top:16px">
-            Cu stimă,<br>
-            <strong style="color:#94a3b8">Echipa VoSmart</strong> · office@vosmart.ro · 0756 362 828
-          </p>
-        </div>
-      </div>
-    `,
+    subject: "VoSmart - Activati contul Trial Gratuit",
+    text: textBody,
+    html: `<!DOCTYPE html>
+<html lang="ro"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f5;padding:20px 0">
+<tr><td align="center">
+<table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:8px;overflow:hidden;border:1px solid #e0e0e0">
+  <tr><td style="background:#f59e0b;padding:24px 32px;text-align:center">
+    <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:700">VoSmart Corporate</h1>
+    <p style="margin:6px 0 0;color:#fff8e1;font-size:14px">Activare cont Trial Gratuit</p>
+  </td></tr>
+  <tr><td style="padding:32px">
+    <p style="margin:0 0 16px;font-size:16px;color:#333333">Buna ziua, <strong>${data.name}</strong>,</p>
+    <p style="margin:0 0 16px;color:#555555;line-height:1.6">
+      Ati solicitat activarea unui cont <strong>Trial Gratuit</strong> pe platforma VoSmart Corporate
+      pentru firma <strong>${data.companyName}</strong>.
+    </p>
+    <p style="margin:0 0 24px;color:#555555;line-height:1.6">
+      Apasati butonul de mai jos pentru a va confirma adresa de email si a activa contul.
+      Linkul este valabil <strong>48 de ore</strong>.
+    </p>
+    <table cellpadding="0" cellspacing="0" width="100%">
+    <tr><td align="center" style="padding:8px 0 28px">
+      <a href="${data.verificationLink}"
+        style="display:inline-block;background:#f59e0b;color:#000000;text-decoration:none;padding:14px 32px;border-radius:6px;font-weight:700;font-size:16px">
+        Activeaza contul Trial
+      </a>
+    </td></tr>
+    </table>
+    <table cellpadding="0" cellspacing="0" width="100%" style="background:#fffbeb;border:1px solid #fde68a;border-radius:6px;margin-bottom:24px">
+    <tr><td style="padding:16px">
+      <p style="margin:0 0 8px;font-size:13px;color:#92400e;font-weight:700">Contul Trial include:</p>
+      <ul style="margin:0;padding-left:18px;color:#78350f;font-size:14px;line-height:1.8">
+        <li>1 asociatie clienta</li>
+        <li>Upload documente (max 5 fisiere)</li>
+        <li>1 raport de cenzor generat cu AI</li>
+      </ul>
+    </td></tr>
+    </table>
+    <p style="margin:0 0 8px;color:#888888;font-size:13px;line-height:1.6">
+      Daca butonul nu functioneaza, copiati si lipiti acest link in browser:
+    </p>
+    <p style="margin:0 0 24px;word-break:break-all;font-size:12px;color:#666666">${data.verificationLink}</p>
+    <p style="margin:0;color:#888888;font-size:13px;border-top:1px solid #eeeeee;padding-top:16px">
+      Daca nu ati solicitat acest cont, ignorati acest email.<br><br>
+      Cu stima,<br>
+      <strong style="color:#555555">Echipa VoSmart</strong><br>
+      office@vosmart.ro &nbsp;|&nbsp; 0756 362 828
+    </p>
+  </td></tr>
+</table>
+</td></tr>
+</table>
+</body></html>`,
   });
 }
 
@@ -240,6 +271,7 @@ export async function notifyAdminForTrialRegistration(data: {
   companyName: string;
   phone?: string | null;
   address?: string | null;
+  verificationLink?: string;
 }) {
   if (!canSendEmail()) {
     console.log("Trial inregistrat:", data.email, data.companyName);
@@ -252,23 +284,51 @@ export async function notifyAdminForTrialRegistration(data: {
   await createTransporter().sendMail({
     from,
     to,
-    subject: `VoSmart Trial — înregistrare nouă: ${data.companyName}`,
-    html: `
-      <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px;background:#0a0e1f;color:#e2e8f0">
-        <div style="background:linear-gradient(135deg,#92400e22,#d9770622);border:1px solid #d9770644;border-radius:16px;padding:24px;margin-bottom:24px">
-          <h2 style="color:#fbbf24;margin:0 0 4px">Trial Gratuit — Cont nou neconfirmat</h2>
-          <p style="color:#94a3b8;margin:0;font-size:13px">Utilizatorul trebuie să confirme emailul pentru activare</p>
-        </div>
-        <table style="width:100%;border-collapse:collapse">
-          <tr><td style="padding:10px 0;border-bottom:1px solid #1e293b;color:#64748b;width:140px">Firmă</td><td style="padding:10px 0;border-bottom:1px solid #1e293b;font-weight:600;color:#f1f5f9">${data.companyName}</td></tr>
-          <tr><td style="padding:10px 0;border-bottom:1px solid #1e293b;color:#64748b">Nume</td><td style="padding:10px 0;border-bottom:1px solid #1e293b;color:#f1f5f9">${data.name}</td></tr>
-          <tr><td style="padding:10px 0;border-bottom:1px solid #1e293b;color:#64748b">Email</td><td style="padding:10px 0;border-bottom:1px solid #1e293b"><a href="mailto:${data.email}" style="color:#fbbf24">${data.email}</a></td></tr>
-          <tr><td style="padding:10px 0;border-bottom:1px solid #1e293b;color:#64748b">Pachet</td><td style="padding:10px 0;border-bottom:1px solid #1e293b;color:#fbbf24;font-weight:600">Trial Gratuit</td></tr>
-          ${data.phone ? `<tr><td style="padding:10px 0;border-bottom:1px solid #1e293b;color:#64748b">Telefon</td><td style="padding:10px 0;border-bottom:1px solid #1e293b;color:#f1f5f9">${data.phone}</td></tr>` : ""}
-          ${data.address ? `<tr><td style="padding:10px 0;color:#64748b">Adresă</td><td style="padding:10px 0;color:#f1f5f9">${data.address}</td></tr>` : ""}
-        </table>
-      </div>
-    `,
+    subject: `VoSmart Trial - inregistrare noua: ${data.companyName}`,
+    text: `VoSmart Trial Gratuit - cont nou neconfirmat
+
+Firma: ${data.companyName}
+Nume: ${data.name}
+Email: ${data.email}
+Pachet: Trial Gratuit
+${data.phone ? `Telefon: ${data.phone}` : ""}
+${data.address ? `Adresa: ${data.address}` : ""}
+
+Utilizatorul trebuie sa confirme emailul pentru activare.
+${data.verificationLink ? `\nLink activare (backup daca emailul clientului nu a ajuns):\n${data.verificationLink}` : ""}`,
+    html: `<!DOCTYPE html>
+<html><head><meta charset="UTF-8"></head>
+<body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f5;padding:20px 0">
+<tr><td align="center">
+<table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:8px;overflow:hidden;border:1px solid #e0e0e0">
+  <tr><td style="background:#d97706;padding:20px 32px">
+    <h2 style="margin:0;color:#ffffff;font-size:18px">Trial Gratuit — Cont nou neconfirmat</h2>
+    <p style="margin:4px 0 0;color:#fff8e1;font-size:13px">Utilizatorul trebuie sa confirme emailul pentru activare</p>
+  </td></tr>
+  <tr><td style="padding:24px 32px">
+    <table cellpadding="0" cellspacing="0" width="100%" style="border-collapse:collapse">
+      <tr><td style="padding:9px 0;border-bottom:1px solid #eeeeee;color:#888888;width:130px;font-size:14px">Firma</td><td style="padding:9px 0;border-bottom:1px solid #eeeeee;font-weight:700;color:#333333;font-size:14px">${data.companyName}</td></tr>
+      <tr><td style="padding:9px 0;border-bottom:1px solid #eeeeee;color:#888888;font-size:14px">Nume</td><td style="padding:9px 0;border-bottom:1px solid #eeeeee;color:#333333;font-size:14px">${data.name}</td></tr>
+      <tr><td style="padding:9px 0;border-bottom:1px solid #eeeeee;color:#888888;font-size:14px">Email</td><td style="padding:9px 0;border-bottom:1px solid #eeeeee;font-size:14px"><a href="mailto:${data.email}" style="color:#d97706">${data.email}</a></td></tr>
+      <tr><td style="padding:9px 0;border-bottom:1px solid #eeeeee;color:#888888;font-size:14px">Pachet</td><td style="padding:9px 0;border-bottom:1px solid #eeeeee;color:#d97706;font-weight:700;font-size:14px">Trial Gratuit</td></tr>
+      ${data.phone ? `<tr><td style="padding:9px 0;border-bottom:1px solid #eeeeee;color:#888888;font-size:14px">Telefon</td><td style="padding:9px 0;border-bottom:1px solid #eeeeee;color:#333333;font-size:14px">${data.phone}</td></tr>` : ""}
+      ${data.address ? `<tr><td style="padding:9px 0;color:#888888;font-size:14px">Adresa</td><td style="padding:9px 0;color:#333333;font-size:14px">${data.address}</td></tr>` : ""}
+    </table>
+    ${data.verificationLink ? `
+    <table cellpadding="0" cellspacing="0" width="100%" style="background:#fffbeb;border:1px solid #fde68a;border-radius:6px;margin-top:20px">
+    <tr><td style="padding:16px">
+      <p style="margin:0 0 8px;font-size:13px;color:#92400e;font-weight:700">Link activare client (backup)</p>
+      <p style="margin:0 0 10px;font-size:12px;color:#78350f">Daca emailul clientului nu a ajuns, puteti trimite acest link manual:</p>
+      <p style="margin:0 0 12px;word-break:break-all;font-size:12px;color:#555555">${data.verificationLink}</p>
+      <a href="${data.verificationLink}" style="display:inline-block;background:#d97706;color:#ffffff;text-decoration:none;padding:8px 16px;border-radius:4px;font-size:13px;font-weight:700">Deschide link activare</a>
+    </td></tr>
+    </table>` : ""}
+  </td></tr>
+</table>
+</td></tr>
+</table>
+</body></html>`,
   });
 }
 
