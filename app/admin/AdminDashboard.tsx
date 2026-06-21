@@ -5,10 +5,21 @@ import Image from "next/image";
 interface User { id: string; name: string | null; email: string; role: string; }
 interface Association {
   id: string; name: string; package: string; cui: string | null;
+  filesUploadedCount: number;
+  maxDocuments: number;
   user: { name: string | null; email: string; status: string; };
   documents: Document[];
   reports: Report[];
   _count: { documents: number; reports: number; };
+  corporate?: { package: string; companyName: string } | null;
+}
+interface CorporateAdmin {
+  id: string; name: string | null; email: string; status: string; createdAt: string;
+  corporateAccount: {
+    id: string; companyName: string; package: string; status: string;
+    subscriptionStatus: string | null; maxAssoc: number;
+    _count: { associations: number };
+  } | null;
 }
 interface Document {
   id: string; title: string; fileName: string; status: string;
@@ -30,6 +41,10 @@ export default function AdminDashboard({ user }: { user: User }) {
   const [associations, setAssociations] = useState<Association[]>([]);
   const [allDocs, setAllDocs] = useState<Document[]>([]);
   const [cenzori, setCenzori] = useState<Cenzor[]>([]);
+  const [corporates, setCorporates] = useState<CorporateAdmin[]>([]);
+  const [clientiSubTab, setClientiSubTab] = useState<"corporates" | "associations">("corporates");
+  const [actionMsg, setActionMsg] = useState<Record<string, string>>({});
+  const [actionWorking, setActionWorking] = useState<string | null>(null);
   const [selectedDoc, setSelectedDoc] = useState<Document | null>(null);
   const [selectedAssoc, setSelectedAssoc] = useState<Association | null>(null);
   const [draftText, setDraftText] = useState("");
@@ -44,7 +59,7 @@ export default function AdminDashboard({ user }: { user: User }) {
   const [creatingCenzor, setCreatingCenzor] = useState(false);
 
   useEffect(() => {
-    if (tab === "overview" || tab === "clienti") fetchAssociations();
+    if (tab === "overview" || tab === "clienti") { fetchAssociations(); fetchCorporates(); }
     if (tab === "documente") fetchDocuments();
     if (tab === "cenzori") fetchCenzori();
   }, [tab]);
@@ -53,6 +68,10 @@ export default function AdminDashboard({ user }: { user: User }) {
     const res = await fetch("/api/admin/clients");
     if (res.ok) setAssociations(await res.json());
   }
+  async function fetchCorporates() {
+    const res = await fetch("/api/admin/corporates");
+    if (res.ok) setCorporates(await res.json());
+  }
   async function fetchDocuments() {
     const res = await fetch("/api/admin/documents");
     if (res.ok) setAllDocs(await res.json());
@@ -60,6 +79,20 @@ export default function AdminDashboard({ user }: { user: User }) {
   async function fetchCenzori() {
     const res = await fetch("/api/admin/cenzori");
     if (res.ok) setCenzori(await res.json());
+  }
+
+  async function clientAction(associationId: string, action: string, extra?: object) {
+    setActionWorking(associationId + action);
+    setActionMsg(prev => ({ ...prev, [associationId]: "" }));
+    const res = await fetch("/api/admin/clients/action", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ associationId, action, ...extra }),
+    });
+    const data = await res.json();
+    setActionMsg(prev => ({ ...prev, [associationId]: res.ok ? "✓ " + data.message : "✗ " + (data.error || "Eroare") }));
+    if (res.ok) fetchAssociations();
+    setActionWorking(null);
   }
 
   async function generateDraft(doc: Document) {
@@ -172,6 +205,20 @@ export default function AdminDashboard({ user }: { user: User }) {
     window.location.href = "/admin/login";
   }
 
+  function packageBadge(pkg: string) {
+    const map: Record<string, [string, string]> = {
+      trial: ["bg-amber-500/15 text-amber-300", "Trial Gratuit"],
+      starter: ["bg-cyan-500/15 text-cyan-300", "Starter"],
+      business: ["bg-violet-500/15 text-violet-300", "Business"],
+      professional: ["bg-emerald-500/15 text-emerald-300", "Professional"],
+      enterprise: ["bg-emerald-500/15 text-emerald-300 border border-emerald-500/30", "Enterprise"],
+      premium: ["bg-violet-500/15 text-violet-300", "Premium"],
+      smart: ["bg-cyan-500/15 text-cyan-300", "Smart"],
+    };
+    const [cls, label] = map[pkg] || ["bg-slate-500/15 text-slate-300", pkg];
+    return <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${cls}`}>{label}</span>;
+  }
+
   const statusBadge = (status: string) => {
     const map: Record<string, [string, string]> = {
       published: ["bg-emerald-500/15 text-emerald-300", "Publicat"],
@@ -244,12 +291,14 @@ export default function AdminDashboard({ user }: { user: User }) {
         {/* OVERVIEW */}
         {tab === "overview" && (
           <div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
               {[
-                ["👥", "Clienți activi", totalClients.toString()],
+                ["🏢", "Admini Corporate", corporates.length.toString()],
+                ["👥", "Asociații (Clienți)", totalClients.toString()],
                 ["📄", "Doc. de revizuit", pendingDocs.length.toString()],
                 ["✅", "Rapoarte publicate", associations.reduce((a, c) => a + c.reports?.filter(r => r.status === "published").length, 0).toString()],
                 ["⚡", "Se analizează", allDocs.filter(d => d.status === "analyzing").length.toString()],
+                ["⏳", "Clienți în așteptare", associations.filter(a => a.user.status === "pending").length.toString()],
               ].map(([icon, label, value]) => (
                 <div key={label} className="rounded-2xl border border-white/8 bg-white/[0.03] p-5">
                   <div className="text-2xl mb-2">{icon}</div>
@@ -440,35 +489,165 @@ export default function AdminDashboard({ user }: { user: User }) {
 
         {/* CLIENȚI */}
         {tab === "clienti" && (
-          <div className="space-y-4">
-            {associations.map(a => (
-              <a key={a.id} href={`/admin/client/${a.id}`}
-                className="block rounded-2xl border border-white/8 bg-white/[0.03] p-6 transition hover:bg-white/[0.06] hover:border-violet-500/30 cursor-pointer">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <h3 className="font-semibold text-lg">{a.name}</h3>
-                    <p className="text-sm text-slate-400">{a.user.email}</p>
-                    {a.cui && <p className="text-xs text-slate-500">CUI: {a.cui}</p>}
+          <div>
+            {/* Sub-tab-uri */}
+            <div className="flex gap-2 mb-6">
+              {[
+                { key: "corporates" as const, label: "🏢 Admini Corporate" },
+                { key: "associations" as const, label: "👥 Asociații (Clienți)" },
+              ].map(t => (
+                <button key={t.key} onClick={() => setClientiSubTab(t.key)}
+                  className={`px-4 py-2 rounded-xl text-sm font-medium transition ${clientiSubTab === t.key ? "bg-violet-600 text-white shadow-[0_0_20px_rgba(124,58,237,0.3)]" : "text-slate-400 hover:text-white hover:bg-white/[0.05]"}`}>
+                  {t.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Sub-tab: Admini Corporate */}
+            {clientiSubTab === "corporates" && (
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {corporates.length === 0 && (
+                  <div className="col-span-full rounded-2xl border border-white/8 bg-white/[0.03] p-8 text-center text-slate-400">
+                    Nu există admini corporate înregistrați.
                   </div>
-                  <div className="flex flex-col items-end gap-2">
-                    {a.user.status === "pending" && (
-                      <button type="button" onClick={(e) => { e.preventDefault(); approveClient(a.id); }}
-                        className="rounded-full bg-emerald-600 px-3 py-1 text-xs font-semibold text-white hover:bg-emerald-500">
-                        Aproba
-                      </button>
-                    )}
-                    <span className={`rounded-full px-3 py-1 text-xs font-medium ${a.package === "premium" ? "bg-violet-500/15 text-violet-300" : "bg-cyan-500/15 text-cyan-300"}`}>
-                      {a.package === "premium" ? "Premium" : "Smart"}
-                    </span>
-                    <div className="flex gap-3 text-xs text-slate-400">
-                      <span>📁 {a._count?.documents || 0} doc.</span>
-                      <span>📋 {a._count?.reports || 0} rap.</span>
+                )}
+                {corporates.map(corp => (
+                  <div key={corp.id} className="rounded-2xl border border-white/8 bg-white/[0.03] p-5 flex flex-col gap-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold truncate">{corp.corporateAccount?.companyName || corp.name || "—"}</p>
+                        <p className="text-xs text-slate-400 truncate">{corp.email}</p>
+                      </div>
+                      <div className="flex-shrink-0">
+                        {corp.corporateAccount ? packageBadge(corp.corporateAccount.package) : null}
+                      </div>
                     </div>
-                    <span className="text-xs text-violet-400">→ Vezi documente</span>
+                    <div className="flex items-center gap-4 text-xs text-slate-400">
+                      <span>👥 {corp.corporateAccount?._count.associations ?? 0} clienți</span>
+                      <span>📦 max {corp.corporateAccount?.maxAssoc ?? 0}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                        corp.status === "active" ? "bg-emerald-500/15 text-emerald-300"
+                        : corp.status === "rejected" ? "bg-red-500/15 text-red-300"
+                        : "bg-yellow-500/15 text-yellow-300"
+                      }`}>
+                        {corp.status === "active" ? "Activ" : corp.status === "rejected" ? "Suspendat" : "Pending"}
+                      </span>
+                      {corp.corporateAccount && (
+                        <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                          corp.corporateAccount.status === "active" ? "bg-emerald-500/15 text-emerald-300"
+                          : corp.corporateAccount.status === "suspended" ? "bg-red-500/15 text-red-300"
+                          : "bg-yellow-500/15 text-yellow-300"
+                        }`}>
+                          Cont: {corp.corporateAccount.status === "active" ? "activ" : corp.corporateAccount.status === "suspended" ? "suspendat" : "pending"}
+                        </span>
+                      )}
+                    </div>
                   </div>
-                </div>
-              </a>
-            ))}
+                ))}
+              </div>
+            )}
+
+            {/* Sub-tab: Asociații */}
+            {clientiSubTab === "associations" && (
+              <div className="space-y-3">
+                {associations.length === 0 && (
+                  <div className="rounded-2xl border border-white/8 bg-white/[0.03] p-8 text-center text-slate-400">
+                    Nu există asociații înregistrate.
+                  </div>
+                )}
+                {associations.map(a => (
+                  <div key={a.id} className="rounded-2xl border border-white/8 bg-white/[0.03] p-5">
+                    <div className="flex items-start justify-between gap-4 mb-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <a href={`/admin/client/${a.id}`} className="font-semibold hover:text-violet-300 transition">{a.name}</a>
+                          {packageBadge(a.corporate?.package || a.package)}
+                          <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                            a.user.status === "active" ? "bg-emerald-500/15 text-emerald-300"
+                            : a.user.status === "rejected" ? "bg-red-500/15 text-red-300"
+                            : "bg-yellow-500/15 text-yellow-300"
+                          }`}>
+                            {a.user.status === "active" ? "Activ" : a.user.status === "rejected" ? "Suspendat" : "Pending"}
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-400 mt-0.5">
+                          {a.corporate ? `Admin: ${a.corporate.companyName}` : a.user.email}
+                        </p>
+                        <p className="text-xs text-slate-500 mt-0.5">
+                          📁 Documente: <span className={`font-semibold ${a.filesUploadedCount >= a.maxDocuments ? "text-red-400" : "text-slate-300"}`}>{a.filesUploadedCount}/{a.maxDocuments}</span>
+                        </p>
+                      </div>
+                      <div className="flex-shrink-0 text-xs text-slate-400 text-right">
+                        <div>📋 {a._count?.reports || 0} rap.</div>
+                      </div>
+                    </div>
+
+                    {/* Butoane acțiune */}
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        onClick={() => clientAction(a.id, "reset_docs")}
+                        disabled={actionWorking === a.id + "reset_docs"}
+                        title="Resetează contor documente"
+                        className="rounded-lg border border-white/10 bg-white/[0.05] px-3 py-1.5 text-xs font-medium text-slate-300 transition hover:bg-white/[0.10] disabled:opacity-50">
+                        🔄 Reset
+                      </button>
+
+                      {a.user.status !== "rejected" ? (
+                        <button
+                          onClick={() => clientAction(a.id, "suspend")}
+                          disabled={actionWorking === a.id + "suspend"}
+                          title="Suspendă cont"
+                          className="rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-1.5 text-xs font-medium text-red-300 transition hover:bg-red-500/20 disabled:opacity-50">
+                          ⏸ Suspendă
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => clientAction(a.id, "activate")}
+                          disabled={actionWorking === a.id + "activate"}
+                          title="Activează cont"
+                          className="rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-300 transition hover:bg-emerald-500/20 disabled:opacity-50">
+                          ▶ Activează
+                        </button>
+                      )}
+
+                      <div className="flex items-center gap-1">
+                        <span className="text-xs text-slate-400">📁 Dosare max:</span>
+                        <select
+                          onChange={e => e.target.value && clientAction(a.id, "set_max_docs", { maxDocuments: Number(e.target.value) })}
+                          defaultValue=""
+                          className="rounded-lg border border-white/10 bg-black/30 px-2 py-1.5 text-xs text-white outline-none focus:border-violet-500">
+                          <option value="" disabled>—</option>
+                          <option value="5">1 dosar (5 doc)</option>
+                          <option value="10">2 dosare (10 doc)</option>
+                          <option value="15">3 dosare (15 doc)</option>
+                          <option value="30">6 dosare (30 doc)</option>
+                        </select>
+                      </div>
+
+                      <button
+                        onClick={() => {
+                          if (confirm(`Ștergi asociația "${a.name}"? Această acțiune este ireversibilă.`)) {
+                            clientAction(a.id, "delete");
+                          }
+                        }}
+                        disabled={actionWorking === a.id + "delete"}
+                        title="Șterge asociația"
+                        className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-xs font-medium text-red-400 transition hover:bg-red-500/20 disabled:opacity-50">
+                        🗑 Șterge
+                      </button>
+                    </div>
+
+                    {actionMsg[a.id] && (
+                      <p className={`text-xs mt-2 ${actionMsg[a.id].startsWith("✓") ? "text-emerald-400" : "text-red-400"}`}>
+                        {actionMsg[a.id]}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 

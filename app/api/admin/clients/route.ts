@@ -17,6 +17,7 @@ export async function GET() {
       documents: { orderBy: { createdAt: "desc" }, take: 5 },
       reports: { orderBy: { createdAt: "desc" }, take: 5 },
       _count: { select: { documents: true, reports: true } },
+      corporate: { select: { package: true, companyName: true } },
     },
     orderBy: { createdAt: "desc" },
   });
