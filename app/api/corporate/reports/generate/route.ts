@@ -10,6 +10,16 @@ export async function POST(req: NextRequest) {
   const doc = await prisma.document.findUnique({ where: { id: documentId }, include: { association: true } });
   if (!doc) return NextResponse.json({ error: "Document negăsit" }, { status: 404 });
 
+  // Trial limit: max 1 published report across all associations
+  const corp = await prisma.corporateAccount.findUnique({ where: { userId: user.id } });
+  if (corp?.package === "trial") {
+    const assocIds = (await prisma.association.findMany({ where: { corporateId: corp.id }, select: { id: true } })).map(a => a.id);
+    const reportCount = await prisma.report.count({ where: { associationId: { in: assocIds }, status: "published" } });
+    if (reportCount >= 1) {
+      return NextResponse.json({ error: "TRIAL_LIMIT", message: "Limita trial atinsă. Alege un pachet plătit pentru a emite mai multe rapoarte." }, { status: 403 });
+    }
+  }
+
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return NextResponse.json({ error: "API key lipsă" }, { status: 500 });
 

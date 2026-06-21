@@ -2,7 +2,6 @@
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Image from "next/image";
-import CardPaymentForm from "@/app/components/CardPaymentForm";
 import { useCuiAutofill } from "@/app/hooks/useCuiAutofill";
 
 const PACKAGES = [
@@ -49,7 +48,7 @@ function PackageFromQuery({ onPackage }: { onPackage: (pkg: string) => void }) {
   const searchParams = useSearchParams();
   useEffect(() => {
     const pkg = searchParams.get("package");
-    if (pkg && PACKAGES.some(p => p.key === pkg)) onPackage(pkg);
+    if (pkg && (PACKAGES.some(p => p.key === pkg) || pkg === "trial")) onPackage(pkg);
   }, [searchParams, onPackage]);
   return null;
 }
@@ -60,6 +59,7 @@ export default function CorporatePage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
+  const [isTrial, setIsTrial] = useState(false);
 
   // Login
   const [loginEmail, setLoginEmail] = useState("");
@@ -74,8 +74,6 @@ export default function CorporatePage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [clientSecret, setClientSecret] = useState<string | null>(null);
-  const [paymentDone, setPaymentDone] = useState(false);
 
   const cuiStatus = useCuiAutofill(cui, data => {
     setCompanyName(data.denumire);
@@ -122,11 +120,23 @@ export default function CorporatePage() {
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Eroare"); return; }
-      if (data.clientSecret) {
-        setClientSecret(data.clientSecret);
-      } else {
+
+      if (data.isTrial) {
+        setIsTrial(true);
         setSuccess(true);
+        return;
       }
+
+      if (data.clientSecret) {
+        sessionStorage.setItem("vosmartCheckout", JSON.stringify({
+          clientSecret: data.clientSecret,
+          packageKey: selectedPackage,
+        }));
+        window.location.href = "/corporate/checkout";
+        return;
+      }
+
+      setSuccess(true);
     } catch { setError("Eroare de conexiune"); }
     finally { setLoading(false); }
   }
@@ -173,11 +183,53 @@ export default function CorporatePage() {
         </p>
       </section>
 
-      {/* Pachete */}
+      {/* Trial card */}
+      <section className="px-5 pb-8 sm:px-6">
+        <div className="mx-auto max-w-7xl">
+          <div
+            onClick={() => setSelectedPackage("trial")}
+            className={`relative rounded-[2rem] border cursor-pointer transition hover:-translate-y-1 p-6 md:p-8 ${selectedPackage === "trial"
+              ? "border-amber-500/50 bg-amber-500/10 shadow-[0_0_50px_rgba(245,158,11,0.20)]"
+              : "border-amber-500/20 bg-amber-500/5 hover:bg-amber-500/10 hover:border-amber-500/35"}`}>
+            {selectedPackage === "trial" && (
+              <div className="absolute top-4 right-4 text-emerald-400 text-lg">✓</div>
+            )}
+            <div className="flex flex-col md:flex-row md:items-center gap-6">
+              <div className="flex-1">
+                <div className="flex items-center gap-3 mb-3">
+                  <span className="inline-flex rounded-full border border-amber-500/40 bg-amber-500/10 px-3 py-1 text-xs font-medium text-amber-300">
+                    TRIAL GRATUIT
+                  </span>
+                  <span className="text-xs text-slate-500">Fără card, fără angajament</span>
+                </div>
+                <h3 className="text-xl font-bold mb-1">Încearcă VoSmart Corporate</h3>
+                <p className="text-slate-400 text-sm">Testați platforma fără costuri. Acces complet pentru 1 asociație.</p>
+              </div>
+              <div className="flex gap-6 md:gap-10 text-sm">
+                {[
+                  ["1", "asociație"],
+                  ["1", "sesiune upload"],
+                  ["1", "raport AI"],
+                ].map(([val, lbl]) => (
+                  <div key={lbl} className="text-center">
+                    <p className="text-2xl font-bold text-amber-300">{val}</p>
+                    <p className="text-xs text-slate-500">{lbl}</p>
+                  </div>
+                ))}
+              </div>
+              <div className="md:text-right">
+                <p className="text-3xl font-bold text-amber-300">0 lei</p>
+                <p className="text-xs text-slate-500">gratuit</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Pachete plătite */}
       <section className="px-5 pb-16 sm:px-6">
         <div className="mx-auto max-w-7xl">
-          <h2 className="text-2xl font-bold text-center mb-3">Alege pachetul potrivit</h2>
-          <p className="text-center text-slate-400 mb-10 text-sm">Prețuri lunare, fără contract pe termen lung</p>
+          <p className="text-center text-xs text-slate-500 uppercase tracking-widest mb-6">sau alege un plan complet</p>
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
             {PACKAGES.map(pkg => (
               <div key={pkg.key}
@@ -187,7 +239,7 @@ export default function CorporatePage() {
                   : "border-cyan-500/50 bg-cyan-500/10 shadow-[0_0_40px_rgba(6,182,212,0.20)]"
                   : "border-white/10 bg-white/[0.03] hover:bg-white/[0.06]"}`}>
                 {pkg.recommended && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-violet-600 px-4 py-1 text-xs font-semibold shadow-[0_0_15px_rgba(124,58,237,0.5)]">
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-violet-600 px-4 py-1 text-xs font-semibold shadow-[0_0_15px_rgba(124,58,237,0.5)] whitespace-nowrap">
                     Recomandat
                   </div>
                 )}
@@ -218,39 +270,43 @@ export default function CorporatePage() {
       {/* Formular */}
       <section className="px-5 pb-20 sm:px-6">
         <div className="mx-auto max-w-lg">
-          {paymentDone ? (
-            <div className="rounded-3xl border border-emerald-500/30 bg-emerald-500/10 p-10 text-center">
-              <div className="text-5xl mb-4">✅</div>
-              <h3 className="text-xl font-bold text-emerald-300 mb-2">Cont creat și plată confirmată!</h3>
-              <p className="text-slate-300 text-sm mb-6">
-                Activarea contului poate dura câteva minute. Te poți autentifica din portalul corporate.
-              </p>
-              <a href="/corporate/login"
-                className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-6 py-3 font-semibold transition hover:bg-violet-500 shadow-[0_0_25px_rgba(124,58,237,0.35)]">
-                Intră în portal →
-              </a>
-            </div>
-          ) : clientSecret ? (
-            <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-8">
-              <h3 className="text-lg font-semibold mb-1">Finalizează plata</h3>
-              <p className="text-xs text-slate-500 mb-4">
-                Pachet ales: <span className="text-violet-300 font-medium">{PACKAGES.find(p => p.key === selectedPackage)?.name} — {PACKAGES.find(p => p.key === selectedPackage)?.price} lei/lună</span>
-              </p>
-              <CardPaymentForm
-                clientSecret={clientSecret}
-                submitLabel={`Plătește ${PACKAGES.find(p => p.key === selectedPackage)?.price} lei`}
-                onSuccess={() => { setClientSecret(null); setPaymentDone(true); }}
-              />
-            </div>
-          ) : success ? (
-            <div className="rounded-3xl border border-emerald-500/30 bg-emerald-500/10 p-10 text-center">
-              <div className="text-5xl mb-4">✅</div>
-              <h3 className="text-xl font-bold text-emerald-300 mb-2">Cerere trimisă cu succes!</h3>
-              <p className="text-slate-300 text-sm mb-4">
-                Contul tău corporate este în așteptare. Te vom contacta în maxim 24 ore pentru activare și detalii de plată.
-              </p>
-              <p className="text-xs text-slate-500">Pachet ales: <strong className="text-white">{PACKAGES.find(p => p.key === selectedPackage)?.name}</strong> — {PACKAGES.find(p => p.key === selectedPackage)?.price} lei/lună</p>
-            </div>
+          {success ? (
+            isTrial ? (
+              <div className="rounded-3xl border border-amber-500/30 bg-amber-500/10 p-10 text-center">
+                <div className="text-5xl mb-4">🎉</div>
+                <h3 className="text-xl font-bold text-amber-300 mb-2">Cont Trial activat!</h3>
+                <p className="text-slate-300 text-sm mb-2">
+                  Contul dumneavoastră trial este activ. Puteți testa platforma cu 1 asociație, 1 sesiune de upload și 1 raport generat.
+                </p>
+                <p className="text-xs text-slate-500 mb-6">
+                  Un email de confirmare a fost trimis la adresa înregistrată.
+                </p>
+                <a href="/corporate/login"
+                  className="inline-flex items-center gap-2 rounded-xl bg-amber-500 px-6 py-3 font-semibold text-black transition hover:bg-amber-400 shadow-[0_0_25px_rgba(245,158,11,0.35)]">
+                  Intră în portal →
+                </a>
+                <div className="mt-6 pt-6 border-t border-white/5">
+                  <p className="text-xs text-slate-500 mb-3">Vrei mai mult? Alege un plan complet:</p>
+                  <div className="flex flex-wrap gap-2 justify-center">
+                    {PACKAGES.map(p => (
+                      <a key={p.key} href={`/corporate?package=${p.key}`}
+                        className="text-xs rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-slate-300 hover:bg-white/10 transition">
+                        {p.name} — {p.price} lei
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-3xl border border-emerald-500/30 bg-emerald-500/10 p-10 text-center">
+                <div className="text-5xl mb-4">✅</div>
+                <h3 className="text-xl font-bold text-emerald-300 mb-2">Cerere înregistrată!</h3>
+                <p className="text-slate-300 text-sm mb-4">
+                  Contul tău corporate este în așteptare. Te vom contacta în maxim 24 ore pentru activare și detalii de plată.
+                </p>
+                <p className="text-xs text-slate-500">Pachet ales: <strong className="text-white">{PACKAGES.find(p => p.key === selectedPackage)?.name}</strong> — {PACKAGES.find(p => p.key === selectedPackage)?.price} lei/lună</p>
+              </div>
+            )
           ) : (
             <>
               {/* Tabs */}
@@ -282,10 +338,21 @@ export default function CorporatePage() {
                   </form>
                 ) : (
                   <form onSubmit={handleRegister} className="space-y-4">
-                    <h3 className="text-lg font-semibold mb-1">Înregistrare firmă de cenzorat</h3>
-                    <p className="text-xs text-slate-500 mb-4">
-                      Pachet ales: <span className="text-violet-300 font-medium">{PACKAGES.find(p => p.key === selectedPackage)?.name} — {PACKAGES.find(p => p.key === selectedPackage)?.price} lei/lună</span>
-                    </p>
+                    <h3 className="text-lg font-semibold mb-1">
+                      {selectedPackage === "trial" ? "Activează contul Trial Gratuit" : "Înregistrare firmă de cenzorat"}
+                    </h3>
+                    <div className={`flex items-center gap-3 rounded-xl border px-4 py-3 mb-2 ${
+                      selectedPackage === "trial"
+                        ? "border-amber-500/30 bg-amber-500/10"
+                        : "border-white/10 bg-black/10"
+                    }`}>
+                      <span className="text-xs text-slate-400">Pachet ales:</span>
+                      <span className={`text-sm font-semibold ${selectedPackage === "trial" ? "text-amber-300" : "text-violet-300"}`}>
+                        {selectedPackage === "trial"
+                          ? "Trial Gratuit — 0 lei"
+                          : `${PACKAGES.find(p => p.key === selectedPackage)?.name} — ${PACKAGES.find(p => p.key === selectedPackage)?.price} lei/lună`}
+                      </span>
+                    </div>
 
                     <div className="border-b border-white/5 pb-4">
                       <p className="text-xs text-slate-400 uppercase tracking-wider mb-3">Date firmă</p>
@@ -321,8 +388,16 @@ export default function CorporatePage() {
                     </div>
 
                     <button type="submit" disabled={loading}
-                      className="w-full rounded-xl bg-violet-600 px-6 py-4 font-semibold transition hover:bg-violet-500 shadow-[0_0_25px_rgba(124,58,237,0.35)] disabled:opacity-50">
-                      {loading ? "Se procesează..." : "Continuă spre plată →"}
+                      className={`w-full rounded-xl px-6 py-4 font-semibold transition disabled:opacity-50 ${
+                        selectedPackage === "trial"
+                          ? "bg-amber-500 hover:bg-amber-400 text-black shadow-[0_0_25px_rgba(245,158,11,0.35)]"
+                          : "bg-violet-600 hover:bg-violet-500 shadow-[0_0_25px_rgba(124,58,237,0.35)]"
+                      }`}>
+                      {loading
+                        ? "Se procesează..."
+                        : selectedPackage === "trial"
+                          ? "Activează Trial Gratuit →"
+                          : "Continuă spre plată →"}
                     </button>
                   </form>
                 )}

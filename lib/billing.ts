@@ -1,14 +1,15 @@
 import { prisma } from "@/lib/prisma";
 import { stripe } from "@/lib/stripe";
 
-export type CorporatePackage = "starter" | "business" | "professional" | "enterprise";
+export type CorporatePackage = "trial" | "starter" | "business" | "professional" | "enterprise";
 export type AssociationPackage = "smart" | "premium";
 
 export const CORPORATE_PACKAGES: Record<CorporatePackage, { name: string; priceRon: number; maxAssoc: number }> = {
-  starter:      { name: "Starter",      priceRon: 250,  maxAssoc: 5 },
-  business:     { name: "Business",     priceRon: 500,  maxAssoc: 15 },
-  professional: { name: "Professional", priceRon: 900,  maxAssoc: 50 },
-  enterprise:   { name: "Enterprise",   priceRon: 1500, maxAssoc: 9999 },
+  trial:        { name: "Trial Gratuit", priceRon: 0,    maxAssoc: 1 },
+  starter:      { name: "Starter",       priceRon: 250,  maxAssoc: 5 },
+  business:     { name: "Business",      priceRon: 500,  maxAssoc: 15 },
+  professional: { name: "Professional",  priceRon: 900,  maxAssoc: 50 },
+  enterprise:   { name: "Enterprise",    priceRon: 1500, maxAssoc: 9999 },
 };
 
 export const ASSOCIATION_PACKAGES: Record<AssociationPackage, { name: string; priceRon: number }> = {

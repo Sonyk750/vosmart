@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { stripe } from "@/lib/stripe";
+import { notifyApplicantCorporateActivated } from "@/lib/email";
+import { CORPORATE_PACKAGES, CorporatePackage } from "@/lib/billing";
 import type Stripe from "stripe";
 
 export async function POST(req: Request) {
@@ -79,18 +81,30 @@ async function syncSubscription(subscription: Stripe.Subscription) {
     return;
   }
 
-  const corporate = await prisma.corporateAccount.findUnique({ where: { stripeCustomerId: customerId } });
+  const corporate = await prisma.corporateAccount.findUnique({
+    where: { stripeCustomerId: customerId },
+    include: { user: { select: { name: true, email: true } } },
+  });
   if (corporate) {
+    const isActivatingNow = status === "active" && corporate.status === "pending";
     await prisma.corporateAccount.update({
       where: { id: corporate.id },
       data: {
         subscriptionStatus: status,
         currentPeriodEnd,
         stripeSubscriptionId: subscription.id,
-        ...(status === "active" && corporate.status === "pending"
-          ? { status: "active", activatedAt: new Date() }
-          : {}),
+        ...(isActivatingNow ? { status: "active", activatedAt: new Date() } : {}),
       },
     });
+
+    if (isActivatingNow && corporate.user) {
+      const pkgInfo = CORPORATE_PACKAGES[corporate.package as CorporatePackage];
+      notifyApplicantCorporateActivated({
+        name: corporate.user.name || corporate.companyName,
+        email: corporate.user.email,
+        packageName: pkgInfo?.name || corporate.package,
+        companyName: corporate.companyName,
+      }).catch(console.error);
+    }
   }
 }

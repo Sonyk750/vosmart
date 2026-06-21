@@ -269,6 +269,36 @@ export default function Home() {
               <p className="mt-4 text-slate-400 text-lg">Oferă clienților tăi un portal modern cu analiză AI. Gestionează toate asociațiile dintr-un singur panou.</p>
             </div>
 
+            {/* Trial card */}
+            <a href="/corporate?package=trial"
+              className="block mb-6 rounded-[2rem] border border-amber-500/25 bg-amber-500/5 p-6 md:p-8 transition hover:-translate-y-1 hover:border-amber-500/40 hover:bg-amber-500/10 hover:shadow-[0_0_50px_rgba(245,158,11,0.15)]">
+              <div className="flex flex-col md:flex-row md:items-center gap-6">
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 mb-3">
+                    <span className="inline-flex rounded-full border border-amber-500/40 bg-amber-500/10 px-3 py-1 text-xs font-bold text-amber-300 uppercase tracking-wider">
+                      Trial Gratuit
+                    </span>
+                    <span className="text-xs text-slate-500">Fără card, fără angajament</span>
+                  </div>
+                  <h3 className="text-xl font-bold mb-1">Încearcă VoSmart Corporate</h3>
+                  <p className="text-slate-400 text-sm">Testați platforma fără costuri — 1 asociație, 1 upload, 1 raport AI generat.</p>
+                </div>
+                <div className="flex gap-8 text-center">
+                  {[["1","asociație"],["1","upload"],["1","raport AI"]].map(([v,l])=>(
+                    <div key={l}><p className="text-2xl font-bold text-amber-300">{v}</p><p className="text-xs text-slate-500">{l}</p></div>
+                  ))}
+                </div>
+                <div className="md:text-right shrink-0">
+                  <p className="text-3xl font-bold text-amber-300">0 lei</p>
+                  <span className="mt-2 inline-flex rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-2 text-sm font-semibold text-amber-200 hover:bg-amber-500/20 transition">
+                    Încearcă gratuit →
+                  </span>
+                </div>
+              </div>
+            </a>
+
+            <p className="text-center text-xs text-slate-600 uppercase tracking-widest mb-6">sau alege un plan complet</p>
+
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-12">
               {[
                 { key:"starter", name:"Starter", price:"250", assoc:"1 – 5 asociații", color:"cyan", features:["Până la 5 asociații cliente","Portal clienți dedicat","Analiză AI documente","Rapoarte automate","Logo propriu în portal","Suport email"] },

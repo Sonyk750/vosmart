@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { stripe } from "@/lib/stripe";
 import { CORPORATE_PACKAGES, CorporatePackage, getOrCreateStripeCustomer, ronToBani } from "@/lib/billing";
+import { notifyAdminForCorporateRegistration, notifyApplicantCorporateWelcome } from "@/lib/email";
 import crypto from "crypto";
 import type Stripe from "stripe";
 
@@ -22,6 +23,7 @@ export async function POST(req: NextRequest) {
 
     const pkgKey: CorporatePackage = (pkg in CORPORATE_PACKAGES ? pkg : "starter") as CorporatePackage;
     const pkgInfo = CORPORATE_PACKAGES[pkgKey];
+    const isTrial = pkgKey === "trial";
 
     const user = await prisma.user.create({
       data: {
@@ -37,13 +39,39 @@ export async function POST(req: NextRequest) {
             phone,
             package: pkgKey,
             maxAssoc: pkgInfo.maxAssoc,
-            status: "pending",
+            status: isTrial ? "active" : "pending",
+            ...(isTrial ? { activatedAt: new Date() } : {}),
           }
         }
       },
       include: { corporateAccount: true },
     });
 
+    // send notification emails (non-blocking)
+    notifyAdminForCorporateRegistration({
+      companyName,
+      name,
+      email: email.toLowerCase(),
+      packageName: pkgInfo.name,
+      phone,
+      address,
+      isTrial,
+    }).catch(console.error);
+
+    notifyApplicantCorporateWelcome({
+      name,
+      email: email.toLowerCase(),
+      packageName: pkgInfo.name,
+      companyName,
+      isTrial,
+    }).catch(console.error);
+
+    // Trial: no payment needed
+    if (isTrial) {
+      return NextResponse.json({ success: true, isTrial: true });
+    }
+
+    // Paid: create Stripe subscription
     let clientSecret: string | null = null;
     try {
       const customerId = await getOrCreateStripeCustomer("corporate", user.corporateAccount!.id);
