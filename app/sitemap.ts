@@ -15,6 +15,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: "https://www.vosmart.ro/blog", lastModified: new Date(), changeFrequency: "weekly", priority: 0.8 },
     { url: "https://www.vosmart.ro/clienti", lastModified: new Date(), changeFrequency: "monthly", priority: 0.7 },
     { url: "https://www.vosmart.ro/corporate", lastModified: new Date(), changeFrequency: "monthly", priority: 0.8 },
+    { url: "https://www.vosmart.ro/help", lastModified: new Date(), changeFrequency: "monthly", priority: 0.6 },
     ...blogUrls,
   ]
 }
