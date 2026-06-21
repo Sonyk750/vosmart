@@ -59,7 +59,15 @@ export default function AdminDashboard({ user }: { user: User }) {
   const [creatingCenzor, setCreatingCenzor] = useState(false);
 
   useEffect(() => {
-    if (tab === "overview" || tab === "clienti") { fetchAssociations(); fetchCorporates(); }
+    // Încărcăm tot de la start ca cardurile overview să aibă date complete
+    fetchAssociations();
+    fetchCorporates();
+    fetchDocuments();
+    fetchCenzori();
+  }, []);
+
+  useEffect(() => {
+    if (tab === "clienti") { fetchAssociations(); fetchCorporates(); }
     if (tab === "documente") fetchDocuments();
     if (tab === "cenzori") fetchCenzori();
   }, [tab]);
@@ -238,12 +246,11 @@ export default function AdminDashboard({ user }: { user: User }) {
   const totalClients = associations.length;
   const pendingClients = associations.filter(a => a.user.status === "pending");
 
-  const tabs = [
-    { key: "overview", label: "📊 Prezentare generală" },
-    { key: "documente", label: `📋 Documente${pendingDocs.length > 0 ? ` (${pendingDocs.length})` : ""}` },
-    { key: "clienti", label: "👥 Clienți" },
-    ...(user.role === "admin" ? [{ key: "cenzori", label: "🔑 Cenzori" }] : []),
-  ];
+  const sectionTitle: Record<string, string> = {
+    clienti: "Clienți",
+    documente: "Documente",
+    cenzori: "Cenzori",
+  };
 
   return (
     <main className="min-h-screen bg-[#050814] text-white">
@@ -276,56 +283,61 @@ export default function AdminDashboard({ user }: { user: User }) {
 
       <div className="mx-auto max-w-7xl px-5 py-8 sm:px-6">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold">Panou intern VoSmart</h1>
-          <p className="text-slate-400 mt-1.5">Gestionare clienți, documente și rapoarte</p>
-        </div>
-
-        {/* Tabs principale */}
-        <div className="flex gap-2 mb-8 p-1 rounded-xl bg-white/[0.04] border border-white/8 w-fit flex-wrap">
-          {tabs.map(t => (
-            <button key={t.key} onClick={() => setTab(t.key as any)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2 ${
-                tab === t.key
-                  ? "bg-violet-600 text-white shadow-[0_2px_12px_rgba(124,58,237,0.4)]"
-                  : "text-slate-400 hover:text-white hover:bg-white/[0.05]"
-              }`}>
-              {t.label}
-            </button>
-          ))}
+          {tab !== "overview" ? (
+            <div>
+              <button onClick={() => setTab("overview")}
+                className="flex items-center gap-2 text-slate-400 hover:text-white text-sm mb-4 transition group">
+                <span className="text-lg group-hover:-translate-x-0.5 transition-transform">←</span>
+                <span>Înapoi la panou</span>
+              </button>
+              <h1 className="text-3xl font-bold">{sectionTitle[tab]}</h1>
+            </div>
+          ) : (
+            <div>
+              <h1 className="text-3xl font-bold">Panou intern VoSmart</h1>
+              <p className="text-slate-400 mt-1.5">Selectează o secțiune pentru a gestiona</p>
+            </div>
+          )}
         </div>
 
         {/* OVERVIEW */}
         {tab === "overview" && (
           <div>
-            {/* Overview cards */}
+            {/* Overview cards — click pentru navigare */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 mb-10">
               {[
-                { icon: "🏢", label: "Admini Corporate", value: corporates.length, sub: "conturi înregistrate", color: "violet" },
-                { icon: "👥", label: "Asociații Clienți", value: totalClients, sub: "total asociații", color: "cyan" },
-                { icon: "📄", label: "De revizuit", value: pendingDocs.length, sub: "documente analizate", color: "amber" },
-                { icon: "✅", label: "Rapoarte publicate", value: associations.reduce((a, c) => a + c.reports?.filter(r => r.status === "published").length, 0), sub: "rapoarte aprobate", color: "emerald" },
-                { icon: "⚡", label: "Se analizează", value: allDocs.filter(d => d.status === "analyzing").length, sub: "în procesare AI", color: "blue" },
-                { icon: "⏳", label: "În așteptare", value: associations.filter(a => a.user.status === "pending").length, sub: "necesită aprobare", color: "rose" },
+                { icon: "🏢", label: "Admini Corporate", value: corporates.length, sub: "conturi înregistrate", color: "violet", action: () => { setTab("clienti"); setClientiSubTab("corporates"); } },
+                { icon: "👥", label: "Asociații Clienți", value: totalClients, sub: "total asociații", color: "cyan", action: () => { setTab("clienti"); setClientiSubTab("associations"); } },
+                { icon: "📄", label: "De revizuit", value: pendingDocs.length, sub: "documente analizate", color: "amber", action: () => setTab("documente") },
+                { icon: "✅", label: "Rapoarte publicate", value: associations.reduce((a, c) => a + c.reports?.filter(r => r.status === "published").length, 0), sub: "rapoarte aprobate", color: "emerald", action: () => setTab("documente") },
+                { icon: "⚡", label: "Se analizează", value: allDocs.filter(d => d.status === "analyzing").length, sub: "în procesare AI", color: "blue", action: () => setTab("documente") },
+                { icon: "🔑", label: "Cenzori", value: cenzori.length, sub: "cenzori activi", color: "indigo", action: () => setTab("cenzori") },
+                { icon: "⏳", label: "În așteptare", value: associations.filter(a => a.user.status === "pending").length, sub: "necesită aprobare", color: "rose", action: () => { setTab("clienti"); setClientiSubTab("associations"); } },
               ].map(card => {
-                const colorMap: Record<string, { border: string; bg: string; badge: string; text: string; glow: string }> = {
-                  violet:  { border: "border-violet-500/20",  bg: "from-violet-500/10 to-violet-500/[0.03]",  badge: "bg-violet-500/15 text-violet-300",  text: "text-violet-200",  glow: "shadow-[0_0_30px_rgba(139,92,246,0.08)]" },
-                  cyan:    { border: "border-cyan-500/20",    bg: "from-cyan-500/10 to-cyan-500/[0.03]",      badge: "bg-cyan-500/15 text-cyan-300",      text: "text-cyan-200",    glow: "shadow-[0_0_30px_rgba(6,182,212,0.08)]" },
-                  amber:   { border: "border-amber-500/20",   bg: "from-amber-500/10 to-amber-500/[0.03]",   badge: "bg-amber-500/15 text-amber-300",   text: "text-amber-200",   glow: "shadow-[0_0_30px_rgba(245,158,11,0.08)]" },
-                  emerald: { border: "border-emerald-500/20", bg: "from-emerald-500/10 to-emerald-500/[0.03]",badge: "bg-emerald-500/15 text-emerald-300", text: "text-emerald-200", glow: "shadow-[0_0_30px_rgba(16,185,129,0.08)]" },
-                  blue:    { border: "border-blue-500/20",    bg: "from-blue-500/10 to-blue-500/[0.03]",      badge: "bg-blue-500/15 text-blue-300",      text: "text-blue-200",    glow: "shadow-[0_0_30px_rgba(59,130,246,0.08)]" },
-                  rose:    { border: "border-rose-500/20",    bg: "from-rose-500/10 to-rose-500/[0.03]",      badge: "bg-rose-500/15 text-rose-300",      text: "text-rose-200",    glow: "shadow-[0_0_30px_rgba(244,63,94,0.08)]" },
+                const colorMap: Record<string, { border: string; bg: string; badge: string; text: string; glow: string; ring: string }> = {
+                  violet:  { border: "border-violet-500/20",  bg: "from-violet-500/10 to-violet-500/[0.03]",   badge: "bg-violet-500/15 text-violet-300",   text: "text-violet-200",   glow: "shadow-[0_0_30px_rgba(139,92,246,0.08)]",   ring: "hover:border-violet-500/50 hover:shadow-[0_0_40px_rgba(139,92,246,0.18)]" },
+                  cyan:    { border: "border-cyan-500/20",    bg: "from-cyan-500/10 to-cyan-500/[0.03]",        badge: "bg-cyan-500/15 text-cyan-300",         text: "text-cyan-200",     glow: "shadow-[0_0_30px_rgba(6,182,212,0.08)]",    ring: "hover:border-cyan-500/50 hover:shadow-[0_0_40px_rgba(6,182,212,0.18)]" },
+                  amber:   { border: "border-amber-500/20",   bg: "from-amber-500/10 to-amber-500/[0.03]",     badge: "bg-amber-500/15 text-amber-300",       text: "text-amber-200",    glow: "shadow-[0_0_30px_rgba(245,158,11,0.08)]",   ring: "hover:border-amber-500/50 hover:shadow-[0_0_40px_rgba(245,158,11,0.18)]" },
+                  emerald: { border: "border-emerald-500/20", bg: "from-emerald-500/10 to-emerald-500/[0.03]", badge: "bg-emerald-500/15 text-emerald-300",   text: "text-emerald-200",  glow: "shadow-[0_0_30px_rgba(16,185,129,0.08)]",   ring: "hover:border-emerald-500/50 hover:shadow-[0_0_40px_rgba(16,185,129,0.18)]" },
+                  blue:    { border: "border-blue-500/20",    bg: "from-blue-500/10 to-blue-500/[0.03]",        badge: "bg-blue-500/15 text-blue-300",         text: "text-blue-200",     glow: "shadow-[0_0_30px_rgba(59,130,246,0.08)]",   ring: "hover:border-blue-500/50 hover:shadow-[0_0_40px_rgba(59,130,246,0.18)]" },
+                  indigo:  { border: "border-indigo-500/20",  bg: "from-indigo-500/10 to-indigo-500/[0.03]",   badge: "bg-indigo-500/15 text-indigo-300",     text: "text-indigo-200",   glow: "shadow-[0_0_30px_rgba(99,102,241,0.08)]",   ring: "hover:border-indigo-500/50 hover:shadow-[0_0_40px_rgba(99,102,241,0.18)]" },
+                  rose:    { border: "border-rose-500/20",    bg: "from-rose-500/10 to-rose-500/[0.03]",        badge: "bg-rose-500/15 text-rose-300",         text: "text-rose-200",     glow: "shadow-[0_0_30px_rgba(244,63,94,0.08)]",    ring: "hover:border-rose-500/50 hover:shadow-[0_0_40px_rgba(244,63,94,0.18)]" },
                 };
                 const c = colorMap[card.color];
                 return (
-                  <div key={card.label} className={`relative overflow-hidden rounded-2xl border ${c.border} bg-gradient-to-br ${c.bg} p-6 ${c.glow} transition hover:scale-[1.02]`}>
+                  <button key={card.label} onClick={card.action}
+                    className={`relative overflow-hidden rounded-2xl border ${c.border} bg-gradient-to-br ${c.bg} p-6 ${c.glow} ${c.ring} transition-all duration-200 hover:scale-[1.03] hover:-translate-y-0.5 cursor-pointer text-left group w-full`}>
                     <div className="flex items-start justify-between mb-5">
                       <div className="text-3xl">{card.icon}</div>
                       <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${c.badge}`}>{card.sub}</span>
                     </div>
                     <div className={`text-5xl font-bold mb-1 ${c.text}`}>{card.value}</div>
-                    <div className="text-sm text-slate-400 mt-1">{card.label}</div>
+                    <div className="flex items-center justify-between mt-2">
+                      <div className="text-sm text-slate-400">{card.label}</div>
+                      <span className="text-slate-600 text-xs group-hover:text-slate-400 transition-colors">→</span>
+                    </div>
                     <div className="pointer-events-none absolute -right-4 -bottom-4 text-9xl opacity-[0.04]">{card.icon}</div>
-                  </div>
+                  </button>
                 );
               })}
             </div>
