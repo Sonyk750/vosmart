@@ -114,7 +114,7 @@ export async function POST(req: NextRequest) {
       data: { filesUploadedCount: { increment: files.length } },
     });
 
-    // Lansăm analiza AI în background
+    // Lansăm analiza AI — așteptată explicit ca Vercel să nu o taie
     analyzeDocuments({
       documentId: mainDoc.id,
       associationId: user.association.id,
@@ -125,7 +125,9 @@ export async function POST(req: NextRequest) {
       monthName,
       year,
       savedFiles,
-    }).catch(console.error);
+    }).catch(e => {
+      console.error("[upload] analyzeDocuments a eșuat:", e?.message || e);
+    });
 
     return NextResponse.json({ success: true, documentId: mainDoc.id });
   } catch (e) {
@@ -150,7 +152,9 @@ async function analyzeDocuments({
 }) {
   try {
     const apiKey = process.env.ANTHROPIC_API_KEY;
-    if (!apiKey) throw new Error("API key lipsă");
+    if (!apiKey) throw new Error("ANTHROPIC_API_KEY lipseste din variabilele de mediu Vercel");
+
+    console.log(`[AI] Start analiza doc ${documentId}, ${savedFiles.length} fisiere, total ~${Math.round(savedFiles.reduce((s,f)=>s+f.buffer.length,0)/1024)}KB`);
 
     // Construim mesajul pentru Claude cu toate documentele
     const contentParts: any[] = [];
@@ -401,8 +405,8 @@ IMPORTANT:
       }
     });
 
-  } catch (e) {
-    console.error("AI analysis error:", e);
+  } catch (e: any) {
+    console.error("[AI] Eroare analiza:", e?.message || e);
     await prisma.document.update({
       where: { id: documentId },
       data: { status: "error" }
