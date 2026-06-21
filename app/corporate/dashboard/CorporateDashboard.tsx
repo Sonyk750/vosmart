@@ -59,6 +59,8 @@ export default function CorporateDashboard({ user, corporate, isAdmin = false }:
 
   // Rapoarte state
   const [reports, setReports] = useState<any[]>([]);
+  const [deletingDocId, setDeletingDocId] = useState<string | null>(null);
+  const [confirmDeleteDocId, setConfirmDeleteDocId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchDocuments();
@@ -216,6 +218,16 @@ export default function CorporateDashboard({ user, corporate, isAdmin = false }:
       setTimeout(() => { setAnalysisProgress(0); setAnalysisStep(""); }, 3000);
     }
     setUploading(false);
+  }
+
+  async function deleteDocument(id: string) {
+    setDeletingDocId(id);
+    const res = await fetch(`/api/dashboard/documents/${id}`, { method: "DELETE" });
+    if (res.ok) {
+      setDocuments(prev => prev.filter(d => d.id !== id));
+    }
+    setDeletingDocId(null);
+    setConfirmDeleteDocId(null);
   }
 
   async function handleLogout() {
@@ -711,13 +723,15 @@ export default function CorporateDashboard({ user, corporate, isAdmin = false }:
                   {documents.map((doc: any) => {
                     const isAnalyzing = doc.status === "analyzing";
                     const isError = doc.status === "error";
+                    const isConfirmingDelete = confirmDeleteDocId === doc.id;
+                    const isDeleting = deletingDocId === doc.id;
                     return (
-                      <div key={doc.id} className={`rounded-xl border p-4 transition ${
+                      <div key={doc.id} className={`rounded-xl border transition ${
                         isAnalyzing ? "border-violet-500/20 bg-violet-500/5"
                         : isError ? "border-red-500/20 bg-red-500/5"
                         : "border-white/8 bg-white/[0.02]"
                       }`}>
-                        <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-start justify-between gap-3 p-4">
                           <div className="flex-1 min-w-0">
                             <p className="font-semibold text-sm text-white">{doc.title}</p>
                             <p className="text-xs text-slate-500 mt-0.5">{doc.fileName}</p>
@@ -725,28 +739,59 @@ export default function CorporateDashboard({ user, corporate, isAdmin = false }:
                               <p className="text-xs text-slate-400 mt-1">{doc.aiSummary}</p>
                             )}
                             {isError && (
-                              <p className="text-xs text-red-400 mt-1">Analiza a eșuat. Verifică formatul fișierelor (PDF, imagine) și încearcă din nou.</p>
+                              <div className="mt-1.5 space-y-1">
+                                <p className="text-xs text-red-400 font-medium">Analiza a eșuat</p>
+                                {doc.aiSummary && (
+                                  <p className="text-[11px] text-red-400/70 font-mono bg-red-500/5 rounded px-2 py-1 break-words">{doc.aiSummary}</p>
+                                )}
+                                <p className="text-xs text-slate-500">Verifică formatul fișierelor (PDF, imagine) și încearcă din nou sau șterge dosarul.</p>
+                              </div>
                             )}
                           </div>
-                          <div className="flex flex-col items-end gap-1.5 shrink-0">
+                          <div className="flex flex-col items-end gap-2 shrink-0">
                             {statusBadge(doc.status)}
                             {doc.aiScore !== null && doc.aiScore !== undefined && (
                               <span className={`text-sm font-bold ${doc.aiScore >= 80 ? "text-emerald-400" : doc.aiScore >= 60 ? "text-yellow-400" : "text-red-400"}`}>
                                 {doc.aiScore.toFixed(0)}%
                               </span>
                             )}
+                            <button
+                              type="button"
+                              onClick={() => setConfirmDeleteDocId(isConfirmingDelete ? null : doc.id)}
+                              className="text-xs text-slate-600 hover:text-red-400 transition mt-1"
+                            >
+                              🗑 Șterge
+                            </button>
                           </div>
                         </div>
+
                         {/* Bara progres pentru documentele în analiză */}
                         {isAnalyzing && (
-                          <div className="mt-3">
+                          <div className="px-4 pb-4">
                             <div className="h-1.5 rounded-full bg-white/8 overflow-hidden">
                               <div className="h-full w-3/4 rounded-full animate-pulse" style={{ background: "linear-gradient(90deg,#7c3aed,#06b6d4)" }} />
                             </div>
-                            <p className="text-xs text-violet-400 mt-1 flex items-center gap-1.5">
+                            <p className="text-xs text-violet-400 mt-1.5 flex items-center gap-1.5">
                               <span className="w-2 h-2 rounded-full bg-violet-400 animate-ping inline-block"/>
                               Se analizează cu AI... reîncarcă pagina pentru actualizare
                             </p>
+                          </div>
+                        )}
+
+                        {/* Confirmare ștergere */}
+                        {isConfirmingDelete && (
+                          <div className="border-t border-red-500/20 bg-red-500/5 px-4 py-3 flex items-center justify-between gap-3 rounded-b-xl">
+                            <p className="text-xs text-red-300">Ești sigur că vrei să ștergi acest dosar?</p>
+                            <div className="flex gap-2">
+                              <button type="button" onClick={() => setConfirmDeleteDocId(null)}
+                                className="rounded-lg border border-white/10 px-3 py-1.5 text-xs text-slate-400 hover:text-white transition">
+                                Anulează
+                              </button>
+                              <button type="button" onClick={() => deleteDocument(doc.id)} disabled={isDeleting}
+                                className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-500 transition disabled:opacity-50 flex items-center gap-1.5">
+                                {isDeleting ? <><span className="w-3 h-3 rounded-full border border-white/30 border-t-white animate-spin"/>Ștergere...</> : "Șterge definitiv"}
+                              </button>
+                            </div>
                           </div>
                         )}
                       </div>
