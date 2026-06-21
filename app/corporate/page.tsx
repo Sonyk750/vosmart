@@ -99,7 +99,7 @@ export default function CorporatePage() {
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Eroare"); return; }
-      if (data.role !== "corporate") {
+      if (data.role !== "corporate" && data.role !== "admin") {
         setError("Acest cont nu este un cont corporate.");
         return;
       }
@@ -124,7 +124,7 @@ export default function CorporatePage() {
       if (data.isTrial) {
         setIsTrial(true);
         setSuccess(true);
-        return;
+        return; // account needs email verification
       }
 
       if (data.clientSecret) {
@@ -273,20 +273,23 @@ export default function CorporatePage() {
           {success ? (
             isTrial ? (
               <div className="rounded-3xl border border-amber-500/30 bg-amber-500/10 p-10 text-center">
-                <div className="text-5xl mb-4">🎉</div>
-                <h3 className="text-xl font-bold text-amber-300 mb-2">Cont Trial activat!</h3>
+                <div className="text-5xl mb-4">✉️</div>
+                <h3 className="text-xl font-bold text-amber-300 mb-2">Verificați emailul!</h3>
                 <p className="text-slate-300 text-sm mb-2">
-                  Contul dumneavoastră trial este activ. Puteți testa platforma cu 1 asociație, 1 sesiune de upload și 1 raport generat.
+                  Am trimis un email cu link de activare la adresa înregistrată.
+                  <strong className="text-white"> Trebuie să confirmați emailul</strong> pentru a activa contul Trial.
                 </p>
                 <p className="text-xs text-slate-500 mb-6">
-                  Un email de confirmare a fost trimis la adresa înregistrată.
+                  Linkul este valabil 48 de ore. Verificați și folderul Spam dacă nu găsiți emailul.
                 </p>
-                <a href="/corporate/login"
-                  className="inline-flex items-center gap-2 rounded-xl bg-amber-500 px-6 py-3 font-semibold text-black transition hover:bg-amber-400 shadow-[0_0_25px_rgba(245,158,11,0.35)]">
-                  Intră în portal →
-                </a>
-                <div className="mt-6 pt-6 border-t border-white/5">
-                  <p className="text-xs text-slate-500 mb-3">Vrei mai mult? Alege un plan complet:</p>
+                <div className="rounded-xl border border-white/10 bg-black/20 p-4 text-left text-sm text-slate-400 space-y-2 mb-6">
+                  <p className="font-semibold text-white text-xs uppercase tracking-wider mb-2">Ce urmează:</p>
+                  <p>1. Căutați emailul de la <span className="text-amber-300">VoSmart</span> cu subiectul „Confirmați adresa de email"</p>
+                  <p>2. Apăsați butonul de activare din email</p>
+                  <p>3. Veți fi redirecționat spre portal și puteți intra cu datele create</p>
+                </div>
+                <div className="mt-4 pt-4 border-t border-white/5">
+                  <p className="text-xs text-slate-500 mb-3">Vrei un plan complet fără limitări trial?</p>
                   <div className="flex flex-wrap gap-2 justify-center">
                     {PACKAGES.map(p => (
                       <a key={p.key} href={`/corporate?package=${p.key}`}

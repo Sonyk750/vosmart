@@ -33,9 +33,30 @@ export default async function CorporateDashboardPage() {
     });
 
     if (!session || session.expiresAt < new Date()) redirect("/corporate");
-    if (session.user.role !== "corporate") redirect("/corporate");
+
+    const isAdmin = session.user.role === "admin";
+
+    if (!isAdmin && session.user.role !== "corporate") redirect("/corporate");
+
+    // Admin without corporate account: auto-create enterprise account
+    if (isAdmin && !session.user.corporateAccount) {
+      await prisma.corporateAccount.create({
+        data: {
+          userId: session.user.id,
+          companyName: "VoSmart Admin",
+          package: "enterprise",
+          status: "active",
+          maxAssoc: 9999,
+          subscriptionStatus: "active",
+          activatedAt: new Date(),
+        },
+      });
+      redirect("/corporate/dashboard");
+    }
+
     if (!session.user.corporateAccount) redirect("/corporate");
-    if (session.user.corporateAccount.status === "pending") {
+
+    if (!isAdmin && session.user.corporateAccount.status === "pending") {
       return (
         <main className="min-h-screen bg-[#050814] text-white flex items-center justify-center px-4">
           <div className="max-w-md text-center">
@@ -57,6 +78,7 @@ export default async function CorporateDashboardPage() {
       <CorporateDashboard
         user={session.user}
         corporate={{ ...corporateRest, currentPeriodEnd: currentPeriodEnd?.toISOString() ?? null }}
+        isAdmin={isAdmin}
       />
     );
   } catch (e) {

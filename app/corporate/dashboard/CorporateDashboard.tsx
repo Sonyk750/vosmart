@@ -19,7 +19,7 @@ interface Corporate {
 }
 interface User { id: string; name: string | null; email: string; role: string; }
 
-export default function CorporateDashboard({ user, corporate }: { user: User; corporate: Corporate }) {
+export default function CorporateDashboard({ user, corporate, isAdmin = false }: { user: User; corporate: Corporate; isAdmin?: boolean }) {
   const router = useRouter();
   const [tab, setTab] = useState<"overview" | "clienti" | "adauga" | "abonament">("overview");
   const pkg = CORPORATE_PACKAGES[corporate.package as CorporatePackage] as { name: string; priceRon: number; maxAssoc: number } | undefined;

@@ -33,11 +33,28 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: `Documente obligatorii lipsă: ${missing.join(", ")}` }, { status: 400 });
     }
 
-    // Verificăm limita de documente per asociație
+    // Trial: verificăm tipurile de documente permise
+    const TRIAL_ALLOWED_TYPES = ["lista_plata", "explicatii_lista", "distributia_facturilor", "facturi", "extras_cont"];
     const association = await prisma.association.findUnique({
       where: { id: user.association.id },
-      select: { filesUploadedCount: true, maxDocuments: true },
+      select: { filesUploadedCount: true, maxDocuments: true, corporateId: true },
     });
+
+    if (association?.corporateId) {
+      const corpAccount = await prisma.corporateAccount.findUnique({
+        where: { id: association.corporateId },
+        select: { package: true },
+      });
+      if (corpAccount?.package === "trial") {
+        const blocked = fileTypes.filter((t: string) => !TRIAL_ALLOWED_TYPES.includes(t));
+        if (blocked.length > 0) {
+          return NextResponse.json({
+            error: `Contul Trial permite doar: Listă de plată, Explicații, Distribuirea facturilor, Facturi și Extras de cont. Documentele nesolicitate: ${blocked.join(", ")}. Faceți upgrade la un plan plătit pentru toate tipurile.`,
+          }, { status: 403 });
+        }
+      }
+    }
+
     if (association && association.filesUploadedCount + files.length > association.maxDocuments) {
       return NextResponse.json({
         error: `Ați atins limita de ${association.maxDocuments} documente pentru asociația dvs. (${association.filesUploadedCount} încărcate). Vă rugăm contactați administratorul pentru a crește limita.`

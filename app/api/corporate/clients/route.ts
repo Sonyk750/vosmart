@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
 
   const corp = await prisma.corporateAccount.findUnique({ where: { userId: user.id }, include: { _count: { select: { associations: true } } } });
   if (!corp) return NextResponse.json({ error: "Cont corporate negăsit" }, { status: 404 });
-  if (corp._count.associations >= corp.maxAssoc) return NextResponse.json({ error: "Limita de asociații atinsă" }, { status: 400 });
+  if (corp._count.associations >= corp.maxAssoc) return NextResponse.json({ error: "Limita de asociații atinsă. Upgrade la un plan plătit pentru mai multe asociații." }, { status: 400 });
 
   const { clientName, clientEmail, clientPassword, assocName, assocCui, assocAddress, assocPhone, corporateId } = await req.json();
   if (!clientName || !clientEmail || !clientPassword || !assocName) {
@@ -22,6 +22,8 @@ export async function POST(req: NextRequest) {
 
   const existing = await prisma.user.findUnique({ where: { email: clientEmail.toLowerCase() } });
   if (existing) return NextResponse.json({ error: "Email deja folosit" }, { status: 409 });
+
+  const isTrial = corp.package === "trial";
 
   const newUser = await prisma.user.create({
     data: {
@@ -36,6 +38,7 @@ export async function POST(req: NextRequest) {
           address: assocAddress || null,
           phone: assocPhone || null,
           corporateId: corp.id,
+          maxDocuments: isTrial ? 5 : 30, // trial: max 5 documente
         }
       }
     },

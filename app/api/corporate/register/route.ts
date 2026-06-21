@@ -2,12 +2,24 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { stripe } from "@/lib/stripe";
 import { CORPORATE_PACKAGES, CorporatePackage, getOrCreateStripeCustomer, ronToBani } from "@/lib/billing";
-import { notifyAdminForCorporateRegistration, notifyApplicantCorporateWelcome } from "@/lib/email";
+import {
+  notifyAdminForCorporateRegistration,
+  notifyApplicantCorporateWelcome,
+  sendTrialVerificationEmail,
+  notifyAdminForTrialRegistration,
+} from "@/lib/email";
 import crypto from "crypto";
 import type Stripe from "stripe";
 
 function hashPassword(p: string) {
   return crypto.createHash("sha256").update(p + process.env.NEXTAUTH_SECRET).digest("hex");
+}
+
+export function createVerificationToken(corporateId: string): string {
+  const expires = Date.now() + 48 * 60 * 60 * 1000; // 48 ore
+  const payload = Buffer.from(`${corporateId}:${expires}`).toString("base64url");
+  const hmac = crypto.createHmac("sha256", process.env.NEXTAUTH_SECRET!).update(payload).digest("hex");
+  return `${payload}.${hmac}`;
 }
 
 export async function POST(req: NextRequest) {
@@ -31,6 +43,8 @@ export async function POST(req: NextRequest) {
         email: email.toLowerCase(),
         password: hashPassword(password),
         role: "corporate",
+        // Trial starts pending (needs email verification); paid starts active
+        status: isTrial ? "pending" : "active",
         corporateAccount: {
           create: {
             companyName,
@@ -39,15 +53,38 @@ export async function POST(req: NextRequest) {
             phone,
             package: pkgKey,
             maxAssoc: pkgInfo.maxAssoc,
-            status: isTrial ? "active" : "pending",
-            ...(isTrial ? { activatedAt: new Date() } : {}),
+            status: "pending",
           }
         }
       },
       include: { corporateAccount: true },
     });
 
-    // send notification emails (non-blocking)
+    if (isTrial) {
+      // Generate verification token and send emails
+      const token = createVerificationToken(user.corporateAccount!.id);
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://vosmart.ro";
+      const verificationLink = `${appUrl}/corporate/verify?token=${encodeURIComponent(token)}`;
+
+      sendTrialVerificationEmail({
+        name,
+        email: email.toLowerCase(),
+        companyName,
+        verificationLink,
+      }).catch(console.error);
+
+      notifyAdminForTrialRegistration({
+        name,
+        email: email.toLowerCase(),
+        companyName,
+        phone,
+        address,
+      }).catch(console.error);
+
+      return NextResponse.json({ success: true, isTrial: true, pending: true });
+    }
+
+    // Paid plan notifications
     notifyAdminForCorporateRegistration({
       companyName,
       name,
@@ -55,7 +92,7 @@ export async function POST(req: NextRequest) {
       packageName: pkgInfo.name,
       phone,
       address,
-      isTrial,
+      isTrial: false,
     }).catch(console.error);
 
     notifyApplicantCorporateWelcome({
@@ -63,15 +100,10 @@ export async function POST(req: NextRequest) {
       email: email.toLowerCase(),
       packageName: pkgInfo.name,
       companyName,
-      isTrial,
+      isTrial: false,
     }).catch(console.error);
 
-    // Trial: no payment needed
-    if (isTrial) {
-      return NextResponse.json({ success: true, isTrial: true });
-    }
-
-    // Paid: create Stripe subscription
+    // Create Stripe subscription for paid plans
     let clientSecret: string | null = null;
     try {
       const customerId = await getOrCreateStripeCustomer("corporate", user.corporateAccount!.id);

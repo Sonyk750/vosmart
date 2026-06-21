@@ -167,6 +167,106 @@ export async function notifyApplicantCorporateWelcome(data: { name: string; emai
   });
 }
 
+export async function sendTrialVerificationEmail(data: {
+  name: string;
+  email: string;
+  companyName: string;
+  verificationLink: string;
+}) {
+  if (!canSendEmail()) {
+    console.log("Trial verification link pentru:", data.email, data.verificationLink);
+    return;
+  }
+
+  const from = process.env.EMAIL_FROM || process.env.SMTP_USER!;
+
+  await createTransporter().sendMail({
+    from,
+    to: data.email,
+    subject: "VoSmart — Confirmați adresa de email pentru a activa contul Trial",
+    html: `
+      <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:0;background:#0a0e1f;color:#e2e8f0">
+        <div style="background:linear-gradient(135deg,#d97706,#f59e0b);padding:40px 32px;border-radius:16px 16px 0 0;text-align:center">
+          <div style="font-size:48px;margin-bottom:12px">✉️</div>
+          <h1 style="margin:0;font-size:24px;color:#ffffff;font-weight:700">Confirmați adresa de email</h1>
+          <p style="margin:8px 0 0;color:#fef3c7;font-size:14px">VoSmart Corporate — Trial Gratuit</p>
+        </div>
+        <div style="padding:32px;background:#0f1629;border-radius:0 0 16px 16px">
+          <p style="font-size:16px;margin:0 0 16px">Bună ziua, <strong style="color:#fbbf24">${data.name}</strong>,</p>
+          <p style="color:#94a3b8;line-height:1.7;margin:0 0 24px">
+            Ați solicitat activarea unui cont Trial Gratuit pe platforma VoSmart Corporate pentru firma
+            <strong style="color:#f1f5f9">${data.companyName}</strong>.
+          </p>
+          <p style="color:#94a3b8;line-height:1.7;margin:0 0 28px">
+            Pentru a vă activa contul, vă rugăm să confirmați adresa de email apăsând butonul de mai jos.
+            Linkul este valabil <strong style="color:#fbbf24">48 de ore</strong>.
+          </p>
+          <div style="text-align:center;margin:32px 0">
+            <a href="${data.verificationLink}"
+              style="display:inline-block;background:linear-gradient(135deg,#d97706,#f59e0b);color:#000;text-decoration:none;padding:16px 36px;border-radius:12px;font-weight:700;font-size:16px;letter-spacing:0.01em">
+              ✓ Activează contul Trial
+            </a>
+          </div>
+          <div style="background:#1e293b;border:1px solid #334155;border-radius:12px;padding:16px;margin-bottom:24px">
+            <p style="margin:0 0 8px;font-size:12px;color:#64748b">Contul Trial include:</p>
+            <ul style="margin:0;padding-left:16px;color:#94a3b8;font-size:14px;line-height:1.8">
+              <li>1 asociație clientă</li>
+              <li>Upload documente (max 5 fișiere: listă, explicații, distribuție, 2 facturi, extras cont)</li>
+              <li>1 raport de cenzor generat cu AI</li>
+            </ul>
+          </div>
+          <p style="color:#64748b;font-size:13px;line-height:1.6;margin:0 0 16px">
+            Dacă nu ați solicitat acest cont, ignorați acest email. Dacă linkul nu funcționează, copiați URL-ul:<br>
+            <span style="color:#94a3b8;word-break:break-all;font-size:12px">${data.verificationLink}</span>
+          </p>
+          <p style="color:#64748b;font-size:13px;margin:0;border-top:1px solid #1e293b;padding-top:16px">
+            Cu stimă,<br>
+            <strong style="color:#94a3b8">Echipa VoSmart</strong> · office@vosmart.ro · 0756 362 828
+          </p>
+        </div>
+      </div>
+    `,
+  });
+}
+
+export async function notifyAdminForTrialRegistration(data: {
+  name: string;
+  email: string;
+  companyName: string;
+  phone?: string | null;
+  address?: string | null;
+}) {
+  if (!canSendEmail()) {
+    console.log("Trial inregistrat:", data.email, data.companyName);
+    return;
+  }
+
+  const to = process.env.ADMIN_NOTIFICATION_EMAIL || "office@vosmart.ro";
+  const from = process.env.EMAIL_FROM || process.env.SMTP_USER!;
+
+  await createTransporter().sendMail({
+    from,
+    to,
+    subject: `VoSmart Trial — înregistrare nouă: ${data.companyName}`,
+    html: `
+      <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px;background:#0a0e1f;color:#e2e8f0">
+        <div style="background:linear-gradient(135deg,#92400e22,#d9770622);border:1px solid #d9770644;border-radius:16px;padding:24px;margin-bottom:24px">
+          <h2 style="color:#fbbf24;margin:0 0 4px">Trial Gratuit — Cont nou neconfirmat</h2>
+          <p style="color:#94a3b8;margin:0;font-size:13px">Utilizatorul trebuie să confirme emailul pentru activare</p>
+        </div>
+        <table style="width:100%;border-collapse:collapse">
+          <tr><td style="padding:10px 0;border-bottom:1px solid #1e293b;color:#64748b;width:140px">Firmă</td><td style="padding:10px 0;border-bottom:1px solid #1e293b;font-weight:600;color:#f1f5f9">${data.companyName}</td></tr>
+          <tr><td style="padding:10px 0;border-bottom:1px solid #1e293b;color:#64748b">Nume</td><td style="padding:10px 0;border-bottom:1px solid #1e293b;color:#f1f5f9">${data.name}</td></tr>
+          <tr><td style="padding:10px 0;border-bottom:1px solid #1e293b;color:#64748b">Email</td><td style="padding:10px 0;border-bottom:1px solid #1e293b"><a href="mailto:${data.email}" style="color:#fbbf24">${data.email}</a></td></tr>
+          <tr><td style="padding:10px 0;border-bottom:1px solid #1e293b;color:#64748b">Pachet</td><td style="padding:10px 0;border-bottom:1px solid #1e293b;color:#fbbf24;font-weight:600">Trial Gratuit</td></tr>
+          ${data.phone ? `<tr><td style="padding:10px 0;border-bottom:1px solid #1e293b;color:#64748b">Telefon</td><td style="padding:10px 0;border-bottom:1px solid #1e293b;color:#f1f5f9">${data.phone}</td></tr>` : ""}
+          ${data.address ? `<tr><td style="padding:10px 0;color:#64748b">Adresă</td><td style="padding:10px 0;color:#f1f5f9">${data.address}</td></tr>` : ""}
+        </table>
+      </div>
+    `,
+  });
+}
+
 export async function notifyApplicantCorporateActivated(data: { name: string; email: string; packageName: string; companyName: string }) {
   if (!canSendEmail()) return;
 

@@ -19,6 +19,9 @@ export async function POST(req: NextRequest) {
     if (user.role === "client" && user.status !== "active") {
       return NextResponse.json({ error: "Contul tau asteapta aprobarea administratorului VoSmart." }, { status: 403 });
     }
+    if (user.role === "corporate" && user.status !== "active") {
+      return NextResponse.json({ error: "Contul nu a fost activat. Verificați emailul pentru linkul de activare." }, { status: 403 });
+    }
 
     const token = crypto.randomBytes(32).toString("hex");
     const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 zile
