@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
   const session = await getSession();
   if (!session || session.role !== "admin") return NextResponse.json({ error: "Neautorizat" }, { status: 401 });
 
-  const { companyName, email, password, packageType } = await req.json();
+  const { companyName, email, password, packageType, phone } = await req.json();
   if (!companyName || !email || !password) return NextResponse.json({ error: "Date lipsă" }, { status: 400 });
 
   const existing = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
   });
 
   const corp = await prisma.corporateAccount.create({
-    data: { userId: newUser.id, companyName, package: packageType || "trial", status: "active", maxAssoc, activatedAt: new Date() },
+    data: { userId: newUser.id, companyName, package: packageType || "trial", status: "active", maxAssoc, activatedAt: new Date(), ...(phone ? { phone } : {}) },
   });
 
   await prisma.association.create({

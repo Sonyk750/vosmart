@@ -66,12 +66,43 @@ export default function AdminDashboard({ user }: { user: User }) {
   const [creatingCorp, setCreatingCorp] = useState(false);
   const [createCorpMsg, setCreateCorpMsg] = useState("");
 
+  // Colegi form
+  const [colegNume, setColegNume] = useState("");
+  const [colegFunctia, setColegFunctia] = useState("");
+  const [colegEmail, setColegEmail] = useState("");
+  const [colegTelefon, setColegTelefon] = useState("");
+  const [colegParola, setColegParola] = useState("");
+  const [creatingColeg, setCreatingColeg] = useState(false);
+  const [colegMsg, setColegMsg] = useState("");
+
+  // Navighează între tab-uri cu URL sync (fix buton Înapoi browser)
+  function goTo(newTab: "overview" | "clienti" | "documente" | "cenzori", sub?: string) {
+    setTab(newTab);
+    if (sub) setClientiSubTab(sub as any);
+    if (newTab === "overview") {
+      window.history.pushState({ tab: "overview" }, "", "/admin");
+    } else {
+      window.history.pushState({ tab: newTab }, "", `/admin?t=${newTab}`);
+    }
+  }
+
   useEffect(() => {
-    // Încărcăm tot de la start ca cardurile overview să aibă date complete
     fetchAssociations();
     fetchCorporates();
     fetchDocuments();
     fetchCenzori();
+
+    // Restore tab from URL on load
+    const params = new URLSearchParams(window.location.search);
+    const t = params.get("t") as typeof tab;
+    if (t && ["clienti", "documente", "cenzori"].includes(t)) setTab(t);
+
+    // Handle browser back/forward
+    const handlePop = (e: PopStateEvent) => {
+      setTab((e.state?.tab as typeof tab) || "overview");
+    };
+    window.addEventListener("popstate", handlePop);
+    return () => window.removeEventListener("popstate", handlePop);
   }, []);
 
   useEffect(() => {
@@ -277,7 +308,7 @@ export default function AdminDashboard({ user }: { user: User }) {
   const sectionTitle: Record<string, string> = {
     clienti: "Clienți",
     documente: "Documente",
-    cenzori: "Admini",
+    cenzori: "Colegi",
   };
 
   return (
@@ -313,7 +344,7 @@ export default function AdminDashboard({ user }: { user: User }) {
         <div className="mb-8">
           {tab !== "overview" ? (
             <div>
-              <button onClick={() => setTab("overview")}
+              <button onClick={() => goTo("overview")}
                 className="flex items-center gap-2 text-slate-400 hover:text-white text-sm mb-4 transition group">
                 <span className="text-lg group-hover:-translate-x-0.5 transition-transform">←</span>
                 <span>Înapoi la panou</span>
@@ -334,13 +365,12 @@ export default function AdminDashboard({ user }: { user: User }) {
             {/* Overview cards — click pentru navigare */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 mb-10">
               {[
-                { icon: "🏢", label: "Admini Corporate", value: corporates.length, sub: "conturi înregistrate", color: "violet", action: () => { setTab("clienti"); setClientiSubTab("corporates"); } },
-                { icon: "👥", label: "Asociații Clienți", value: totalClients, sub: "total asociații", color: "cyan", action: () => { setTab("clienti"); setClientiSubTab("associations"); } },
-                { icon: "📄", label: "De revizuit", value: pendingDocs.length, sub: "documente analizate", color: "amber", action: () => setTab("documente") },
-                { icon: "✅", label: "Rapoarte publicate", value: associations.reduce((a, c) => a + c.reports?.filter(r => r.status === "published").length, 0), sub: "rapoarte aprobate", color: "emerald", action: () => setTab("documente") },
-                { icon: "⚡", label: "Se analizează", value: allDocs.filter(d => d.status === "analyzing").length, sub: "în procesare AI", color: "blue", action: () => setTab("documente") },
-                { icon: "🔑", label: "Admini", value: cenzori.length, sub: "admini activi", color: "indigo", action: () => setTab("cenzori") },
-                { icon: "⏳", label: "În așteptare", value: associations.filter(a => a.user.status === "pending").length, sub: "necesită aprobare", color: "rose", action: () => { setTab("clienti"); setClientiSubTab("associations"); } },
+                { icon: "🏢", label: "Clienți Corporate", value: corporates.length, sub: "conturi înregistrate", color: "violet", action: () => goTo("clienti", "corporates") },
+                { icon: "📄", label: "De revizuit", value: pendingDocs.length, sub: "documente analizate", color: "amber", action: () => goTo("documente") },
+                { icon: "✅", label: "Rapoarte publicate", value: associations.reduce((a, c) => a + c.reports?.filter(r => r.status === "published").length, 0), sub: "rapoarte aprobate", color: "emerald", action: () => goTo("documente") },
+                { icon: "⚡", label: "Se analizează", value: allDocs.filter(d => d.status === "analyzing").length, sub: "în procesare AI", color: "blue", action: () => goTo("documente") },
+                { icon: "👫", label: "Colegi", value: cenzori.length, sub: "conturi colegi", color: "indigo", action: () => goTo("cenzori") },
+                { icon: "⏳", label: "În așteptare", value: associations.filter(a => a.user.status === "pending").length, sub: "necesită aprobare", color: "rose", action: () => goTo("clienti", "associations") },
               ].map(card => {
                 const colorMap: Record<string, { border: string; bg: string; badge: string; text: string; glow: string; ring: string }> = {
                   violet:  { border: "border-violet-500/20",  bg: "from-violet-500/10 to-violet-500/[0.03]",   badge: "bg-violet-500/15 text-violet-300",   text: "text-violet-200",   glow: "shadow-[0_0_30px_rgba(139,92,246,0.08)]",   ring: "hover:border-violet-500/50 hover:shadow-[0_0_40px_rgba(139,92,246,0.18)]" },
@@ -410,7 +440,7 @@ export default function AdminDashboard({ user }: { user: User }) {
                             {d.aiScore.toFixed(0)}%
                           </span>
                         )}
-                        <button onClick={() => { setSelectedDoc(d); setTab("documente"); setMsg(""); setDraftText(""); }}
+                        <button onClick={() => { setSelectedDoc(d); goTo("documente"); setMsg(""); setDraftText(""); }}
                           className="rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold transition hover:bg-violet-500">
                           Revizuiește
                         </button>
@@ -559,7 +589,7 @@ export default function AdminDashboard({ user }: { user: User }) {
             {/* Sub-tab switcher stilizat */}
             <div className="flex gap-2 mb-6 p-1 rounded-xl bg-white/[0.04] border border-white/8 w-fit flex-wrap">
               {[
-                { key: "corporates" as const, label: "🏢 Admini Corporate", count: corporates.length },
+                { key: "corporates" as const, label: "🏢 Clienți Corporate", count: corporates.length },
                 { key: "associations" as const, label: "👥 Asociații", count: associations.length },
                 { key: "adauga-corporate" as const, label: "➕ Adaugă Corporate", count: null },
               ].map(t => (
@@ -783,66 +813,88 @@ export default function AdminDashboard({ user }: { user: User }) {
 
         {/* ADMINI - doar admin */}
         {tab === "cenzori" && user.role === "admin" && (
-          <div className="grid gap-6 lg:grid-cols-2">
-            {/* Lista admini */}
+          <div className="grid gap-8 lg:grid-cols-2">
+            {/* Formular creare coleg */}
             <div>
-              <h2 className="text-lg font-semibold mb-4">Admini activi</h2>
-              <div className="space-y-4">
-                {cenzori.map(c => (
-                  <div key={c.id} className="rounded-2xl border border-white/8 bg-white/[0.03] p-5">
-                    <div className="flex items-center justify-between mb-3">
-                      <div>
-                        <p className="font-semibold">{c.name}</p>
-                        <p className="text-sm text-slate-400">{c.email}</p>
-                      </div>
-                      <span className="rounded-full bg-cyan-500/15 px-3 py-1 text-xs text-cyan-300">Admin</span>
-                    </div>
-                    <div>
-                      <p className="text-xs text-slate-500 mb-2">Asociații alocate:</p>
-                      <div className="flex flex-wrap gap-2">
-                        {c.allocatedClients.map(al => (
-                          <span key={al.associationId} className="rounded-lg bg-white/[0.05] px-2 py-1 text-xs text-slate-300">
-                            {al.association.name}
-                          </span>
-                        ))}
-                        {c.allocatedClients.length === 0 && <span className="text-xs text-slate-500">Nicio asociație alocată</span>}
-                      </div>
-                    </div>
-                    {/* Alocare */}
-                    <div className="mt-3 pt-3 border-t border-white/5">
-                      <p className="text-xs text-slate-500 mb-2">Alocă asociație:</p>
-                      <select onChange={e => e.target.value && allocateCenzor(c.id, e.target.value)}
-                        className="w-full rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-white outline-none focus:border-violet-500">
-                        <option value="">Selectează asociație...</option>
-                        {associations
-                          .filter(a => !c.allocatedClients.find(al => al.associationId === a.id))
-                          .map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
-                      </select>
-                    </div>
-                  </div>
-                ))}
+              <h2 className="text-lg font-semibold mb-4">Adaugă coleg nou</h2>
+              <div className="rounded-2xl border border-indigo-500/20 bg-gradient-to-br from-indigo-500/8 to-indigo-500/[0.02] p-6">
+                <form onSubmit={async e => {
+                  e.preventDefault();
+                  setCreatingColeg(true);
+                  setColegMsg("");
+                  const res = await fetch("/api/admin/create-corporate", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      companyName: colegNume + (colegFunctia ? ` — ${colegFunctia}` : ""),
+                      email: colegEmail,
+                      password: colegParola,
+                      packageType: "trial",
+                      phone: colegTelefon,
+                    }),
+                  });
+                  const data = await res.json();
+                  if (res.ok) {
+                    setColegMsg("✓ Cont creat! Colegul se poate loga la /corporate/login");
+                    setColegNume(""); setColegFunctia(""); setColegEmail(""); setColegTelefon(""); setColegParola("");
+                    fetchCorporates();
+                  } else {
+                    setColegMsg("✗ " + (data.error || "Eroare la creare"));
+                  }
+                  setCreatingColeg(false);
+                }} className="space-y-3">
+                  <input type="text" required value={colegNume} onChange={e => setColegNume(e.target.value)}
+                    placeholder="Nume și prenume"
+                    className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-indigo-500 transition" />
+                  <input type="text" value={colegFunctia} onChange={e => setColegFunctia(e.target.value)}
+                    placeholder="Funcția (ex: Contabil, Director)"
+                    className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-indigo-500 transition" />
+                  <input type="email" required value={colegEmail} onChange={e => setColegEmail(e.target.value)}
+                    placeholder="Adresa de email"
+                    className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-indigo-500 transition" />
+                  <input type="tel" value={colegTelefon} onChange={e => setColegTelefon(e.target.value)}
+                    placeholder="Telefon"
+                    className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-indigo-500 transition" />
+                  <input type="password" required minLength={8} value={colegParola} onChange={e => setColegParola(e.target.value)}
+                    placeholder="Parolă (minim 8 caractere)"
+                    className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-indigo-500 transition" />
+                  <button type="submit" disabled={creatingColeg}
+                    className="w-full rounded-xl bg-indigo-600 px-6 py-3 font-semibold transition hover:bg-indigo-500 disabled:opacity-50">
+                    {creatingColeg ? "Se creează..." : "Creează cont coleg"}
+                  </button>
+                  {colegMsg && (
+                    <p className={`text-sm text-center ${colegMsg.startsWith("✓") ? "text-emerald-400" : "text-rose-400"}`}>
+                      {colegMsg}
+                    </p>
+                  )}
+                </form>
+                <div className="mt-4 rounded-xl bg-indigo-500/10 border border-indigo-500/20 p-3 text-xs text-indigo-300">
+                  Colegii creați se pot loga la <strong>/corporate/login</strong> și au aceleași drepturi ca un cont Corporate.
+                </div>
               </div>
             </div>
 
-            {/* Creare admin nou */}
+            {/* Lista colegi existenți */}
             <div>
-              <h2 className="text-lg font-semibold mb-4">Adaugă admin nou</h2>
-              <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6">
-                <form onSubmit={createCenzor} className="space-y-4">
-                  <input type="text" required value={newCenzorName} onChange={e => setNewCenzorName(e.target.value)}
-                    placeholder="Nume complet"
-                    className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-violet-500 transition" />
-                  <input type="email" required value={newCenzorEmail} onChange={e => setNewCenzorEmail(e.target.value)}
-                    placeholder="Email"
-                    className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-violet-500 transition" />
-                  <input type="password" required minLength={8} value={newCenzorPass} onChange={e => setNewCenzorPass(e.target.value)}
-                    placeholder="Parolă (minim 8 caractere)"
-                    className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-violet-500 transition" />
-                  <button type="submit" disabled={creatingCenzor}
-                    className="w-full rounded-xl bg-violet-600 px-6 py-3 font-semibold transition hover:bg-violet-500 disabled:opacity-50">
-                    {creatingCenzor ? "Se creează..." : "Creează cont admin"}
-                  </button>
-                </form>
+              <h2 className="text-lg font-semibold mb-4">Colegi activi <span className="text-sm text-slate-500 font-normal ml-1">({cenzori.length})</span></h2>
+              <div className="space-y-3">
+                {cenzori.length === 0 && (
+                  <div className="rounded-2xl border border-white/8 bg-white/[0.02] p-6 text-center text-slate-500 text-sm">
+                    Niciun coleg adăugat încă
+                  </div>
+                )}
+                {cenzori.map(c => (
+                  <div key={c.id} className="rounded-2xl border border-white/8 bg-white/[0.03] p-4 flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-full bg-indigo-600/30 border border-indigo-500/30 flex items-center justify-center text-indigo-300 font-bold text-sm flex-shrink-0">
+                      {c.name?.charAt(0)?.toUpperCase() || "?"}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm truncate">{c.name}</p>
+                      <p className="text-xs text-slate-400 truncate">{c.email}</p>
+                    </div>
+                    <span className="rounded-full bg-indigo-500/15 px-2.5 py-1 text-xs text-indigo-300 flex-shrink-0">Coleg</span>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
