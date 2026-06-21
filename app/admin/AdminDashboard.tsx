@@ -18,7 +18,9 @@ interface CorporateAdmin {
   corporateAccount: {
     id: string; companyName: string; package: string; status: string;
     subscriptionStatus: string | null; maxAssoc: number;
+    currentPeriodEnd: string | null;
     _count: { associations: number };
+    associations: Array<{ id: string; filesUploadedCount: number; _count: { documents: number } }>;
   } | null;
 }
 interface Document {
@@ -65,6 +67,9 @@ export default function AdminDashboard({ user }: { user: User }) {
   const [newCorpPackage, setNewCorpPackage] = useState("trial");
   const [creatingCorp, setCreatingCorp] = useState(false);
   const [createCorpMsg, setCreateCorpMsg] = useState("");
+
+  // Confirmare stergere
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   // Colegi form
   const [colegNume, setColegNume] = useState("");
@@ -586,226 +591,235 @@ export default function AdminDashboard({ user }: { user: User }) {
         {/* CLIENȚI */}
         {tab === "clienti" && (
           <div>
-            {/* Sub-tab switcher stilizat */}
-            <div className="flex gap-2 mb-6 p-1 rounded-xl bg-white/[0.04] border border-white/8 w-fit flex-wrap">
-              {[
-                { key: "corporates" as const, label: "🏢 Clienți Corporate", count: corporates.length },
-                { key: "associations" as const, label: "👥 Asociații", count: associations.length },
-                { key: "adauga-corporate" as const, label: "➕ Adaugă Corporate", count: null },
-              ].map(t => (
-                <button key={t.key} onClick={() => setClientiSubTab(t.key)}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2 ${
-                    clientiSubTab === t.key
-                      ? "bg-violet-600 text-white shadow-[0_2px_12px_rgba(124,58,237,0.4)]"
-                      : "text-slate-400 hover:text-white"
-                  }`}>
-                  {t.label}
-                  {t.count !== null && (
-                    <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${clientiSubTab === t.key ? "bg-white/20" : "bg-white/[0.08]"}`}>
-                      {t.count}
-                    </span>
-                  )}
-                </button>
-              ))}
+            {/* Header + buton adaugă */}
+            <div className="flex items-center justify-between mb-6 gap-4 flex-wrap">
+              <div>
+                <p className="text-slate-400 text-sm mt-1">
+                  {corporates.length} {corporates.length === 1 ? "client înregistrat" : "clienți înregistrați"}
+                </p>
+              </div>
+              <button
+                onClick={() => setClientiSubTab(prev => prev === "adauga-corporate" ? "corporates" : "adauga-corporate")}
+                className={`flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold transition ${
+                  clientiSubTab === "adauga-corporate"
+                    ? "bg-white/10 text-white border border-white/20"
+                    : "bg-violet-600 text-white hover:bg-violet-500 shadow-[0_0_20px_rgba(124,58,237,0.35)]"
+                }`}>
+                {clientiSubTab === "adauga-corporate" ? "✕ Închide" : "➕ Adaugă client"}
+              </button>
             </div>
 
-            {/* Sub-tab: Admini Corporate */}
-            {clientiSubTab === "corporates" && (
-              <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
-                {corporates.length === 0 && (
-                  <div className="col-span-full rounded-2xl border border-white/8 bg-white/[0.03] p-8 text-center text-slate-400">
-                    Nu există admini corporate înregistrați.
-                  </div>
-                )}
-                {corporates.map(corp => {
-                  const initials = (corp.corporateAccount?.companyName || corp.name || "?").slice(0, 2).toUpperCase();
-                  return (
-                    <div key={corp.id} className="rounded-2xl border border-white/8 bg-gradient-to-br from-white/[0.04] to-white/[0.01] p-6 flex flex-col gap-4 hover:border-violet-500/30 transition">
-                      {/* Header cu avatar */}
-                      <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-500/30 to-cyan-500/30 flex items-center justify-center text-lg font-bold text-white border border-violet-500/20 flex-shrink-0">
-                          {initials}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-semibold text-white truncate">{corp.corporateAccount?.companyName || corp.name || "—"}</p>
-                          <p className="text-xs text-slate-400 truncate">{corp.email}</p>
-                        </div>
-                        {corp.corporateAccount && packageBadge(corp.corporateAccount.package)}
-                      </div>
-                      {/* Stats */}
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="rounded-xl bg-white/[0.03] border border-white/5 p-3 text-center">
-                          <div className="text-2xl font-bold text-white">{corp.corporateAccount?._count.associations ?? 0}</div>
-                          <div className="text-xs text-slate-500 mt-0.5">Clienți activi</div>
-                        </div>
-                        <div className="rounded-xl bg-white/[0.03] border border-white/5 p-3 text-center">
-                          <div className="text-2xl font-bold text-white">{corp.corporateAccount?.maxAssoc === 9999 ? "∞" : corp.corporateAccount?.maxAssoc ?? 0}</div>
-                          <div className="text-xs text-slate-500 mt-0.5">Locuri max</div>
-                        </div>
-                      </div>
-                      {/* Status */}
-                      <div className="flex gap-2 flex-wrap">
-                        <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium border ${
-                          corp.status === "active" ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/20"
-                          : corp.status === "rejected" ? "bg-red-500/15 text-red-300 border-red-500/20"
-                          : "bg-yellow-500/15 text-yellow-300 border-yellow-500/20"
-                        }`}>
-                          {corp.status === "active" ? "✓ Activ" : corp.status === "rejected" ? "⛔ Suspendat" : "⏳ Pending"}
-                        </span>
-                        {corp.corporateAccount && corp.corporateAccount.status !== "active" && (
-                          <span className="rounded-full px-2.5 py-0.5 text-xs font-medium bg-yellow-500/10 text-yellow-400 border border-yellow-500/20">
-                            Cont: {corp.corporateAccount.status}
-                          </span>
-                        )}
-                        <span className="text-xs text-slate-600 ml-auto">
-                          {new Date(corp.createdAt).toLocaleDateString("ro-RO")}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-
-            {/* Sub-tab: Asociații */}
-            {clientiSubTab === "associations" && (
-              <div className="space-y-4">
-                {associations.length === 0 && (
-                  <div className="rounded-2xl border border-white/8 bg-white/[0.03] p-8 text-center text-slate-400">
-                    Nu există asociații înregistrate.
-                  </div>
-                )}
-                {associations.map(a => {
-                  const initials = a.name.slice(0, 2).toUpperCase();
-                  const docPercent = a.maxDocuments > 0 ? Math.round((a.filesUploadedCount / a.maxDocuments) * 100) : 0;
-                  const isAtLimit = a.filesUploadedCount >= a.maxDocuments;
-                  return (
-                    <div key={a.id} className="rounded-2xl border border-white/8 bg-gradient-to-br from-white/[0.04] to-white/[0.01] p-5 hover:border-violet-500/20 transition">
-                      {/* Header */}
-                      <div className="flex items-start gap-4 mb-4">
-                        <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-cyan-500/20 to-violet-500/20 flex items-center justify-center text-sm font-bold text-white border border-white/10 flex-shrink-0">
-                          {initials}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <a href={`/admin/client/${a.id}`} className="font-semibold text-white hover:text-violet-300 transition">{a.name}</a>
-                            {packageBadge(a.corporate?.package || a.package)}
-                            <span className={`rounded-full px-2 py-0.5 text-xs font-medium border ${
-                              a.user.status === "active" ? "bg-emerald-500/10 text-emerald-300 border-emerald-500/20"
-                              : a.user.status === "rejected" ? "bg-red-500/10 text-red-300 border-red-500/20"
-                              : "bg-yellow-500/10 text-yellow-300 border-yellow-500/20"
-                            }`}>
-                              {a.user.status === "active" ? "✓ Activ" : a.user.status === "rejected" ? "⛔ Suspendat" : "⏳ Pending"}
-                            </span>
-                          </div>
-                          <p className="text-xs text-slate-500 mt-1">
-                            {a.corporate ? `🏢 ${a.corporate.companyName}` : `📧 ${a.user.email}`}
-                          </p>
-                        </div>
-                        <div className="text-xs text-slate-500 text-right flex-shrink-0">
-                          <div>{a._count?.reports || 0} rap.</div>
-                        </div>
-                      </div>
-
-                      {/* Bara de progres documente */}
-                      <div className="mb-4">
-                        <div className="flex items-center justify-between mb-1.5">
-                          <span className="text-xs text-slate-500">Documente încărcate</span>
-                          <span className={`text-xs font-semibold ${isAtLimit ? "text-red-400" : "text-slate-300"}`}>
-                            {a.filesUploadedCount}/{a.maxDocuments}
-                          </span>
-                        </div>
-                        <div className="h-1.5 w-full rounded-full bg-white/10 overflow-hidden">
-                          <div className={`h-full rounded-full transition-all ${isAtLimit ? "bg-red-500" : docPercent > 70 ? "bg-amber-500" : "bg-emerald-500"}`}
-                            style={{ width: `${Math.min(100, docPercent)}%` }} />
-                        </div>
-                      </div>
-
-                      {/* Butoane acțiune */}
-                      <div className="flex flex-wrap gap-2">
-                        <button onClick={() => clientAction(a.id, "reset_docs")} disabled={actionWorking === a.id + "reset_docs"}
-                          className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.05] px-3 py-2 text-xs font-medium text-slate-300 transition hover:bg-white/[0.10] hover:border-white/20 disabled:opacity-40">
-                          🔄 <span>Reset</span>
-                        </button>
-
-                        {a.user.status !== "rejected" ? (
-                          <button onClick={() => clientAction(a.id, "suspend")} disabled={actionWorking === a.id + "suspend"}
-                            className="flex items-center gap-1.5 rounded-xl border border-amber-500/20 bg-amber-500/[0.08] px-3 py-2 text-xs font-medium text-amber-300 transition hover:bg-amber-500/15 disabled:opacity-40">
-                            ⏸ <span>Suspendă</span>
-                          </button>
-                        ) : (
-                          <button onClick={() => clientAction(a.id, "activate")} disabled={actionWorking === a.id + "activate"}
-                            className="flex items-center gap-1.5 rounded-xl border border-emerald-500/20 bg-emerald-500/[0.08] px-3 py-2 text-xs font-medium text-emerald-300 transition hover:bg-emerald-500/15 disabled:opacity-40">
-                            ▶ <span>Activează</span>
-                          </button>
-                        )}
-
-                        <div className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.05] px-3 py-2 text-xs">
-                          <span className="text-slate-400">📁</span>
-                          <select onChange={e => e.target.value && clientAction(a.id, "set_max_docs", { maxDocuments: Number(e.target.value) })}
-                            defaultValue="" className="bg-transparent text-white outline-none cursor-pointer text-xs">
-                            <option value="" disabled>Dosare max</option>
-                            <option value="5">1 dosar (5 doc)</option>
-                            <option value="10">2 dosare (10 doc)</option>
-                            <option value="15">3 dosare (15 doc)</option>
-                            <option value="30">6 dosare (30 doc)</option>
-                          </select>
-                        </div>
-
-                        <button onClick={() => { if (confirm(`Ștergi asociația "${a.name}"? Această acțiune este ireversibilă.`)) clientAction(a.id, "delete"); }}
-                          disabled={actionWorking === a.id + "delete"}
-                          className="flex items-center gap-1.5 rounded-xl border border-red-500/20 bg-red-500/[0.08] px-3 py-2 text-xs font-medium text-red-400 transition hover:bg-red-500/15 disabled:opacity-40 ml-auto">
-                          🗑 <span>Șterge</span>
-                        </button>
-                      </div>
-
-                      {actionMsg[a.id] && (
-                        <p className={`text-xs mt-3 font-medium ${actionMsg[a.id].startsWith("✓") ? "text-emerald-400" : "text-red-400"}`}>
-                          {actionMsg[a.id]}
-                        </p>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-            {/* Sub-tab: Adaugă Corporate */}
+            {/* Formular adaugă — expandabil */}
             {clientiSubTab === "adauga-corporate" && (
-              <div className="max-w-xl">
-                <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-8">
-                  <h2 className="text-xl font-semibold mb-1">Adaugă cont corporate</h2>
-                  <p className="text-sm text-slate-400 mb-6">Creează un cont corporate direct din panoul de admin. Contul va fi activ imediat.</p>
+              <div className="mb-6 rounded-2xl border border-violet-500/20 bg-gradient-to-br from-violet-500/8 to-violet-500/[0.02] p-6">
+                <h2 className="text-base font-semibold mb-4">Cont corporate nou</h2>
+                {createCorpMsg && (
+                  <div className={`mb-4 rounded-xl border px-4 py-3 text-sm ${createCorpMsg.startsWith("✓") ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300" : "border-red-500/30 bg-red-500/10 text-red-300"}`}>
+                    {createCorpMsg}
+                  </div>
+                )}
+                <form onSubmit={createCorporate} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                  <input type="text" required value={newCorpName} onChange={e => setNewCorpName(e.target.value)}
+                    placeholder="Numele firmei *"
+                    className="rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-violet-500 transition text-sm" />
+                  <input type="email" required value={newCorpEmail} onChange={e => setNewCorpEmail(e.target.value)}
+                    placeholder="Email *"
+                    className="rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-violet-500 transition text-sm" />
+                  <input type="password" required minLength={8} value={newCorpPass} onChange={e => setNewCorpPass(e.target.value)}
+                    placeholder="Parolă *"
+                    className="rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-violet-500 transition text-sm" />
+                  <select value={newCorpPackage} onChange={e => setNewCorpPackage(e.target.value)}
+                    className="rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white outline-none focus:border-violet-500 transition text-sm">
+                    <option value="trial">Trial (gratuit)</option>
+                    <option value="starter">Starter — 250 lei</option>
+                    <option value="business">Business — 500 lei</option>
+                    <option value="professional">Professional — 900 lei</option>
+                    <option value="enterprise">Enterprise — 1500 lei</option>
+                  </select>
+                  <button type="submit" disabled={creatingCorp}
+                    className="sm:col-span-2 lg:col-span-4 rounded-xl bg-violet-600 px-6 py-3 font-semibold transition hover:bg-violet-500 disabled:opacity-50 text-sm">
+                    {creatingCorp ? "Se creează..." : "Creează cont →"}
+                  </button>
+                </form>
+              </div>
+            )}
 
-                  {createCorpMsg && (
-                    <div className={`mb-4 rounded-xl border px-4 py-3 text-sm ${createCorpMsg.startsWith("✓") ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300" : "border-red-500/30 bg-red-500/10 text-red-300"}`}>
-                      {createCorpMsg}
-                    </div>
-                  )}
-
-                  <form onSubmit={createCorporate} className="space-y-4">
-                    <input type="text" required value={newCorpName} onChange={e => setNewCorpName(e.target.value)}
-                      placeholder="Numele firmei *"
-                      className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-violet-500 transition" />
-                    <input type="email" required value={newCorpEmail} onChange={e => setNewCorpEmail(e.target.value)}
-                      placeholder="Email *"
-                      className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-violet-500 transition" />
-                    <input type="password" required minLength={8} value={newCorpPass} onChange={e => setNewCorpPass(e.target.value)}
-                      placeholder="Parolă (minim 8 caractere) *"
-                      className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-violet-500 transition" />
-                    <select value={newCorpPackage} onChange={e => setNewCorpPackage(e.target.value)}
-                      className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white outline-none focus:border-violet-500 transition">
-                      <option value="trial">Trial (gratuit, 1 dosar)</option>
-                      <option value="starter">Starter (10 asociații, 250 lei/lună)</option>
-                      <option value="business">Business (25 asociații, 500 lei/lună)</option>
-                      <option value="professional">Professional (50 asociații, 900 lei/lună)</option>
-                      <option value="enterprise">Enterprise (nelimitat, 1500 lei/lună)</option>
-                    </select>
-                    <button type="submit" disabled={creatingCorp}
-                      className="w-full rounded-xl bg-violet-600 px-6 py-3.5 font-semibold transition hover:bg-violet-500 disabled:opacity-50">
-                      {creatingCorp ? "Se creează..." : "Creează cont corporate →"}
-                    </button>
-                  </form>
+            {/* Lista clienți */}
+            {corporates.length === 0 ? (
+              <div className="rounded-2xl border border-white/8 bg-white/[0.02] p-16 text-center">
+                <div className="text-5xl mb-4">🏢</div>
+                <p className="text-slate-400 font-medium">Niciun client corporate înregistrat</p>
+                <p className="text-slate-600 text-sm mt-1">Apasă „Adaugă client" pentru a crea primul cont</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {/* Header tabel */}
+                <div className="hidden lg:grid grid-cols-[1fr_140px_130px_110px_auto] gap-4 px-5 text-xs font-semibold uppercase tracking-widest text-slate-500">
+                  <span>Client</span>
+                  <span>Pachet</span>
+                  <span>Zile rămase</span>
+                  <span>Dosare AI</span>
+                  <span className="text-right">Acțiuni</span>
                 </div>
+
+                {corporates.map(corp => {
+                  const ca = corp.corporateAccount;
+                  const assoc = ca?.associations?.[0];
+                  const assocId = assoc?.id ?? null;
+                  const docsCount = assoc?._count?.documents ?? 0;
+                  const initials = (ca?.companyName || corp.name || "?").slice(0, 2).toUpperCase();
+                  const isSuspended = corp.status === "rejected";
+                  const isPending = corp.status === "pending";
+                  const isActive = corp.status === "active";
+
+                  // Zile rămase
+                  let daysLeft: number | null = null;
+                  if (ca?.currentPeriodEnd) {
+                    daysLeft = Math.ceil((new Date(ca.currentPeriodEnd).getTime() - Date.now()) / 86400000);
+                  }
+                  const daysColor = daysLeft === null ? "" : daysLeft <= 0 ? "text-red-400" : daysLeft <= 7 ? "text-amber-400" : "text-emerald-400";
+                  const daysLabel = ca?.package === "trial" ? "Trial ∞" : daysLeft === null ? "—" : daysLeft <= 0 ? "Expirat" : `${daysLeft} zile`;
+
+                  const isDeleting = confirmDeleteId === corp.id;
+
+                  return (
+                    <div key={corp.id}
+                      className={`relative rounded-2xl border transition-all duration-200 overflow-hidden ${
+                        isDeleting ? "border-red-500/40 bg-red-500/5" :
+                        isSuspended ? "border-red-500/15 bg-red-500/[0.02]" :
+                        isPending ? "border-amber-500/15 bg-amber-500/[0.02]" :
+                        "border-white/8 bg-white/[0.025] hover:border-violet-500/25 hover:bg-white/[0.04]"
+                      }`}>
+                      {/* Bara colorata stanga */}
+                      <div className={`absolute left-0 top-0 bottom-0 w-1 rounded-l-2xl ${
+                        isSuspended ? "bg-red-500/60" : isPending ? "bg-amber-500/60" : "bg-violet-500/40"
+                      }`} />
+
+                      <div className="pl-4 pr-5 py-4">
+                        {/* Layout tabel pe desktop */}
+                        <div className="lg:grid lg:grid-cols-[1fr_140px_130px_110px_auto] lg:items-center gap-4">
+
+                          {/* Col 1: Client info */}
+                          <div className="flex items-center gap-3 mb-3 lg:mb-0">
+                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm font-bold flex-shrink-0 ${
+                              isSuspended ? "bg-red-500/20 text-red-300 border border-red-500/20" :
+                              "bg-gradient-to-br from-violet-500/30 to-cyan-500/20 text-white border border-violet-500/20"
+                            }`}>
+                              {initials}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="font-semibold text-sm text-white">{ca?.companyName || corp.name || "—"}</span>
+                                {isSuspended && <span className="rounded-full bg-red-500/15 text-red-400 border border-red-500/20 px-2 py-0.5 text-xs">⛔ Suspendat</span>}
+                                {isPending && <span className="rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/20 px-2 py-0.5 text-xs">⏳ Pending</span>}
+                              </div>
+                              <p className="text-xs text-slate-500 truncate mt-0.5">{corp.email}</p>
+                            </div>
+                          </div>
+
+                          {/* Col 2: Pachet */}
+                          <div className="flex lg:block items-center gap-2 mb-2 lg:mb-0">
+                            <span className="text-xs text-slate-600 lg:hidden">Pachet: </span>
+                            <div>{ca ? packageBadge(ca.package) : <span className="text-slate-600 text-xs">—</span>}</div>
+                          </div>
+
+                          {/* Col 3: Zile rămase */}
+                          <div className="flex lg:block items-center gap-2 mb-2 lg:mb-0">
+                            <span className="text-xs text-slate-600 lg:hidden">Abonament: </span>
+                            <div>
+                              {ca?.package === "trial" ? (
+                                <span className="text-xs text-slate-400">Trial permanent</span>
+                              ) : daysLeft !== null ? (
+                                <div>
+                                  <span className={`text-sm font-semibold ${daysColor}`}>{daysLabel}</span>
+                                  {daysLeft > 0 && daysLeft <= 30 && (
+                                    <div className="mt-1 h-1 w-24 rounded-full bg-white/10 overflow-hidden">
+                                      <div className={`h-full rounded-full ${daysLeft <= 7 ? "bg-red-500" : daysLeft <= 14 ? "bg-amber-500" : "bg-emerald-500"}`}
+                                        style={{ width: `${Math.min(100, (daysLeft / 30) * 100)}%` }} />
+                                    </div>
+                                  )}
+                                </div>
+                              ) : (
+                                <span className="text-xs text-slate-500">—</span>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Col 4: Dosare AI */}
+                          <div className="flex lg:block items-center gap-2 mb-3 lg:mb-0">
+                            <span className="text-xs text-slate-600 lg:hidden">Dosare AI: </span>
+                            <div className="flex items-baseline gap-1">
+                              <span className="text-xl font-bold text-white">{docsCount}</span>
+                              <span className="text-xs text-slate-500">doc</span>
+                            </div>
+                          </div>
+
+                          {/* Col 5: Acțiuni */}
+                          <div className="flex items-center gap-1.5 justify-end flex-wrap">
+                            {/* Email */}
+                            <a href={`mailto:${corp.email}`}
+                              className="flex items-center gap-1 rounded-lg border border-white/10 bg-white/[0.05] px-2.5 py-1.5 text-xs text-slate-300 transition hover:bg-white/[0.10] hover:text-white"
+                              title="Trimite email">
+                              ✉ Email
+                            </a>
+
+                            {/* Reset contor (doar trial) */}
+                            {ca?.package === "trial" && assocId && (
+                              <button onClick={() => clientAction(assocId, "reset_docs")}
+                                disabled={actionWorking === assocId + "reset_docs"}
+                                className="flex items-center gap-1 rounded-lg border border-white/10 bg-white/[0.05] px-2.5 py-1.5 text-xs text-slate-300 transition hover:bg-white/[0.10] hover:text-white disabled:opacity-40"
+                                title="Resetează contor documente">
+                                🔄 Reset
+                              </button>
+                            )}
+
+                            {/* Suspendă / Activează */}
+                            {assocId && (isSuspended ? (
+                              <button onClick={() => clientAction(assocId, "activate")}
+                                disabled={actionWorking === assocId + "activate"}
+                                className="flex items-center gap-1 rounded-lg border border-emerald-500/25 bg-emerald-500/[0.08] px-2.5 py-1.5 text-xs text-emerald-300 transition hover:bg-emerald-500/15 disabled:opacity-40">
+                                ▶ Activează
+                              </button>
+                            ) : (
+                              <button onClick={() => clientAction(assocId, "suspend")}
+                                disabled={actionWorking === assocId + "suspend"}
+                                className="flex items-center gap-1 rounded-lg border border-amber-500/25 bg-amber-500/[0.08] px-2.5 py-1.5 text-xs text-amber-300 transition hover:bg-amber-500/15 disabled:opacity-40">
+                                ⏸ Suspendă
+                              </button>
+                            ))}
+
+                            {/* Șterge */}
+                            {!isDeleting ? (
+                              <button onClick={() => setConfirmDeleteId(corp.id)}
+                                className="flex items-center gap-1 rounded-lg border border-red-500/20 bg-red-500/[0.06] px-2.5 py-1.5 text-xs text-red-400 transition hover:bg-red-500/15">
+                                🗑 Șterge
+                              </button>
+                            ) : (
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-xs text-red-300">Confirmi ștergerea?</span>
+                                <button onClick={() => { if (assocId) clientAction(assocId, "delete"); setConfirmDeleteId(null); fetchCorporates(); }}
+                                  className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-500 transition">
+                                  Da, șterge
+                                </button>
+                                <button onClick={() => setConfirmDeleteId(null)}
+                                  className="rounded-lg border border-white/15 px-3 py-1.5 text-xs text-slate-300 hover:bg-white/[0.08] transition">
+                                  Anulează
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Mesaj acțiune */}
+                        {assocId && actionMsg[assocId] && (
+                          <p className={`text-xs mt-2 pl-12 ${actionMsg[assocId].startsWith("✓") ? "text-emerald-400" : "text-red-400"}`}>
+                            {actionMsg[assocId]}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>

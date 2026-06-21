@@ -14,8 +14,16 @@ export async function GET() {
       corporateAccount: {
         select: {
           id: true, companyName: true, package: true, status: true,
-          subscriptionStatus: true, maxAssoc: true,
+          subscriptionStatus: true, maxAssoc: true, currentPeriodEnd: true,
           _count: { select: { associations: true } },
+          associations: {
+            select: {
+              id: true,
+              filesUploadedCount: true,
+              _count: { select: { documents: true } },
+            },
+            take: 1,
+          },
         },
       },
     },
