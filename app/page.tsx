@@ -3,6 +3,64 @@ import { useState } from "react";
 import Image from "next/image";
 import SplashScreen from "./components/SplashScreen";
 
+function ContactForm() {
+  const [form, setForm] = useState({ nume: "", email: "", telefon: "", mesaj: "" })
+  const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle")
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setStatus("loading")
+    const res = await fetch("/api/contact", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(form),
+    })
+    setStatus(res.ok ? "success" : "error")
+  }
+
+  if (status === "success") {
+    return (
+      <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-8 flex flex-col items-center justify-center text-center min-h-[300px]">
+        <div className="text-5xl mb-4">✅</div>
+        <h3 className="text-2xl font-semibold mb-2">Mesaj trimis!</h3>
+        <p className="text-slate-400">Te contactăm în cel mai scurt timp la <span className="text-white">{form.email}</span>.</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-8">
+      <h3 className="mb-6 text-2xl font-semibold">Trimite-ne un mesaj</h3>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <input
+          type="text" placeholder="Nume" required
+          value={form.nume} onChange={e => setForm(f => ({ ...f, nume: e.target.value }))}
+          className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-violet-500 transition" />
+        <input
+          type="email" placeholder="Email" required
+          value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
+          className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-violet-500 transition" />
+        <input
+          type="text" placeholder="Telefon"
+          value={form.telefon} onChange={e => setForm(f => ({ ...f, telefon: e.target.value }))}
+          className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-violet-500 transition" />
+        <textarea
+          rows={5} placeholder="Mesaj" required
+          value={form.mesaj} onChange={e => setForm(f => ({ ...f, mesaj: e.target.value }))}
+          className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-violet-500 transition resize-none" />
+        {status === "error" && (
+          <p className="text-red-400 text-sm">Eroare la trimitere. Încearcă din nou sau scrie la office@vosmart.ro.</p>
+        )}
+        <button
+          type="submit" disabled={status === "loading"}
+          className="w-full rounded-xl bg-violet-600 px-6 py-3.5 font-semibold transition hover:bg-violet-500 shadow-[0_0_25px_rgba(124,58,237,0.35)] disabled:opacity-60">
+          {status === "loading" ? "Se trimite..." : "Trimite mesajul"}
+        </button>
+      </form>
+    </div>
+  )
+}
+
 const services = [
   {
     icon: "📄",
@@ -405,16 +463,7 @@ export default function Home() {
               </div>
             </div>
             <div className="grid gap-10 lg:grid-cols-2">
-              <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-8">
-                <h3 className="mb-6 text-2xl font-semibold">Trimite-ne un mesaj</h3>
-                <div className="space-y-4">
-                  <input type="text" placeholder="Nume" className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-violet-500 transition"/>
-                  <input type="email" placeholder="Email" className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-violet-500 transition"/>
-                  <input type="text" placeholder="Telefon" className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-violet-500 transition"/>
-                  <textarea rows={5} placeholder="Mesaj" className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-violet-500 transition resize-none"/>
-                  <button className="w-full rounded-xl bg-violet-600 px-6 py-3.5 font-semibold transition hover:bg-violet-500 shadow-[0_0_25px_rgba(124,58,237,0.35)]">Trimite mesajul</button>
-                </div>
-              </div>
+              <ContactForm />
               <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-8">
                 <h3 className="mb-6 text-2xl font-semibold">Locația noastră</h3>
                 <div className="overflow-hidden rounded-2xl border border-white/10">
