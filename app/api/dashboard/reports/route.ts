@@ -8,6 +8,7 @@ export async function GET() {
 
   const reports = await prisma.report.findMany({
     where: { associationId: user.association.id },
+    include: { association: { select: { name: true } } },
     orderBy: { createdAt: "desc" },
   });
   return NextResponse.json(reports);

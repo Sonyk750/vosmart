@@ -989,13 +989,17 @@ ${body}
                 {reports.map((report: any) => {
                   const content = report.aiDraft || report.content || "";
                   const isOpen = openReportId === report.id;
+                  const assocName = report.association?.name || corporate.associations?.[0]?.name || "";
+                  const displayTitle = assocName && !report.title.includes(assocName)
+                    ? `${report.title} — ${assocName}`
+                    : report.title;
                   return (
                     <div key={report.id} className="rounded-2xl border border-white/10 bg-white/[0.025] overflow-hidden">
                       {/* Header raport */}
                       <div className="flex items-center gap-3 px-5 py-4">
                         <div className="text-2xl">📋</div>
                         <div className="flex-1 min-w-0">
-                          <p className="font-semibold text-white">{report.title}</p>
+                          <p className="font-semibold text-white">{displayTitle}</p>
                           {report.month && report.year && (
                             <p className="text-xs text-slate-400 mt-0.5">{report.month} {report.year}</p>
                           )}
@@ -1017,7 +1021,7 @@ ${body}
                         </button>
                         {content && (
                           <button
-                            onClick={() => printReportAsPDF(report.title, content)}
+                            onClick={() => printReportAsPDF(displayTitle, content)}
                             className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-2.5 text-sm font-semibold text-emerald-300 hover:bg-emerald-500/20 transition">
                             📥 Descarcă PDF
                           </button>
