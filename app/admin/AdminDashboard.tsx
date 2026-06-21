@@ -238,6 +238,13 @@ export default function AdminDashboard({ user }: { user: User }) {
   const totalClients = associations.length;
   const pendingClients = associations.filter(a => a.user.status === "pending");
 
+  const tabs = [
+    { key: "overview", label: "📊 Prezentare generală" },
+    { key: "documente", label: `📋 Documente${pendingDocs.length > 0 ? ` (${pendingDocs.length})` : ""}` },
+    { key: "clienti", label: "👥 Clienți" },
+    ...(user.role === "admin" ? [{ key: "cenzori", label: "🔑 Cenzori" }] : []),
+  ];
+
   return (
     <main className="min-h-screen bg-[#050814] text-white">
       <div className="pointer-events-none fixed inset-0 -z-10">
@@ -268,21 +275,20 @@ export default function AdminDashboard({ user }: { user: User }) {
       </header>
 
       <div className="mx-auto max-w-7xl px-5 py-8 sm:px-6">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold">Panou intern VoSmart</h1>
-          <p className="text-slate-400 mt-1">Gestionare clienți, documente și rapoarte</p>
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold">Panou intern VoSmart</h1>
+          <p className="text-slate-400 mt-1.5">Gestionare clienți, documente și rapoarte</p>
         </div>
 
-        {/* Tabs */}
-        <div className="flex gap-2 mb-6 border-b border-white/5 pb-1 flex-wrap">
-          {[
-            { key: "overview", label: "📊 Prezentare generală" },
-            { key: "documente", label: `📋 Documente${pendingDocs.length > 0 ? ` (${pendingDocs.length})` : ""}` },
-            { key: "clienti", label: "👥 Clienți" },
-            ...(user.role === "admin" ? [{ key: "cenzori", label: "🔑 Cenzori" }] : []),
-          ].map(t => (
+        {/* Tabs principale */}
+        <div className="flex gap-2 mb-8 p-1 rounded-xl bg-white/[0.04] border border-white/8 w-fit flex-wrap">
+          {tabs.map(t => (
             <button key={t.key} onClick={() => setTab(t.key as any)}
-              className={`px-4 py-2.5 rounded-xl text-sm font-medium transition ${tab === t.key ? "bg-violet-600 text-white shadow-[0_0_20px_rgba(124,58,237,0.3)]" : "text-slate-400 hover:text-white hover:bg-white/[0.05]"}`}>
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2 ${
+                tab === t.key
+                  ? "bg-violet-600 text-white shadow-[0_2px_12px_rgba(124,58,237,0.4)]"
+                  : "text-slate-400 hover:text-white hover:bg-white/[0.05]"
+              }`}>
               {t.label}
             </button>
           ))}
@@ -291,36 +297,54 @@ export default function AdminDashboard({ user }: { user: User }) {
         {/* OVERVIEW */}
         {tab === "overview" && (
           <div>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
+            {/* Overview cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 mb-10">
               {[
-                ["🏢", "Admini Corporate", corporates.length.toString()],
-                ["👥", "Asociații (Clienți)", totalClients.toString()],
-                ["📄", "Doc. de revizuit", pendingDocs.length.toString()],
-                ["✅", "Rapoarte publicate", associations.reduce((a, c) => a + c.reports?.filter(r => r.status === "published").length, 0).toString()],
-                ["⚡", "Se analizează", allDocs.filter(d => d.status === "analyzing").length.toString()],
-                ["⏳", "Clienți în așteptare", associations.filter(a => a.user.status === "pending").length.toString()],
-              ].map(([icon, label, value]) => (
-                <div key={label} className="rounded-2xl border border-white/8 bg-white/[0.03] p-5">
-                  <div className="text-2xl mb-2">{icon}</div>
-                  <div className="text-3xl font-bold">{value}</div>
-                  <div className="text-xs text-slate-500 mt-1">{label}</div>
-                </div>
-              ))}
+                { icon: "🏢", label: "Admini Corporate", value: corporates.length, sub: "conturi înregistrate", color: "violet" },
+                { icon: "👥", label: "Asociații Clienți", value: totalClients, sub: "total asociații", color: "cyan" },
+                { icon: "📄", label: "De revizuit", value: pendingDocs.length, sub: "documente analizate", color: "amber" },
+                { icon: "✅", label: "Rapoarte publicate", value: associations.reduce((a, c) => a + c.reports?.filter(r => r.status === "published").length, 0), sub: "rapoarte aprobate", color: "emerald" },
+                { icon: "⚡", label: "Se analizează", value: allDocs.filter(d => d.status === "analyzing").length, sub: "în procesare AI", color: "blue" },
+                { icon: "⏳", label: "În așteptare", value: associations.filter(a => a.user.status === "pending").length, sub: "necesită aprobare", color: "rose" },
+              ].map(card => {
+                const colorMap: Record<string, { border: string; bg: string; badge: string; text: string; glow: string }> = {
+                  violet:  { border: "border-violet-500/20",  bg: "from-violet-500/10 to-violet-500/[0.03]",  badge: "bg-violet-500/15 text-violet-300",  text: "text-violet-200",  glow: "shadow-[0_0_30px_rgba(139,92,246,0.08)]" },
+                  cyan:    { border: "border-cyan-500/20",    bg: "from-cyan-500/10 to-cyan-500/[0.03]",      badge: "bg-cyan-500/15 text-cyan-300",      text: "text-cyan-200",    glow: "shadow-[0_0_30px_rgba(6,182,212,0.08)]" },
+                  amber:   { border: "border-amber-500/20",   bg: "from-amber-500/10 to-amber-500/[0.03]",   badge: "bg-amber-500/15 text-amber-300",   text: "text-amber-200",   glow: "shadow-[0_0_30px_rgba(245,158,11,0.08)]" },
+                  emerald: { border: "border-emerald-500/20", bg: "from-emerald-500/10 to-emerald-500/[0.03]",badge: "bg-emerald-500/15 text-emerald-300", text: "text-emerald-200", glow: "shadow-[0_0_30px_rgba(16,185,129,0.08)]" },
+                  blue:    { border: "border-blue-500/20",    bg: "from-blue-500/10 to-blue-500/[0.03]",      badge: "bg-blue-500/15 text-blue-300",      text: "text-blue-200",    glow: "shadow-[0_0_30px_rgba(59,130,246,0.08)]" },
+                  rose:    { border: "border-rose-500/20",    bg: "from-rose-500/10 to-rose-500/[0.03]",      badge: "bg-rose-500/15 text-rose-300",      text: "text-rose-200",    glow: "shadow-[0_0_30px_rgba(244,63,94,0.08)]" },
+                };
+                const c = colorMap[card.color];
+                return (
+                  <div key={card.label} className={`relative overflow-hidden rounded-2xl border ${c.border} bg-gradient-to-br ${c.bg} p-6 ${c.glow} transition hover:scale-[1.02]`}>
+                    <div className="flex items-start justify-between mb-5">
+                      <div className="text-3xl">{card.icon}</div>
+                      <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${c.badge}`}>{card.sub}</span>
+                    </div>
+                    <div className={`text-5xl font-bold mb-1 ${c.text}`}>{card.value}</div>
+                    <div className="text-sm text-slate-400 mt-1">{card.label}</div>
+                    <div className="pointer-events-none absolute -right-4 -bottom-4 text-9xl opacity-[0.04]">{card.icon}</div>
+                  </div>
+                );
+              })}
             </div>
 
             {pendingClients.length > 0 && (
-              <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-5 mb-6">
-                <p className="text-sm font-semibold text-emerald-300 mb-3">Clienti noi care asteapta aprobare ({pendingClients.length})</p>
-                <div className="space-y-2">
+              <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/[0.05] p-6 mb-6">
+                <p className="text-base font-semibold text-emerald-300 mb-4 flex items-center gap-2">
+                  <span className="text-xl">🟢</span> Clienți noi care așteaptă aprobare ({pendingClients.length})
+                </p>
+                <div className="space-y-3">
                   {pendingClients.slice(0, 5).map(a => (
-                    <div key={a.id} className="flex items-center justify-between gap-4 rounded-xl bg-black/20 p-3">
+                    <div key={a.id} className="flex items-center justify-between gap-4 rounded-xl bg-black/20 p-4">
                       <div>
-                        <p className="text-sm font-medium">{a.name}</p>
-                        <p className="text-xs text-slate-400">{a.user.email}</p>
+                        <p className="font-medium">{a.name}</p>
+                        <p className="text-xs text-slate-400 mt-0.5">{a.user.email}</p>
                       </div>
                       <button onClick={() => approveClient(a.id)}
-                        className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold transition hover:bg-emerald-500">
-                        Aproba client
+                        className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold transition hover:bg-emerald-500 flex-shrink-0">
+                        Aprobă client
                       </button>
                     </div>
                   ))}
@@ -329,23 +353,25 @@ export default function AdminDashboard({ user }: { user: User }) {
             )}
 
             {pendingDocs.length > 0 && (
-              <div className="rounded-2xl border border-yellow-500/20 bg-yellow-500/5 p-5 mb-6">
-                <p className="text-sm font-semibold text-yellow-300 mb-3">⚠️ Documente care așteaptă revizuire ({pendingDocs.length})</p>
-                <div className="space-y-2">
+              <div className="rounded-2xl border border-yellow-500/20 bg-yellow-500/[0.05] p-6 mb-6">
+                <p className="text-base font-semibold text-yellow-300 mb-4 flex items-center gap-2">
+                  <span className="text-xl">⚠️</span> Documente care așteaptă revizuire ({pendingDocs.length})
+                </p>
+                <div className="space-y-3">
                   {pendingDocs.slice(0, 3).map(d => (
-                    <div key={d.id} className="flex items-center justify-between gap-4 rounded-xl bg-black/20 p-3">
+                    <div key={d.id} className="flex items-center justify-between gap-4 rounded-xl bg-black/20 p-4">
                       <div>
-                        <p className="text-sm font-medium">{d.title}</p>
-                        <p className="text-xs text-slate-400">{d.association?.name || ""}</p>
+                        <p className="font-medium">{d.title}</p>
+                        <p className="text-xs text-slate-400 mt-0.5">{d.association?.name || ""}</p>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-3 flex-shrink-0">
                         {d.aiScore !== null && (
                           <span className={`text-sm font-bold ${d.aiScore >= 80 ? "text-emerald-400" : d.aiScore >= 60 ? "text-yellow-400" : "text-red-400"}`}>
                             {d.aiScore.toFixed(0)}%
                           </span>
                         )}
                         <button onClick={() => { setSelectedDoc(d); setTab("documente"); setMsg(""); setDraftText(""); }}
-                          className="rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-semibold transition hover:bg-violet-500">
+                          className="rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold transition hover:bg-violet-500">
                           Revizuiește
                         </button>
                       </div>
@@ -490,162 +516,184 @@ export default function AdminDashboard({ user }: { user: User }) {
         {/* CLIENȚI */}
         {tab === "clienti" && (
           <div>
-            {/* Sub-tab-uri */}
-            <div className="flex gap-2 mb-6">
+            {/* Sub-tab switcher stilizat */}
+            <div className="flex gap-2 mb-6 p-1 rounded-xl bg-white/[0.04] border border-white/8 w-fit">
               {[
-                { key: "corporates" as const, label: "🏢 Admini Corporate" },
-                { key: "associations" as const, label: "👥 Asociații (Clienți)" },
+                { key: "corporates" as const, label: "🏢 Admini Corporate", count: corporates.length },
+                { key: "associations" as const, label: "👥 Asociații", count: associations.length },
               ].map(t => (
                 <button key={t.key} onClick={() => setClientiSubTab(t.key)}
-                  className={`px-4 py-2 rounded-xl text-sm font-medium transition ${clientiSubTab === t.key ? "bg-violet-600 text-white shadow-[0_0_20px_rgba(124,58,237,0.3)]" : "text-slate-400 hover:text-white hover:bg-white/[0.05]"}`}>
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2 ${
+                    clientiSubTab === t.key
+                      ? "bg-violet-600 text-white shadow-[0_2px_12px_rgba(124,58,237,0.4)]"
+                      : "text-slate-400 hover:text-white"
+                  }`}>
                   {t.label}
+                  <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${clientiSubTab === t.key ? "bg-white/20" : "bg-white/[0.08]"}`}>
+                    {t.count}
+                  </span>
                 </button>
               ))}
             </div>
 
             {/* Sub-tab: Admini Corporate */}
             {clientiSubTab === "corporates" && (
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
                 {corporates.length === 0 && (
                   <div className="col-span-full rounded-2xl border border-white/8 bg-white/[0.03] p-8 text-center text-slate-400">
                     Nu există admini corporate înregistrați.
                   </div>
                 )}
-                {corporates.map(corp => (
-                  <div key={corp.id} className="rounded-2xl border border-white/8 bg-white/[0.03] p-5 flex flex-col gap-3">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1 min-w-0">
-                        <p className="font-semibold truncate">{corp.corporateAccount?.companyName || corp.name || "—"}</p>
-                        <p className="text-xs text-slate-400 truncate">{corp.email}</p>
+                {corporates.map(corp => {
+                  const initials = (corp.corporateAccount?.companyName || corp.name || "?").slice(0, 2).toUpperCase();
+                  return (
+                    <div key={corp.id} className="rounded-2xl border border-white/8 bg-gradient-to-br from-white/[0.04] to-white/[0.01] p-6 flex flex-col gap-4 hover:border-violet-500/30 transition">
+                      {/* Header cu avatar */}
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-500/30 to-cyan-500/30 flex items-center justify-center text-lg font-bold text-white border border-violet-500/20 flex-shrink-0">
+                          {initials}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-white truncate">{corp.corporateAccount?.companyName || corp.name || "—"}</p>
+                          <p className="text-xs text-slate-400 truncate">{corp.email}</p>
+                        </div>
+                        {corp.corporateAccount && packageBadge(corp.corporateAccount.package)}
                       </div>
-                      <div className="flex-shrink-0">
-                        {corp.corporateAccount ? packageBadge(corp.corporateAccount.package) : null}
+                      {/* Stats */}
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="rounded-xl bg-white/[0.03] border border-white/5 p-3 text-center">
+                          <div className="text-2xl font-bold text-white">{corp.corporateAccount?._count.associations ?? 0}</div>
+                          <div className="text-xs text-slate-500 mt-0.5">Clienți activi</div>
+                        </div>
+                        <div className="rounded-xl bg-white/[0.03] border border-white/5 p-3 text-center">
+                          <div className="text-2xl font-bold text-white">{corp.corporateAccount?.maxAssoc === 9999 ? "∞" : corp.corporateAccount?.maxAssoc ?? 0}</div>
+                          <div className="text-xs text-slate-500 mt-0.5">Locuri max</div>
+                        </div>
                       </div>
-                    </div>
-                    <div className="flex items-center gap-4 text-xs text-slate-400">
-                      <span>👥 {corp.corporateAccount?._count.associations ?? 0} clienți</span>
-                      <span>📦 max {corp.corporateAccount?.maxAssoc ?? 0}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                        corp.status === "active" ? "bg-emerald-500/15 text-emerald-300"
-                        : corp.status === "rejected" ? "bg-red-500/15 text-red-300"
-                        : "bg-yellow-500/15 text-yellow-300"
-                      }`}>
-                        {corp.status === "active" ? "Activ" : corp.status === "rejected" ? "Suspendat" : "Pending"}
-                      </span>
-                      {corp.corporateAccount && (
-                        <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                          corp.corporateAccount.status === "active" ? "bg-emerald-500/15 text-emerald-300"
-                          : corp.corporateAccount.status === "suspended" ? "bg-red-500/15 text-red-300"
-                          : "bg-yellow-500/15 text-yellow-300"
+                      {/* Status */}
+                      <div className="flex gap-2 flex-wrap">
+                        <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium border ${
+                          corp.status === "active" ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/20"
+                          : corp.status === "rejected" ? "bg-red-500/15 text-red-300 border-red-500/20"
+                          : "bg-yellow-500/15 text-yellow-300 border-yellow-500/20"
                         }`}>
-                          Cont: {corp.corporateAccount.status === "active" ? "activ" : corp.corporateAccount.status === "suspended" ? "suspendat" : "pending"}
+                          {corp.status === "active" ? "✓ Activ" : corp.status === "rejected" ? "⛔ Suspendat" : "⏳ Pending"}
                         </span>
-                      )}
+                        {corp.corporateAccount && corp.corporateAccount.status !== "active" && (
+                          <span className="rounded-full px-2.5 py-0.5 text-xs font-medium bg-yellow-500/10 text-yellow-400 border border-yellow-500/20">
+                            Cont: {corp.corporateAccount.status}
+                          </span>
+                        )}
+                        <span className="text-xs text-slate-600 ml-auto">
+                          {new Date(corp.createdAt).toLocaleDateString("ro-RO")}
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
 
             {/* Sub-tab: Asociații */}
             {clientiSubTab === "associations" && (
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {associations.length === 0 && (
                   <div className="rounded-2xl border border-white/8 bg-white/[0.03] p-8 text-center text-slate-400">
                     Nu există asociații înregistrate.
                   </div>
                 )}
-                {associations.map(a => (
-                  <div key={a.id} className="rounded-2xl border border-white/8 bg-white/[0.03] p-5">
-                    <div className="flex items-start justify-between gap-4 mb-3">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <a href={`/admin/client/${a.id}`} className="font-semibold hover:text-violet-300 transition">{a.name}</a>
-                          {packageBadge(a.corporate?.package || a.package)}
-                          <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                            a.user.status === "active" ? "bg-emerald-500/15 text-emerald-300"
-                            : a.user.status === "rejected" ? "bg-red-500/15 text-red-300"
-                            : "bg-yellow-500/15 text-yellow-300"
-                          }`}>
-                            {a.user.status === "active" ? "Activ" : a.user.status === "rejected" ? "Suspendat" : "Pending"}
+                {associations.map(a => {
+                  const initials = a.name.slice(0, 2).toUpperCase();
+                  const docPercent = a.maxDocuments > 0 ? Math.round((a.filesUploadedCount / a.maxDocuments) * 100) : 0;
+                  const isAtLimit = a.filesUploadedCount >= a.maxDocuments;
+                  return (
+                    <div key={a.id} className="rounded-2xl border border-white/8 bg-gradient-to-br from-white/[0.04] to-white/[0.01] p-5 hover:border-violet-500/20 transition">
+                      {/* Header */}
+                      <div className="flex items-start gap-4 mb-4">
+                        <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-cyan-500/20 to-violet-500/20 flex items-center justify-center text-sm font-bold text-white border border-white/10 flex-shrink-0">
+                          {initials}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <a href={`/admin/client/${a.id}`} className="font-semibold text-white hover:text-violet-300 transition">{a.name}</a>
+                            {packageBadge(a.corporate?.package || a.package)}
+                            <span className={`rounded-full px-2 py-0.5 text-xs font-medium border ${
+                              a.user.status === "active" ? "bg-emerald-500/10 text-emerald-300 border-emerald-500/20"
+                              : a.user.status === "rejected" ? "bg-red-500/10 text-red-300 border-red-500/20"
+                              : "bg-yellow-500/10 text-yellow-300 border-yellow-500/20"
+                            }`}>
+                              {a.user.status === "active" ? "✓ Activ" : a.user.status === "rejected" ? "⛔ Suspendat" : "⏳ Pending"}
+                            </span>
+                          </div>
+                          <p className="text-xs text-slate-500 mt-1">
+                            {a.corporate ? `🏢 ${a.corporate.companyName}` : `📧 ${a.user.email}`}
+                          </p>
+                        </div>
+                        <div className="text-xs text-slate-500 text-right flex-shrink-0">
+                          <div>{a._count?.reports || 0} rap.</div>
+                        </div>
+                      </div>
+
+                      {/* Bara de progres documente */}
+                      <div className="mb-4">
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="text-xs text-slate-500">Documente încărcate</span>
+                          <span className={`text-xs font-semibold ${isAtLimit ? "text-red-400" : "text-slate-300"}`}>
+                            {a.filesUploadedCount}/{a.maxDocuments}
                           </span>
                         </div>
-                        <p className="text-xs text-slate-400 mt-0.5">
-                          {a.corporate ? `Admin: ${a.corporate.companyName}` : a.user.email}
-                        </p>
-                        <p className="text-xs text-slate-500 mt-0.5">
-                          📁 Documente: <span className={`font-semibold ${a.filesUploadedCount >= a.maxDocuments ? "text-red-400" : "text-slate-300"}`}>{a.filesUploadedCount}/{a.maxDocuments}</span>
-                        </p>
+                        <div className="h-1.5 w-full rounded-full bg-white/10 overflow-hidden">
+                          <div className={`h-full rounded-full transition-all ${isAtLimit ? "bg-red-500" : docPercent > 70 ? "bg-amber-500" : "bg-emerald-500"}`}
+                            style={{ width: `${Math.min(100, docPercent)}%` }} />
+                        </div>
                       </div>
-                      <div className="flex-shrink-0 text-xs text-slate-400 text-right">
-                        <div>📋 {a._count?.reports || 0} rap.</div>
+
+                      {/* Butoane acțiune */}
+                      <div className="flex flex-wrap gap-2">
+                        <button onClick={() => clientAction(a.id, "reset_docs")} disabled={actionWorking === a.id + "reset_docs"}
+                          className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.05] px-3 py-2 text-xs font-medium text-slate-300 transition hover:bg-white/[0.10] hover:border-white/20 disabled:opacity-40">
+                          🔄 <span>Reset</span>
+                        </button>
+
+                        {a.user.status !== "rejected" ? (
+                          <button onClick={() => clientAction(a.id, "suspend")} disabled={actionWorking === a.id + "suspend"}
+                            className="flex items-center gap-1.5 rounded-xl border border-amber-500/20 bg-amber-500/[0.08] px-3 py-2 text-xs font-medium text-amber-300 transition hover:bg-amber-500/15 disabled:opacity-40">
+                            ⏸ <span>Suspendă</span>
+                          </button>
+                        ) : (
+                          <button onClick={() => clientAction(a.id, "activate")} disabled={actionWorking === a.id + "activate"}
+                            className="flex items-center gap-1.5 rounded-xl border border-emerald-500/20 bg-emerald-500/[0.08] px-3 py-2 text-xs font-medium text-emerald-300 transition hover:bg-emerald-500/15 disabled:opacity-40">
+                            ▶ <span>Activează</span>
+                          </button>
+                        )}
+
+                        <div className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.05] px-3 py-2 text-xs">
+                          <span className="text-slate-400">📁</span>
+                          <select onChange={e => e.target.value && clientAction(a.id, "set_max_docs", { maxDocuments: Number(e.target.value) })}
+                            defaultValue="" className="bg-transparent text-white outline-none cursor-pointer text-xs">
+                            <option value="" disabled>Dosare max</option>
+                            <option value="5">1 dosar (5 doc)</option>
+                            <option value="10">2 dosare (10 doc)</option>
+                            <option value="15">3 dosare (15 doc)</option>
+                            <option value="30">6 dosare (30 doc)</option>
+                          </select>
+                        </div>
+
+                        <button onClick={() => { if (confirm(`Ștergi asociația "${a.name}"? Această acțiune este ireversibilă.`)) clientAction(a.id, "delete"); }}
+                          disabled={actionWorking === a.id + "delete"}
+                          className="flex items-center gap-1.5 rounded-xl border border-red-500/20 bg-red-500/[0.08] px-3 py-2 text-xs font-medium text-red-400 transition hover:bg-red-500/15 disabled:opacity-40 ml-auto">
+                          🗑 <span>Șterge</span>
+                        </button>
                       </div>
-                    </div>
 
-                    {/* Butoane acțiune */}
-                    <div className="flex flex-wrap items-center gap-2">
-                      <button
-                        onClick={() => clientAction(a.id, "reset_docs")}
-                        disabled={actionWorking === a.id + "reset_docs"}
-                        title="Resetează contor documente"
-                        className="rounded-lg border border-white/10 bg-white/[0.05] px-3 py-1.5 text-xs font-medium text-slate-300 transition hover:bg-white/[0.10] disabled:opacity-50">
-                        🔄 Reset
-                      </button>
-
-                      {a.user.status !== "rejected" ? (
-                        <button
-                          onClick={() => clientAction(a.id, "suspend")}
-                          disabled={actionWorking === a.id + "suspend"}
-                          title="Suspendă cont"
-                          className="rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-1.5 text-xs font-medium text-red-300 transition hover:bg-red-500/20 disabled:opacity-50">
-                          ⏸ Suspendă
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => clientAction(a.id, "activate")}
-                          disabled={actionWorking === a.id + "activate"}
-                          title="Activează cont"
-                          className="rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-300 transition hover:bg-emerald-500/20 disabled:opacity-50">
-                          ▶ Activează
-                        </button>
+                      {actionMsg[a.id] && (
+                        <p className={`text-xs mt-3 font-medium ${actionMsg[a.id].startsWith("✓") ? "text-emerald-400" : "text-red-400"}`}>
+                          {actionMsg[a.id]}
+                        </p>
                       )}
-
-                      <div className="flex items-center gap-1">
-                        <span className="text-xs text-slate-400">📁 Dosare max:</span>
-                        <select
-                          onChange={e => e.target.value && clientAction(a.id, "set_max_docs", { maxDocuments: Number(e.target.value) })}
-                          defaultValue=""
-                          className="rounded-lg border border-white/10 bg-black/30 px-2 py-1.5 text-xs text-white outline-none focus:border-violet-500">
-                          <option value="" disabled>—</option>
-                          <option value="5">1 dosar (5 doc)</option>
-                          <option value="10">2 dosare (10 doc)</option>
-                          <option value="15">3 dosare (15 doc)</option>
-                          <option value="30">6 dosare (30 doc)</option>
-                        </select>
-                      </div>
-
-                      <button
-                        onClick={() => {
-                          if (confirm(`Ștergi asociația "${a.name}"? Această acțiune este ireversibilă.`)) {
-                            clientAction(a.id, "delete");
-                          }
-                        }}
-                        disabled={actionWorking === a.id + "delete"}
-                        title="Șterge asociația"
-                        className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-xs font-medium text-red-400 transition hover:bg-red-500/20 disabled:opacity-50">
-                        🗑 Șterge
-                      </button>
                     </div>
-
-                    {actionMsg[a.id] && (
-                      <p className={`text-xs mt-2 ${actionMsg[a.id].startsWith("✓") ? "text-emerald-400" : "text-red-400"}`}>
-                        {actionMsg[a.id]}
-                      </p>
-                    )}
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
