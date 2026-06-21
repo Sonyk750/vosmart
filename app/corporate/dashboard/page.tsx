@@ -18,7 +18,7 @@ export default async function CorporateDashboardPage() {
               include: {
                 associations: {
                   include: {
-                    user: { select: { name: true, email: true } },
+                    user: { select: { name: true, email: true, status: true } },
                     documents: { orderBy: { createdAt: "desc" }, take: 3 },
                     reports: { orderBy: { createdAt: "desc" }, take: 3 },
                     _count: { select: { documents: true, reports: true } },

@@ -8,7 +8,7 @@ import { CORPORATE_PACKAGES, CorporatePackage } from "@/lib/billing";
 interface Association {
   id: string; name: string; cui: string | null; address: string | null;
   filesUploadedCount: number; maxDocuments: number;
-  user: { name: string | null; email: string };
+  user: { name: string | null; email: string; status: string };
   documents: any[]; reports: any[];
   _count: { documents: number; reports: number };
 }
@@ -68,6 +68,33 @@ export default function CorporateDashboard({ user, corporate, isAdmin = false }:
       setSelectedAssoc(null);
     } else {
       setClientActionMsg(data.error || "Eroare la ștergere");
+    }
+    setClientActionWorking(false);
+  }
+
+  async function toggleSuspendClient(assoc: Association) {
+    const isSuspended = assoc.user.status === "rejected";
+    const action = isSuspended ? "activate" : "suspend";
+    const confirmMsg = isSuspended
+      ? `Reactivezi contul clientului "${assoc.name}"?`
+      : `Suspendezi contul clientului "${assoc.name}"? Nu va mai putea accesa platforma.`;
+    if (!confirm(confirmMsg)) return;
+    setClientActionWorking(true);
+    setClientActionMsg("");
+    const res = await fetch(`/api/corporate/clients/${assoc.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action }),
+    });
+    const data = await res.json();
+    if (res.ok) {
+      setAssociations(prev => prev.map(a =>
+        a.id === assoc.id ? { ...a, user: { ...a.user, status: isSuspended ? "active" : "rejected" } } : a
+      ));
+      setSelectedAssoc(prev => prev?.id === assoc.id ? { ...prev, user: { ...prev.user, status: isSuspended ? "active" : "rejected" } } : prev);
+      setClientActionMsg(isSuspended ? "✓ Cont reactivat" : "✓ Cont suspendat");
+    } else {
+      setClientActionMsg(data.error || "Eroare");
     }
     setClientActionWorking(false);
   }
@@ -425,6 +452,14 @@ export default function CorporateDashboard({ user, corporate, isAdmin = false }:
                       </p>
                     </div>
                     <div className="flex flex-col gap-1.5">
+                      <button onClick={() => toggleSuspendClient(selectedAssoc)} disabled={clientActionWorking}
+                        className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition disabled:opacity-50 ${
+                          selectedAssoc.user.status === "rejected"
+                            ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20"
+                            : "border-yellow-500/30 bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20"
+                        }`}>
+                        {selectedAssoc.user.status === "rejected" ? "▶ Activează" : "⏸ Suspendă"}
+                      </button>
                       <button onClick={() => deleteClient(selectedAssoc)} disabled={clientActionWorking}
                         className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-xs font-semibold text-red-400 hover:bg-red-500/20 disabled:opacity-50 transition">
                         🗑 Șterge client

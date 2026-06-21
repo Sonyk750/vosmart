@@ -114,8 +114,8 @@ export async function POST(req: NextRequest) {
       data: { filesUploadedCount: { increment: files.length } },
     });
 
-    // Lansăm analiza AI — așteptată explicit ca Vercel să nu o taie
-    analyzeDocuments({
+    // Await explicit — pe Vercel funcția e tăiată după response, deci analiza trebuie terminată înainte
+    await analyzeDocuments({
       documentId: mainDoc.id,
       associationId: user.association.id,
       associationName,
@@ -125,8 +125,6 @@ export async function POST(req: NextRequest) {
       monthName,
       year,
       savedFiles,
-    }).catch(e => {
-      console.error("[upload] analyzeDocuments a eșuat:", e?.message || e);
     });
 
     return NextResponse.json({ success: true, documentId: mainDoc.id });

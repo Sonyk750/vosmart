@@ -37,6 +37,16 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     return NextResponse.json({ success: true });
   }
 
+  if (action === "suspend") {
+    await prisma.user.update({ where: { id: assoc.userId }, data: { status: "rejected" } });
+    return NextResponse.json({ success: true });
+  }
+
+  if (action === "activate") {
+    await prisma.user.update({ where: { id: assoc.userId }, data: { status: "active" } });
+    return NextResponse.json({ success: true });
+  }
+
   return NextResponse.json({ error: "Acțiune necunoscută" }, { status: 400 });
 }
 
