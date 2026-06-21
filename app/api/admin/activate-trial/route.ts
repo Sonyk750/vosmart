@@ -35,6 +35,24 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true, link, status: user.status });
   }
 
+  if (action === "reset_docs") {
+    // Resetează contorul de documente pentru toate asociațiile contului
+    const associations = await prisma.association.findMany({
+      where: { corporateId: user.corporateAccount.id },
+    });
+    for (const assoc of associations) {
+      await prisma.association.update({
+        where: { id: assoc.id },
+        data: { filesUploadedCount: 0 },
+      });
+      // Șterge și documentele cu eroare ca să poată reîncărca
+      await prisma.document.deleteMany({
+        where: { associationId: assoc.id, status: "error" },
+      });
+    }
+    return NextResponse.json({ success: true, message: `Contorul de documente pentru ${email} a fost resetat.` });
+  }
+
   if (action === "delete") {
     await prisma.corporateAccount.delete({ where: { id: user.corporateAccount.id } });
     await prisma.user.delete({ where: { id: user.id } });

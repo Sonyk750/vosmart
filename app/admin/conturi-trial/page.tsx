@@ -112,6 +112,10 @@ export default function ConturiTrialPage() {
                         </button>
                       </>
                     )}
+                    <button disabled={!!working} onClick={() => doAction(acc.email, "reset_docs")}
+                      className="border border-blue-500/40 hover:bg-blue-500/10 disabled:opacity-50 text-blue-300 px-3 py-1.5 rounded text-xs font-semibold">
+                      {working === acc.email + "reset_docs" ? "..." : "Reset documente"}
+                    </button>
                     <button disabled={!!working} onClick={() => { if (confirm(`Șterge contul ${acc.email}?`)) doAction(acc.email, "delete"); }}
                       className="border border-red-500/30 hover:bg-red-500/10 disabled:opacity-50 text-red-400 px-3 py-1.5 rounded text-xs font-semibold">
                       {working === acc.email + "delete" ? "..." : "Șterge"}
