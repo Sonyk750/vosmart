@@ -726,72 +726,69 @@ export default function CorporateDashboard({ user, corporate, isAdmin = false }:
                     const isConfirmingDelete = confirmDeleteDocId === doc.id;
                     const isDeleting = deletingDocId === doc.id;
                     return (
-                      <div key={doc.id} className={`rounded-xl border transition ${
-                        isAnalyzing ? "border-violet-500/20 bg-violet-500/5"
-                        : isError ? "border-red-500/20 bg-red-500/5"
+                      <div key={doc.id} className={`rounded-xl border overflow-hidden transition ${
+                        isAnalyzing ? "border-violet-500/25 bg-violet-500/5"
+                        : isError ? "border-red-500/25 bg-red-500/5"
                         : "border-white/8 bg-white/[0.02]"
                       }`}>
-                        <div className="flex items-start justify-between gap-3 p-4">
+                        {/* Rândul principal */}
+                        <div className="flex items-center gap-3 px-4 py-3">
+                          {/* Icon status */}
+                          <div className="text-xl shrink-0">
+                            {isAnalyzing ? "🔄" : isError ? "❌" : "✅"}
+                          </div>
+
+                          {/* Info */}
                           <div className="flex-1 min-w-0">
-                            <p className="font-semibold text-sm text-white">{doc.title}</p>
-                            <p className="text-xs text-slate-500 mt-0.5">{doc.fileName}</p>
+                            <p className="font-semibold text-sm text-white truncate">{doc.title}</p>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              {statusBadge(doc.status)}
+                              {doc.aiScore !== null && doc.aiScore !== undefined && (
+                                <span className={`text-xs font-bold ${doc.aiScore >= 80 ? "text-emerald-400" : doc.aiScore >= 60 ? "text-yellow-400" : "text-red-400"}`}>
+                                  {doc.aiScore.toFixed(0)}%
+                                </span>
+                              )}
+                            </div>
                             {doc.aiSummary && !isError && (
                               <p className="text-xs text-slate-400 mt-1">{doc.aiSummary}</p>
                             )}
                             {isError && (
-                              <div className="mt-1.5 space-y-1">
-                                <p className="text-xs text-red-400 font-medium">Analiza a eșuat</p>
-                                {doc.aiSummary && (
-                                  <p className="text-[11px] text-red-400/70 font-mono bg-red-500/5 rounded px-2 py-1 break-words">{doc.aiSummary}</p>
-                                )}
-                                <p className="text-xs text-slate-500">Verifică formatul fișierelor (PDF, imagine) și încearcă din nou sau șterge dosarul.</p>
-                              </div>
+                              <p className="text-xs text-red-400 mt-1">
+                                {doc.aiSummary || "Analiza a eșuat — verifică formatul fișierelor și reîncearcă."}
+                              </p>
                             )}
                           </div>
-                          <div className="flex flex-col items-end gap-2 shrink-0">
-                            {statusBadge(doc.status)}
-                            {doc.aiScore !== null && doc.aiScore !== undefined && (
-                              <span className={`text-sm font-bold ${doc.aiScore >= 80 ? "text-emerald-400" : doc.aiScore >= 60 ? "text-yellow-400" : "text-red-400"}`}>
-                                {doc.aiScore.toFixed(0)}%
-                              </span>
-                            )}
-                            <button
-                              type="button"
-                              onClick={() => setConfirmDeleteDocId(isConfirmingDelete ? null : doc.id)}
-                              className="text-xs text-slate-600 hover:text-red-400 transition mt-1"
-                            >
+
+                          {/* Buton ștergere */}
+                          {!isConfirmingDelete ? (
+                            <button type="button"
+                              onClick={() => setConfirmDeleteDocId(doc.id)}
+                              className="shrink-0 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-xs text-red-400 hover:bg-red-500/20 hover:text-red-300 transition font-medium">
                               🗑 Șterge
                             </button>
-                          </div>
-                        </div>
-
-                        {/* Bara progres pentru documentele în analiză */}
-                        {isAnalyzing && (
-                          <div className="px-4 pb-4">
-                            <div className="h-1.5 rounded-full bg-white/8 overflow-hidden">
-                              <div className="h-full w-3/4 rounded-full animate-pulse" style={{ background: "linear-gradient(90deg,#7c3aed,#06b6d4)" }} />
-                            </div>
-                            <p className="text-xs text-violet-400 mt-1.5 flex items-center gap-1.5">
-                              <span className="w-2 h-2 rounded-full bg-violet-400 animate-ping inline-block"/>
-                              Se analizează cu AI... reîncarcă pagina pentru actualizare
-                            </p>
-                          </div>
-                        )}
-
-                        {/* Confirmare ștergere */}
-                        {isConfirmingDelete && (
-                          <div className="border-t border-red-500/20 bg-red-500/5 px-4 py-3 flex items-center justify-between gap-3 rounded-b-xl">
-                            <p className="text-xs text-red-300">Ești sigur că vrei să ștergi acest dosar?</p>
-                            <div className="flex gap-2">
+                          ) : (
+                            <div className="shrink-0 flex items-center gap-2">
                               <button type="button" onClick={() => setConfirmDeleteDocId(null)}
-                                className="rounded-lg border border-white/10 px-3 py-1.5 text-xs text-slate-400 hover:text-white transition">
+                                className="rounded-lg border border-white/10 px-2.5 py-1.5 text-xs text-slate-400 hover:text-white transition">
                                 Anulează
                               </button>
                               <button type="button" onClick={() => deleteDocument(doc.id)} disabled={isDeleting}
-                                className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-500 transition disabled:opacity-50 flex items-center gap-1.5">
-                                {isDeleting ? <><span className="w-3 h-3 rounded-full border border-white/30 border-t-white animate-spin"/>Ștergere...</> : "Șterge definitiv"}
+                                className="rounded-lg bg-red-600 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-red-500 transition disabled:opacity-50 flex items-center gap-1">
+                                {isDeleting
+                                  ? <><span className="w-3 h-3 rounded-full border border-white/30 border-t-white animate-spin"/>...</>
+                                  : "Confirmă"}
                               </button>
                             </div>
+                          )}
+                        </div>
+
+                        {/* Bara analiză în curs */}
+                        {isAnalyzing && (
+                          <div className="px-4 pb-3">
+                            <div className="h-1 rounded-full bg-white/8 overflow-hidden">
+                              <div className="h-full rounded-full animate-pulse" style={{ width: "70%", background: "linear-gradient(90deg,#7c3aed,#06b6d4)" }} />
+                            </div>
+                            <p className="text-[11px] text-violet-400 mt-1">Reîncarcă pagina pentru a vedea rezultatul</p>
                           </div>
                         )}
                       </div>
