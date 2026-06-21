@@ -38,10 +38,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Perioada și documentele sunt obligatorii" }, { status: 400 });
     }
 
+    // Normalizăm tipurile: facturi_2, facturi_3... → facturi (pentru validare)
+    const normalizedTypes = fileTypes.map((t: string) => t.startsWith("facturi") ? "facturi" : t);
+
     // Verificăm documentele obligatorii
     const required = ["lista_plata", "explicatii_lista", "distributia_facturilor", "facturi"];
-    const uploadedTypes = fileTypes;
-    const missing = required.filter(r => !uploadedTypes.includes(r));
+    const missing = required.filter(r => !normalizedTypes.includes(r));
     if (missing.length > 0) {
       return NextResponse.json({ error: `Documente obligatorii lipsă: ${missing.join(", ")}` }, { status: 400 });
     }
@@ -59,7 +61,7 @@ export async function POST(req: NextRequest) {
         select: { package: true },
       });
       if (corpAccount?.package === "trial") {
-        const blocked = fileTypes.filter((t: string) => !TRIAL_ALLOWED_TYPES.includes(t));
+        const blocked = normalizedTypes.filter((t: string) => !TRIAL_ALLOWED_TYPES.includes(t));
         if (blocked.length > 0) {
           return NextResponse.json({
             error: `Contul Trial permite doar: Listă de plată, Explicații, Distribuirea facturilor, Facturi și Extras de cont. Documentele nesolicitate: ${blocked.join(", ")}. Faceți upgrade la un plan plătit pentru toate tipurile.`,
@@ -106,10 +108,11 @@ export async function POST(req: NextRequest) {
     const [month, year] = period.split("-");
     const monthName = new Date(period + "-01").toLocaleString("ro-RO", { month: "long" });
 
+    const titleAssoc = (associationName || "").trim();
     const mainDoc = await prisma.document.create({
       data: {
         associationId: associationId,
-        title: `Dosar verificare ${monthName} ${year}`,
+        title: titleAssoc ? `${titleAssoc} — ${monthName} ${year}` : `Dosar verificare ${monthName} ${year}`,
         type: "dosar_lunar",
         fileName: `dosar_${period}.zip`,
         fileUrl: `/uploads/${associationId}/${period.replace("-", "_")}/`,
@@ -417,10 +420,11 @@ IMPORTANT:
     });
 
   } catch (e: any) {
-    console.error("[AI] Eroare analiza:", e?.message || e);
+    const errMsg = e?.message || String(e);
+    console.error("[AI] Eroare analiza:", errMsg);
     await prisma.document.update({
       where: { id: documentId },
-      data: { status: "error" }
+      data: { status: "error", aiSummary: errMsg.slice(0, 500) }
     });
   }
 }

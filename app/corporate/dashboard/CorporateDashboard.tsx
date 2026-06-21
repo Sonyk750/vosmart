@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import CardPaymentForm from "@/app/components/CardPaymentForm";
 import { CORPORATE_PACKAGES, CorporatePackage } from "@/lib/billing";
+import JSZip from "jszip";
 
 interface Corporate {
   id: string; companyName: string; package: string; maxAssoc: number;
@@ -34,16 +35,25 @@ export default function CorporateDashboard({ user, corporate, isAdmin = false }:
   const [subMsg, setSubMsg] = useState("");
 
   // Upload state
-  const [uploadPeriod, setUploadPeriod] = useState("");
-  const [uploadFiles, setUploadFiles] = useState<{ type: string; label: string; file: File | null }[]>([
-    { type: "lista_plata", label: "Lista de plată *", file: null },
-    { type: "explicatii_lista", label: "Explicații listă *", file: null },
-    { type: "distributia_facturilor", label: "Distribuția facturilor *", file: null },
-    { type: "facturi", label: "Facturi furnizori *", file: null },
-    { type: "extras_cont", label: "Extras cont bancar", file: null },
+  const [uploadMonth, setUploadMonth] = useState("");
+  const [uploadYear, setUploadYear] = useState(new Date().getFullYear().toString());
+  const [assocName, setAssocName] = useState("");
+  const [uploadSubTab, setUploadSubTab] = useState<"fisiere" | "zip">("fisiere");
+  const [uploadFiles, setUploadFiles] = useState<{ type: string; label: string; file: File | null; required: boolean }[]>([
+    { type: "lista_plata", label: "Lista de plată", file: null, required: true },
+    { type: "explicatii_lista", label: "Explicații listă", file: null, required: true },
+    { type: "distributia_facturilor", label: "Distribuția facturilor", file: null, required: true },
+    { type: "extras_cont", label: "Extras cont bancar", file: null, required: false },
   ]);
+  const [invoiceFiles, setInvoiceFiles] = useState<(File | null)[]>([null]);
+  const [zipFile, setZipFile] = useState<File | null>(null);
+  const [zipExtracted, setZipExtracted] = useState<{ name: string; assignedType: string; file: File }[]>([]);
+  const [zipLoading, setZipLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadMsg, setUploadMsg] = useState("");
+  const [analysisProgress, setAnalysisProgress] = useState(0);
+  const [analysisStep, setAnalysisStep] = useState("");
+  const analysisTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [documents, setDocuments] = useState<any[]>([]);
 
   // Rapoarte state
@@ -64,41 +74,144 @@ export default function CorporateDashboard({ user, corporate, isAdmin = false }:
     if (res.ok) setReports(await res.json());
   }
 
+  const MONTHS_RO = [
+    { val: "01", name: "Ianuarie" }, { val: "02", name: "Februarie" },
+    { val: "03", name: "Martie" },   { val: "04", name: "Aprilie" },
+    { val: "05", name: "Mai" },      { val: "06", name: "Iunie" },
+    { val: "07", name: "Iulie" },    { val: "08", name: "August" },
+    { val: "09", name: "Septembrie" },{ val: "10", name: "Octombrie" },
+    { val: "11", name: "Noiembrie" }, { val: "12", name: "Decembrie" },
+  ];
+  const YEARS = ["2024", "2025", "2026", "2027"];
+
+  const ZIP_TYPE_MAP: { patterns: string[]; type: string; label: string }[] = [
+    { patterns: ["lista", "plata", "plată"], type: "lista_plata", label: "Lista de plată" },
+    { patterns: ["explicat"], type: "explicatii_lista", label: "Explicații listă" },
+    { patterns: ["distribut", "repartiz"], type: "distributia_facturilor", label: "Distribuția facturilor" },
+    { patterns: ["factur", "furniz"], type: "facturi", label: "Facturi furnizori" },
+    { patterns: ["extras", "cont", "bancar"], type: "extras_cont", label: "Extras cont bancar" },
+  ];
+
+  function guessTypeFromName(name: string) {
+    const lower = name.toLowerCase();
+    for (const entry of ZIP_TYPE_MAP) {
+      if (entry.patterns.some(p => lower.includes(p))) return entry;
+    }
+    return { type: "altele", label: name };
+  }
+
+  async function handleZipChange(zipF: File) {
+    setZipFile(zipF);
+    setZipLoading(true);
+    setZipExtracted([]);
+    try {
+      const zip = await JSZip.loadAsync(zipF);
+      const extracted: { name: string; assignedType: string; file: File }[] = [];
+      for (const [name, entry] of Object.entries(zip.files)) {
+        if (entry.dir) continue;
+        const ext = name.split(".").pop()?.toLowerCase() || "";
+        const allowed = ["pdf", "jpg", "jpeg", "png", "xlsx", "xls", "doc", "docx"];
+        if (!allowed.includes(ext)) continue;
+        const buffer = await entry.async("arraybuffer");
+        const mimeMap: Record<string, string> = { pdf: "application/pdf", jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", xls: "application/vnd.ms-excel", doc: "application/msword", docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" };
+        const mime = mimeMap[ext] || "application/octet-stream";
+        const file = new File([buffer], name.split("/").pop() || name, { type: mime });
+        const { type } = guessTypeFromName(name);
+        extracted.push({ name: name.split("/").pop() || name, assignedType: type, file });
+      }
+      setZipExtracted(extracted);
+    } catch {
+      setUploadMsg("✗ Nu s-a putut deschide arhiva ZIP.");
+    }
+    setZipLoading(false);
+  }
+
+  function startAnalysisProgress() {
+    setAnalysisProgress(0);
+    setAnalysisStep("Se pregătesc fișierele...");
+    let progress = 0;
+    const STEPS = [
+      { at: 8, label: "Se încarcă fișierele..." },
+      { at: 22, label: "Se procesează documentele..." },
+      { at: 45, label: "Analiză AI în curs..." },
+      { at: 68, label: "Generare raport de cenzor..." },
+      { at: 82, label: "Finalizare raport..." },
+    ];
+    analysisTimerRef.current = setInterval(() => {
+      progress += 1;
+      if (progress >= 90) { if (analysisTimerRef.current) clearInterval(analysisTimerRef.current); return; }
+      const step = STEPS.filter(s => s.at <= progress).pop();
+      setAnalysisProgress(progress);
+      if (step) setAnalysisStep(step.label);
+    }, 560);
+  }
+
+  function stopAnalysisProgress() {
+    if (analysisTimerRef.current) { clearInterval(analysisTimerRef.current); analysisTimerRef.current = null; }
+  }
+
   async function handleUpload(e: React.FormEvent) {
     e.preventDefault();
-    if (!uploadPeriod) { setUploadMsg("Selectează perioada"); return; }
-    const required = ["lista_plata", "explicatii_lista", "distributia_facturilor", "facturi"];
-    const missing = required.filter(r => !uploadFiles.find(f => f.type === r && f.file));
-    if (missing.length > 0) { setUploadMsg("Documentele obligatorii lipsă: " + missing.join(", ")); return; }
+    if (!assocName.trim()) { setUploadMsg("Introdu numele asociației"); return; }
+    if (!uploadMonth || !uploadYear) { setUploadMsg("Selectează luna și anul"); return; }
 
+    const period = `${uploadYear}-${uploadMonth}`;
+
+    // Build files list
+    let allFiles: { file: File; type: string; label: string }[] = [];
+
+    if (uploadSubTab === "fisiere") {
+      for (const uf of uploadFiles) {
+        if (uf.file) allFiles.push({ file: uf.file, type: uf.type, label: uf.label + (uf.required ? " *" : "") });
+      }
+      const validInvoices = invoiceFiles.filter(Boolean) as File[];
+      if (validInvoices.length === 0) { setUploadMsg("Adaugă cel puțin o factură furnizori"); return; }
+      validInvoices.forEach((file, idx) => {
+        allFiles.push({ file, type: idx === 0 ? "facturi" : `facturi_${idx + 1}`, label: validInvoices.length > 1 ? `Factură furnizori (${idx + 1})` : "Facturi furnizori *" });
+      });
+      const missing = uploadFiles.filter(f => f.required && !f.file).map(f => f.label);
+      if (missing.length > 0) { setUploadMsg("Lipsesc: " + missing.join(", ")); return; }
+    } else {
+      if (zipExtracted.length === 0) { setUploadMsg("Alege o arhivă ZIP validă"); return; }
+      const hasReq = ["lista_plata", "explicatii_lista", "distributia_facturilor"].every(t => zipExtracted.some(z => z.assignedType === t));
+      const hasFacturi = zipExtracted.some(z => z.assignedType === "facturi");
+      if (!hasReq || !hasFacturi) { setUploadMsg("ZIP-ul trebuie să conțină: lista de plată, explicații, distribuția facturilor și facturi"); return; }
+      allFiles = zipExtracted.map(z => ({ file: z.file, type: z.assignedType, label: guessTypeFromName(z.name).label }));
+    }
+
+    startAnalysisProgress();
     setUploading(true);
-    setUploadMsg("Se încarcă și se analizează... (30-60 secunde)");
+    setUploadMsg("");
 
     const form = new FormData();
-    form.append("period", uploadPeriod);
-    form.append("associationName", corporate.companyName);
+    form.append("period", period);
+    form.append("associationName", assocName.trim());
     form.append("cui", corporate.cui || "");
     form.append("address", "");
-
-    for (const uf of uploadFiles) {
-      if (uf.file) {
-        form.append("files", uf.file);
-        form.append("fileTypes", uf.type);
-        form.append("fileLabels", uf.label);
-      }
+    for (const { file, type, label } of allFiles) {
+      form.append("files", file);
+      form.append("fileTypes", type);
+      form.append("fileLabels", label);
     }
 
     const res = await fetch("/api/dashboard/upload-structured", { method: "POST", body: form });
     const data = await res.json();
 
+    stopAnalysisProgress();
+
     if (res.ok) {
-      setUploadMsg("✓ Dosar trimis cu succes! Analiza AI este completă.");
+      setAnalysisProgress(100);
+      setAnalysisStep("Analiză completă!");
+      setUploadMsg("✓ Dosar trimis! Analiza AI este completă.");
       setUploadFiles(prev => prev.map(f => ({ ...f, file: null })));
-      setUploadPeriod("");
-      fetchDocuments();
-      fetchReports();
+      setInvoiceFiles([null]);
+      setZipFile(null); setZipExtracted([]);
+      setUploadMonth(""); setAssocName("");
+      fetchDocuments(); fetchReports();
+      setTimeout(() => { setAnalysisProgress(0); setAnalysisStep(""); }, 4000);
     } else {
       setUploadMsg("✗ " + (data.error || "Eroare la upload"));
+      setTimeout(() => { setAnalysisProgress(0); setAnalysisStep(""); }, 3000);
     }
     setUploading(false);
   }
@@ -322,120 +435,321 @@ export default function CorporateDashboard({ user, corporate, isAdmin = false }:
         )}
 
         {/* DOCUMENTE */}
-        {tab === "documente" && (
+        {tab === "documente" && (() => {
+          const docsFilled = uploadFiles.filter(f => f.file).length + invoiceFiles.filter(Boolean).length;
+          const docsMax = 5;
+          const barHue = Math.round(120 - (docsFilled / docsMax) * 120);
+          const barPct = Math.min(100, (docsFilled / docsMax) * 100);
+
+          return (
           <div className="space-y-6">
             {/* Upload form */}
-            <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6">
+            <div className="rounded-2xl border border-white/10 bg-white/[0.025] p-6">
               <h2 className="text-lg font-semibold mb-1">Trimite dosar la analiză AI</h2>
-              <p className="text-sm text-slate-400 mb-6">Încarcă documentele lunare pentru verificare automată. Analiza durează 30-60 secunde.</p>
+              <p className="text-sm text-slate-400 mb-6">Încarcă documentele lunare pentru verificare automată. Analiza durează 30–60 secunde.</p>
 
               <form onSubmit={handleUpload} className="space-y-5">
-                {/* Selector perioadă */}
-                <div>
-                  <label className="block text-xs text-slate-400 uppercase tracking-wider mb-2">Perioada *</label>
-                  <input
-                    type="month"
-                    value={uploadPeriod}
-                    onChange={e => setUploadPeriod(e.target.value)}
-                    className="w-full max-w-xs rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white outline-none focus:border-violet-500 transition"
-                  />
-                </div>
 
-                {/* Fișiere */}
-                <div>
-                  <label className="block text-xs text-slate-400 uppercase tracking-wider mb-3">Documente</label>
-                  <div className="space-y-3">
-                    {uploadFiles.map((uf, idx) => (
-                      <div key={uf.type} className="flex items-center gap-4">
-                        <label className="w-52 text-sm text-slate-300 shrink-0">{uf.label}</label>
-                        <div className="flex-1">
-                          <label className={`flex items-center gap-3 rounded-xl border px-4 py-2.5 cursor-pointer transition ${
-                            uf.file
-                              ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-300"
-                              : "border-white/10 bg-black/10 text-slate-400 hover:border-violet-500/40 hover:bg-violet-500/5"
-                          }`}>
-                            <span className="text-lg">{uf.file ? "✓" : "📄"}</span>
-                            <span className="text-sm truncate">{uf.file ? uf.file.name : "Alege fișier..."}</span>
-                            <input
-                              type="file"
-                              accept=".pdf,.jpg,.jpeg,.png,.xlsx,.xls,.doc,.docx"
-                              className="hidden"
-                              onChange={e => {
-                                const file = e.target.files?.[0] || null;
-                                setUploadFiles(prev => prev.map((f, i) => i === idx ? { ...f, file } : f));
-                              }}
-                            />
-                          </label>
-                        </div>
-                      </div>
-                    ))}
+                {/* Rând 1: Asociatie + Calendar */}
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {/* Asociatie */}
+                  <div>
+                    <label className="block text-xs text-slate-400 uppercase tracking-wider mb-2">Asociație *</label>
+                    <input
+                      type="text" value={assocName} onChange={e => setAssocName(e.target.value)}
+                      placeholder="ex: Bloc 12 Sc. B — Str. Mihai Eminescu"
+                      className="w-full rounded-xl border border-white/10 bg-[#0d0d1a] px-4 py-3 text-white text-sm placeholder-slate-600 outline-none focus:border-violet-500 transition" />
+                  </div>
+
+                  {/* Calendar luna + an */}
+                  <div>
+                    <label className="block text-xs text-slate-400 uppercase tracking-wider mb-2">Perioada verificată *</label>
+                    <div className="flex gap-2">
+                      <select value={uploadMonth} onChange={e => setUploadMonth(e.target.value)}
+                        className="flex-1 rounded-xl border border-white/10 bg-[#0d0d1a] px-3 py-3 text-white text-sm outline-none focus:border-violet-500 transition appearance-none">
+                        <option value="">Luna...</option>
+                        {MONTHS_RO.map(m => <option key={m.val} value={m.val}>{m.name}</option>)}
+                      </select>
+                      <select value={uploadYear} onChange={e => setUploadYear(e.target.value)}
+                        className="w-28 rounded-xl border border-white/10 bg-[#0d0d1a] px-3 py-3 text-white text-sm outline-none focus:border-violet-500 transition appearance-none">
+                        {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
+                      </select>
+                    </div>
                   </div>
                 </div>
 
+                {/* Sub-tabs: Fisiere / ZIP */}
+                <div className="flex gap-1 p-1 rounded-xl bg-white/[0.04] border border-white/8 w-fit">
+                  {[
+                    { key: "fisiere" as const, label: "📄 Fișiere individuale" },
+                    { key: "zip" as const, label: "📦 Arhivă ZIP" },
+                  ].map(t => (
+                    <button key={t.key} type="button" onClick={() => setUploadSubTab(t.key)}
+                      className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+                        uploadSubTab === t.key ? "bg-violet-600 text-white" : "text-slate-400 hover:text-white"
+                      }`}>
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* TAB: Fisiere individuale */}
+                {uploadSubTab === "fisiere" && (
+                  <div className="space-y-2.5">
+                    {/* Documente fixe (fara facturi) */}
+                    {uploadFiles.map((uf, idx) => (
+                      <div key={uf.type} className="flex items-center gap-3">
+                        <div className="w-48 shrink-0 flex items-center gap-1.5">
+                          <span className={`text-xs ${uf.required ? "text-red-400" : "text-slate-600"}`}>
+                            {uf.required ? "●" : "○"}
+                          </span>
+                          <span className="text-sm text-slate-300">{uf.label}</span>
+                          {uf.required && <span className="text-red-400 text-xs">*</span>}
+                        </div>
+                        <label className={`flex-1 flex items-center gap-2.5 rounded-xl border px-4 py-2.5 cursor-pointer transition text-sm ${
+                          uf.file ? "border-emerald-500/40 bg-emerald-500/8 text-emerald-300" : "border-white/8 bg-white/[0.03] text-slate-500 hover:border-violet-500/40 hover:text-slate-300"
+                        }`}>
+                          <span>{uf.file ? "✅" : "📄"}</span>
+                          <span className="truncate flex-1">{uf.file ? uf.file.name : "Alege fișier..."}</span>
+                          {uf.file && <button type="button" onClick={e => { e.preventDefault(); setUploadFiles(p => p.map((f,i)=>i===idx?{...f,file:null}:f)); }} className="text-slate-500 hover:text-red-400 transition ml-1">✕</button>}
+                          <input type="file" accept=".pdf,.jpg,.jpeg,.png,.xlsx,.xls,.doc,.docx" className="hidden"
+                            onChange={e => { const file = e.target.files?.[0]||null; setUploadFiles(p=>p.map((f,i)=>i===idx?{...f,file}:f)); }} />
+                        </label>
+                      </div>
+                    ))}
+
+                    {/* Facturi — multiple */}
+                    <div className="mt-1">
+                      <div className="flex items-center gap-1.5 mb-2">
+                        <span className="text-xs text-red-400">●</span>
+                        <span className="text-sm text-slate-300">Facturi furnizori</span>
+                        <span className="text-red-400 text-xs">*</span>
+                        <span className="text-xs text-slate-600 ml-1">(poți adăuga mai multe)</span>
+                      </div>
+                      <div className="space-y-2">
+                        {invoiceFiles.map((file, idx) => (
+                          <div key={idx} className="flex items-center gap-2">
+                            <label className={`flex-1 flex items-center gap-2.5 rounded-xl border px-4 py-2.5 cursor-pointer transition text-sm ${
+                              file ? "border-emerald-500/40 bg-emerald-500/8 text-emerald-300" : "border-white/8 bg-white/[0.03] text-slate-500 hover:border-violet-500/40 hover:text-slate-300"
+                            }`}>
+                              <span>{file ? "🧾" : "📄"}</span>
+                              <span className="truncate flex-1">{file ? file.name : `Factură ${idx + 1}...`}</span>
+                              {file && <button type="button" onClick={e => { e.preventDefault(); setInvoiceFiles(p => { const n=[...p]; n[idx]=null; return n; }); }} className="text-slate-500 hover:text-red-400 transition">✕</button>}
+                              <input type="file" accept=".pdf,.jpg,.jpeg,.png,.xlsx,.xls" className="hidden"
+                                onChange={e => { const f=e.target.files?.[0]||null; setInvoiceFiles(p=>{ const n=[...p]; n[idx]=f; return n; }); }} />
+                            </label>
+                            {idx > 0 && (
+                              <button type="button" onClick={() => setInvoiceFiles(p=>p.filter((_,i)=>i!==idx))}
+                                className="w-9 h-9 rounded-lg border border-red-500/20 text-red-400 hover:bg-red-500/10 transition flex items-center justify-center text-sm">
+                                ✕
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                        {invoiceFiles.length < 10 && (
+                          <button type="button" onClick={() => setInvoiceFiles(p=>[...p,null])}
+                            className="flex items-center gap-2 text-xs text-violet-400 hover:text-violet-300 transition mt-1">
+                            <span className="w-5 h-5 rounded-full border border-violet-500/40 flex items-center justify-center">+</span>
+                            Adaugă factură
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Bara progres documente (verde → rosu) */}
+                    <div className="mt-4 pt-4 border-t border-white/5">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs text-slate-500">Documente pregătite</span>
+                        <span className="text-xs font-semibold" style={{ color: `hsl(${barHue},75%,55%)` }}>
+                          {docsFilled}/{docsMax}
+                        </span>
+                      </div>
+                      <div className="h-2 rounded-full bg-white/8 overflow-hidden">
+                        <div className="h-full rounded-full transition-all duration-500"
+                          style={{ width: `${barPct}%`, background: `hsl(${barHue},75%,50%)`, boxShadow: `0 0 8px hsl(${barHue},75%,40%)` }} />
+                      </div>
+                      <div className="flex justify-between mt-1">
+                        {[...Array(docsMax)].map((_, i) => (
+                          <span key={i} className="text-[10px]" style={{ color: i < docsFilled ? `hsl(${Math.round(120-(i/(docsMax-1))*120)},75%,55%)` : "rgba(255,255,255,0.1)" }}>▐</span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* TAB: Arhiva ZIP */}
+                {uploadSubTab === "zip" && (
+                  <div className="space-y-4">
+                    {/* Drop zone */}
+                    <label className={`relative flex flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed px-6 py-10 cursor-pointer transition ${
+                      zipFile ? "border-emerald-500/40 bg-emerald-500/5" : "border-white/15 hover:border-violet-500/50 hover:bg-violet-500/5"
+                    }`}>
+                      <div className="text-4xl">{zipFile ? "📦" : "⬆️"}</div>
+                      {zipFile ? (
+                        <div className="text-center">
+                          <p className="font-medium text-emerald-300">{zipFile.name}</p>
+                          <p className="text-xs text-slate-400 mt-1">{Math.round(zipFile.size / 1024)} KB · {zipExtracted.length} fișiere detectate</p>
+                        </div>
+                      ) : (
+                        <div className="text-center">
+                          <p className="text-slate-300 font-medium">Trage ZIP-ul aici sau apasă să alegi</p>
+                          <p className="text-xs text-slate-500 mt-1">Acceptăm arhive .zip cu PDF-uri, imagini și Excel</p>
+                        </div>
+                      )}
+                      <input type="file" accept=".zip" className="hidden"
+                        onChange={e => { const f=e.target.files?.[0]; if(f) handleZipChange(f); }} />
+                    </label>
+
+                    {zipLoading && (
+                      <div className="flex items-center gap-2 text-sm text-violet-300">
+                        <span className="w-4 h-4 rounded-full border-2 border-violet-300/30 border-t-violet-300 animate-spin"/>
+                        Se extrage arhiva...
+                      </div>
+                    )}
+
+                    {/* Lista fisiere extrase */}
+                    {zipExtracted.length > 0 && (
+                      <div className="rounded-xl border border-white/8 bg-white/[0.02] overflow-hidden">
+                        <div className="px-4 py-2.5 border-b border-white/5 bg-white/[0.03]">
+                          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Fișiere detectate în ZIP</p>
+                        </div>
+                        {zipExtracted.map((z, i) => {
+                          const entry = ZIP_TYPE_MAP.find(m => m.type === z.assignedType);
+                          return (
+                            <div key={i} className="flex items-center gap-3 px-4 py-2.5 border-b border-white/5 last:border-0">
+                              <span className="text-base">📄</span>
+                              <span className="text-sm text-slate-300 flex-1 truncate">{z.name}</span>
+                              <select value={z.assignedType} onChange={e => setZipExtracted(p=>p.map((x,xi)=>xi===i?{...x,assignedType:e.target.value}:x))}
+                                className="rounded-lg border border-white/10 bg-[#0d0d1a] px-2 py-1 text-xs text-white outline-none focus:border-violet-500">
+                                <option value="lista_plata">Lista de plată</option>
+                                <option value="explicatii_lista">Explicații listă</option>
+                                <option value="distributia_facturilor">Distribuția facturilor</option>
+                                <option value="facturi">Facturi furnizori</option>
+                                <option value="extras_cont">Extras cont bancar</option>
+                                <option value="altele">Altele</option>
+                              </select>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {/* Structura asteptata */}
+                    {!zipFile && (
+                      <div className="rounded-xl border border-violet-500/15 bg-violet-500/5 p-4">
+                        <p className="text-xs font-semibold text-violet-300 mb-2">Structura recomandată în ZIP</p>
+                        <div className="space-y-1">
+                          {[
+                            "lista_plata.pdf",
+                            "explicatii_lista.pdf",
+                            "distributia_facturilor.pdf",
+                            "facturi.pdf",
+                            "extras_cont.pdf (opțional)",
+                          ].map(f => (
+                            <div key={f} className="flex items-center gap-2 text-xs text-slate-400">
+                              <span className="text-slate-600">📄</span> {f}
+                            </div>
+                          ))}
+                        </div>
+                        <p className="text-[10px] text-slate-600 mt-2">Fișierele sunt mapate automat pe baza numelui. Poți corecta manual dacă e nevoie.</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Bara progres analiză */}
+                {uploading && analysisProgress > 0 && (
+                  <div className="rounded-xl border border-violet-500/20 bg-violet-500/5 p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm text-violet-300 font-medium">{analysisStep}</span>
+                      <span className="text-sm font-bold text-violet-200">{analysisProgress}%</span>
+                    </div>
+                    <div className="h-2.5 rounded-full bg-white/8 overflow-hidden">
+                      <div className="h-full rounded-full transition-all duration-700 relative"
+                        style={{ width: `${analysisProgress}%`, background: "linear-gradient(90deg,#7c3aed,#06b6d4)" }}>
+                        <div className="absolute inset-0 animate-pulse opacity-50 rounded-full" style={{ background: "linear-gradient(90deg,transparent,rgba(255,255,255,0.3),transparent)" }} />
+                      </div>
+                    </div>
+                    <div className="flex justify-between mt-1.5 text-[10px] text-slate-600">
+                      <span>Pregătire</span><span>Procesare</span><span>Analiză AI</span><span>Raport</span><span>Complet</span>
+                    </div>
+                  </div>
+                )}
+
                 {uploadMsg && (
                   <div className={`rounded-xl border px-4 py-3 text-sm ${
-                    uploadMsg.startsWith("✓")
-                      ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300"
-                      : uploadMsg.startsWith("✗")
-                      ? "border-red-500/30 bg-red-500/10 text-red-300"
-                      : "border-violet-500/30 bg-violet-500/10 text-violet-300"
+                    uploadMsg.startsWith("✓") ? "border-emerald-500/30 bg-emerald-500/8 text-emerald-300"
+                    : uploadMsg.startsWith("✗") ? "border-red-500/30 bg-red-500/8 text-red-300"
+                    : "border-violet-500/30 bg-violet-500/8 text-violet-300"
                   }`}>
-                    {uploading && (
-                      <span className="inline-flex items-center gap-2">
-                        <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-                        </svg>
-                      </span>
-                    )}
                     {uploadMsg}
                   </div>
                 )}
 
-                <button
-                  type="submit"
-                  disabled={uploading}
-                  className="w-full rounded-xl bg-violet-600 px-6 py-3.5 font-semibold transition hover:bg-violet-500 disabled:opacity-50 flex items-center justify-center gap-2">
+                <button type="submit" disabled={uploading}
+                  className="w-full rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-6 py-4 font-semibold transition hover:from-violet-500 hover:to-indigo-500 disabled:opacity-50 flex items-center justify-center gap-2 shadow-[0_0_25px_rgba(124,58,237,0.3)]">
                   {uploading ? (
-                    <>
-                      <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-                      </svg>
-                      Se analizează...
-                    </>
+                    <><span className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin"/>Se analizează...</>
                   ) : "🤖 Trimite dosar la analiză AI"}
                 </button>
               </form>
             </div>
 
-            {/* Lista documente existente */}
+            {/* Dosarele mele */}
             {documents.length > 0 && (
-              <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6">
+              <div className="rounded-2xl border border-white/10 bg-white/[0.025] p-6">
                 <h2 className="text-lg font-semibold mb-4">Dosarele mele</h2>
                 <div className="space-y-3">
-                  {documents.map((doc: any) => (
-                    <div key={doc.id} className="flex items-center justify-between rounded-xl border border-white/8 bg-black/20 p-4">
-                      <div>
-                        <p className="font-medium text-sm">{doc.title}</p>
-                        <p className="text-xs text-slate-500 mt-0.5">{doc.fileName}</p>
-                        {doc.aiSummary && <p className="text-xs text-slate-400 mt-1">{doc.aiSummary}</p>}
-                      </div>
-                      <div className="flex flex-col items-end gap-2">
-                        {statusBadge(doc.status)}
-                        {doc.aiScore !== null && doc.aiScore !== undefined && (
-                          <span className={`text-xs font-bold ${doc.aiScore >= 80 ? "text-emerald-400" : doc.aiScore >= 60 ? "text-yellow-400" : "text-red-400"}`}>
-                            {doc.aiScore.toFixed(0)}%
-                          </span>
+                  {documents.map((doc: any) => {
+                    const isAnalyzing = doc.status === "analyzing";
+                    const isError = doc.status === "error";
+                    return (
+                      <div key={doc.id} className={`rounded-xl border p-4 transition ${
+                        isAnalyzing ? "border-violet-500/20 bg-violet-500/5"
+                        : isError ? "border-red-500/20 bg-red-500/5"
+                        : "border-white/8 bg-white/[0.02]"
+                      }`}>
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <p className="font-semibold text-sm text-white">{doc.title}</p>
+                            <p className="text-xs text-slate-500 mt-0.5">{doc.fileName}</p>
+                            {doc.aiSummary && !isError && (
+                              <p className="text-xs text-slate-400 mt-1">{doc.aiSummary}</p>
+                            )}
+                            {isError && (
+                              <p className="text-xs text-red-400 mt-1">Analiza a eșuat. Verifică formatul fișierelor (PDF, imagine) și încearcă din nou.</p>
+                            )}
+                          </div>
+                          <div className="flex flex-col items-end gap-1.5 shrink-0">
+                            {statusBadge(doc.status)}
+                            {doc.aiScore !== null && doc.aiScore !== undefined && (
+                              <span className={`text-sm font-bold ${doc.aiScore >= 80 ? "text-emerald-400" : doc.aiScore >= 60 ? "text-yellow-400" : "text-red-400"}`}>
+                                {doc.aiScore.toFixed(0)}%
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        {/* Bara progres pentru documentele în analiză */}
+                        {isAnalyzing && (
+                          <div className="mt-3">
+                            <div className="h-1.5 rounded-full bg-white/8 overflow-hidden">
+                              <div className="h-full w-3/4 rounded-full animate-pulse" style={{ background: "linear-gradient(90deg,#7c3aed,#06b6d4)" }} />
+                            </div>
+                            <p className="text-xs text-violet-400 mt-1 flex items-center gap-1.5">
+                              <span className="w-2 h-2 rounded-full bg-violet-400 animate-ping inline-block"/>
+                              Se analizează cu AI... reîncarcă pagina pentru actualizare
+                            </p>
+                          </div>
                         )}
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}
           </div>
-        )}
+          );
+        })()}
 
         {/* RAPOARTE */}
         {tab === "rapoarte" && (
