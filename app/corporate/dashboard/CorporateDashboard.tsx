@@ -823,15 +823,22 @@ export default function CorporateDashboard({ user, corporate, isAdmin = false }:
                             )}
                           </div>
 
-                          {/* Buton ștergere */}
+                          {/* Butoane */}
+                          <div className="shrink-0 flex items-center gap-2">
+                            {doc.status === "analyzed" && (
+                              <button type="button" onClick={() => setTab("rapoarte")}
+                                className="rounded-lg border border-cyan-500/30 bg-cyan-500/10 px-3 py-1.5 text-xs text-cyan-300 hover:bg-cyan-500/20 transition font-medium">
+                                📋 Raport
+                              </button>
+                            )}
                           {!isConfirmingDelete ? (
                             <button type="button"
                               onClick={() => setConfirmDeleteDocId(doc.id)}
-                              className="shrink-0 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-xs text-red-400 hover:bg-red-500/20 hover:text-red-300 transition font-medium">
+                              className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-xs text-red-400 hover:bg-red-500/20 hover:text-red-300 transition font-medium">
                               🗑 Șterge
                             </button>
                           ) : (
-                            <div className="shrink-0 flex items-center gap-2">
+                            <div className="flex items-center gap-2">
                               <button type="button" onClick={() => setConfirmDeleteDocId(null)}
                                 className="rounded-lg border border-white/10 px-2.5 py-1.5 text-xs text-slate-400 hover:text-white transition">
                                 Anulează
@@ -844,6 +851,7 @@ export default function CorporateDashboard({ user, corporate, isAdmin = false }:
                               </button>
                             </div>
                           )}
+                          </div>
                         </div>
 
                         {/* Bara analiză în curs */}
@@ -866,9 +874,11 @@ export default function CorporateDashboard({ user, corporate, isAdmin = false }:
         })()}
 
         {/* RAPOARTE */}
-        {tab === "rapoarte" && (
+        {tab === "rapoarte" && (() => {
+          const [openReportId, setOpenReportId] = (useState as any)(null);
+          return (
           <div className="space-y-4">
-            <h2 className="text-lg font-semibold mb-4">Rapoartele mele</h2>
+            <h2 className="text-lg font-semibold">Rapoartele mele</h2>
             {reports.length === 0 ? (
               <div className="rounded-3xl border border-white/8 bg-white/[0.03] p-12 text-center text-slate-400">
                 <div className="text-4xl mb-3">📋</div>
@@ -880,51 +890,74 @@ export default function CorporateDashboard({ user, corporate, isAdmin = false }:
                 </button>
               </div>
             ) : (
-              <div className="grid gap-4 sm:grid-cols-2">
-                {reports.map((report: any) => (
-                  <div key={report.id} className="rounded-2xl border border-white/8 bg-white/[0.03] p-5 hover:border-violet-500/30 transition">
-                    <div className="flex items-start justify-between gap-3 mb-3">
-                      <div>
-                        <p className="font-semibold">{report.title}</p>
-                        {report.month && report.year && (
-                          <p className="text-xs text-slate-400 mt-0.5">{report.month} {report.year}</p>
+              <div className="space-y-4">
+                {reports.map((report: any) => {
+                  const content = report.aiDraft || report.content || "";
+                  const isOpen = openReportId === report.id;
+                  return (
+                    <div key={report.id} className="rounded-2xl border border-white/10 bg-white/[0.025] overflow-hidden">
+                      {/* Header raport */}
+                      <div className="flex items-center gap-3 px-5 py-4">
+                        <div className="text-2xl">📋</div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-white">{report.title}</p>
+                          {report.month && report.year && (
+                            <p className="text-xs text-slate-400 mt-0.5">{report.month} {report.year}</p>
+                          )}
+                        </div>
+                        <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium ${
+                          report.status === "published" ? "bg-emerald-500/15 text-emerald-300"
+                          : "bg-cyan-500/15 text-cyan-300"
+                        }`}>
+                          {report.status === "published" ? "✓ Publicat" : "Analizat"}
+                        </span>
+                      </div>
+
+                      {/* Butoane acțiuni */}
+                      <div className="flex gap-2 px-5 pb-4">
+                        <button
+                          onClick={() => setOpenReportId(isOpen ? null : report.id)}
+                          className="flex-1 rounded-xl border border-violet-500/30 bg-violet-500/10 px-4 py-2.5 text-sm font-semibold text-violet-300 hover:bg-violet-500/20 transition">
+                          {isOpen ? "▲ Ascunde raportul" : "📄 Citește raportul"}
+                        </button>
+                        {content && (
+                          <button
+                            onClick={() => {
+                              const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+                              const url = URL.createObjectURL(blob);
+                              const a = document.createElement("a");
+                              a.href = url;
+                              a.download = `${report.title.replace(/\s+/g, "_")}.txt`;
+                              a.click();
+                              URL.revokeObjectURL(url);
+                            }}
+                            className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2.5 text-sm text-slate-300 hover:bg-white/[0.08] transition">
+                            ⬇ Descarcă
+                          </button>
                         )}
                       </div>
-                      <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${
-                        report.status === "published"
-                          ? "bg-emerald-500/15 text-emerald-300"
-                          : report.status === "draft"
-                          ? "bg-slate-500/15 text-slate-300"
-                          : "bg-yellow-500/15 text-yellow-300"
-                      }`}>
-                        {report.status === "published" ? "✓ Publicat" : report.status === "draft" ? "Draft" : report.status}
-                      </span>
+
+                      {/* Conținut raport */}
+                      {isOpen && content && (
+                        <div className="border-t border-white/8 bg-black/20 px-5 py-5">
+                          <pre className="whitespace-pre-wrap text-sm text-slate-200 leading-relaxed font-sans">
+                            {content}
+                          </pre>
+                        </div>
+                      )}
+                      {isOpen && !content && (
+                        <div className="border-t border-white/8 px-5 py-4 text-sm text-slate-500">
+                          Conținutul raportului nu este disponibil încă.
+                        </div>
+                      )}
                     </div>
-                    {report.status === "published" && (
-                      <button
-                        onClick={() => {
-                          const content = report.aiDraft || report.content || "";
-                          const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
-                          const url = URL.createObjectURL(blob);
-                          const a = document.createElement("a");
-                          a.href = url;
-                          a.download = `${report.title.replace(/\s+/g, "_")}.txt`;
-                          a.click();
-                          URL.revokeObjectURL(url);
-                        }}
-                        className="w-full rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-2 text-sm font-semibold text-emerald-300 transition hover:bg-emerald-500/20">
-                        📄 Descarcă raport
-                      </button>
-                    )}
-                    {report.status !== "published" && (
-                      <p className="text-xs text-slate-500">Raportul este în curs de procesare de către admin.</p>
-                    )}
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
-        )}
+          );
+        })()}
 
         {/* ABONAMENT */}
         {tab === "abonament" && (() => {
