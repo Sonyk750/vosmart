@@ -212,6 +212,7 @@ export default function CorporateDashboard({ user, corporate, isAdmin = false }:
       setZipFile(null); setZipExtracted([]);
       setUploadMonth(""); setAssocName("");
       fetchDocuments(); fetchReports();
+      router.refresh();
       setTimeout(() => { setAnalysisProgress(0); setAnalysisStep(""); }, 4000);
     } else {
       setUploadMsg("✗ " + (data.error || "Eroare la upload"));
@@ -225,6 +226,7 @@ export default function CorporateDashboard({ user, corporate, isAdmin = false }:
     const res = await fetch(`/api/dashboard/documents/${id}`, { method: "DELETE" });
     if (res.ok) {
       setDocuments(prev => prev.filter(d => d.id !== id));
+      router.refresh();
     }
     setDeletingDocId(null);
     setConfirmDeleteDocId(null);
