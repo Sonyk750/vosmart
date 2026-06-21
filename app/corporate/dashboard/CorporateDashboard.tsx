@@ -450,6 +450,11 @@ export default function CorporateDashboard({ user, corporate, isAdmin = false }:
 
         {/* DOCUMENTE */}
         {tab === "documente" && (() => {
+          const assoc = corporate.associations?.[0];
+          const filesUsed: number = assoc?.filesUploadedCount ?? 0;
+          const filesMax: number = assoc?.maxDocuments ?? 5;
+          const atLimit = filesUsed >= filesMax;
+
           const docsFilled = uploadFiles.filter(f => f.file).length + invoiceFiles.length;
           const docsMax = 5;
           const barHue = Math.round(120 - (docsFilled / docsMax) * 120);
@@ -459,8 +464,45 @@ export default function CorporateDashboard({ user, corporate, isAdmin = false }:
           <div className="space-y-6">
             {/* Upload form */}
             <div className="rounded-2xl border border-white/10 bg-white/[0.025] p-6">
-              <h2 className="text-lg font-semibold mb-1">Trimite dosar la analiză AI</h2>
-              <p className="text-sm text-slate-400 mb-6">Încarcă documentele lunare pentru verificare automată. Analiza durează 30–60 secunde.</p>
+              <div className="flex items-start justify-between gap-4 mb-4">
+                <div>
+                  <h2 className="text-lg font-semibold">Trimite dosar la analiză AI</h2>
+                  <p className="text-sm text-slate-400 mt-0.5">Analiza durează 30–60 secunde.</p>
+                </div>
+                {/* Contor documente */}
+                <div className={`shrink-0 rounded-xl border px-3 py-2 text-right ${
+                  atLimit ? "border-red-500/40 bg-red-500/10" : filesUsed >= filesMax - 1 ? "border-yellow-500/40 bg-yellow-500/10" : "border-white/10 bg-white/[0.03]"
+                }`}>
+                  <p className="text-[10px] uppercase tracking-wider text-slate-500">Dosare trimise</p>
+                  <p className={`text-lg font-bold ${atLimit ? "text-red-400" : filesUsed >= filesMax - 1 ? "text-yellow-400" : "text-white"}`}>
+                    {filesUsed}<span className="text-slate-600 text-sm font-normal">/{filesMax}</span>
+                  </p>
+                </div>
+              </div>
+
+              {/* Banner limită atinsă */}
+              {atLimit && (
+                <div className="mb-5 rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 flex items-start gap-3">
+                  <span className="text-xl shrink-0">⛔</span>
+                  <div>
+                    <p className="text-sm font-semibold text-red-300">Limita de dosare a fost atinsă</p>
+                    <p className="text-xs text-red-400/80 mt-0.5">
+                      Pachetul <strong>Trial</strong> permite maximum <strong>{filesMax} dosare</strong>.
+                      Șterge un dosar existent sau contactează administratorul pentru upgrade.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Avertizare aproape de limită */}
+              {!atLimit && filesUsed >= filesMax - 1 && (
+                <div className="mb-5 rounded-xl border border-yellow-500/30 bg-yellow-500/8 px-4 py-3 flex items-start gap-3">
+                  <span className="text-xl shrink-0">⚠️</span>
+                  <p className="text-xs text-yellow-300">
+                    Atenție: mai ai un singur dosar disponibil în pachetul Trial.
+                  </p>
+                </div>
+              )}
 
               <form onSubmit={handleUpload} className="space-y-5">
 
@@ -682,10 +724,16 @@ export default function CorporateDashboard({ user, corporate, isAdmin = false }:
                   </div>
                 )}
 
-                <button type="submit" disabled={uploading}
-                  className="w-full rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-6 py-4 font-semibold transition hover:from-violet-500 hover:to-indigo-500 disabled:opacity-50 flex items-center justify-center gap-2 shadow-[0_0_25px_rgba(124,58,237,0.3)]">
+                <button type="submit" disabled={uploading || atLimit}
+                  className={`w-full rounded-xl px-6 py-4 font-semibold transition flex items-center justify-center gap-2 ${
+                    atLimit
+                      ? "bg-red-500/10 border border-red-500/30 text-red-400 cursor-not-allowed"
+                      : "bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 shadow-[0_0_25px_rgba(124,58,237,0.3)] disabled:opacity-50"
+                  }`}>
                   {uploading ? (
                     <><span className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin"/>Se analizează...</>
+                  ) : atLimit ? (
+                    "⛔ Limită atinsă — șterge un dosar sau contactează admin"
                   ) : "🤖 Trimite dosar la analiză AI"}
                 </button>
               </form>
