@@ -21,26 +21,43 @@ export async function POST(req: NextRequest) {
   }
 
   const existing = await prisma.user.findUnique({ where: { email: clientEmail.toLowerCase() } });
-  if (existing) return NextResponse.json({ error: "Email deja folosit" }, { status: 409 });
+
+  // Dacă emailul aparține altui utilizator (nu celui corporate curent), blocăm
+  if (existing && existing.id !== user.id) {
+    return NextResponse.json({ error: "Email deja folosit de un alt utilizator" }, { status: 409 });
+  }
 
   const isTrial = corp.package === "trial";
+  const assocData = {
+    name: assocName,
+    cui: assocCui || null,
+    address: assocAddress || null,
+    phone: assocPhone || null,
+    corporateId: corp.id,
+    maxDocuments: isTrial ? 5 : 30,
+  };
 
+  // Dacă emailul este al utilizatorului corporate curent, creăm doar asociația
+  if (existing && existing.id === user.id) {
+    const assoc = await prisma.association.create({
+      data: { ...assocData, userId: user.id },
+      include: {
+        _count: { select: { documents: true, reports: true } },
+        documents: { take: 3, orderBy: { createdAt: "desc" } },
+        reports: { take: 3, orderBy: { createdAt: "desc" } },
+      },
+    });
+    return NextResponse.json({ success: true, association: { ...assoc, user: { name: existing.name, email: existing.email } } });
+  }
+
+  // Email nou — creăm user client + asociație
   const newUser = await prisma.user.create({
     data: {
       name: clientName,
       email: clientEmail.toLowerCase(),
       password: hashPassword(clientPassword),
       role: "client",
-      association: {
-        create: {
-          name: assocName,
-          cui: assocCui || null,
-          address: assocAddress || null,
-          phone: assocPhone || null,
-          corporateId: corp.id,
-          maxDocuments: isTrial ? 5 : 30, // trial: max 5 documente
-        }
-      }
+      association: { create: assocData },
     },
     include: {
       association: {
