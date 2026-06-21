@@ -63,7 +63,7 @@ export async function POST(req: NextRequest) {
     if (isTrial) {
       const token = createVerificationToken(user.corporateAccount!.id);
       const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://vosmart.ro";
-      const verificationLink = `${appUrl}/corporate/verify?token=${encodeURIComponent(token)}`;
+      const verificationLink = `${appUrl}/api/corporate/verify?token=${encodeURIComponent(token)}`;
 
       const [verificationResult, adminResult] = await Promise.allSettled([
         sendTrialVerificationEmail({ name, email: email.toLowerCase(), companyName, verificationLink }),

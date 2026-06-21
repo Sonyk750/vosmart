@@ -189,7 +189,7 @@ export async function sendTrialVerificationEmail(data: {
 
 Ati solicitat activarea unui cont Trial Gratuit pe platforma VoSmart Corporate pentru firma ${data.companyName}.
 
-Pentru a va activa contul, accesati linkul de mai jos (valabil 48 de ore):
+Apasati butonul din email sau accesati linkul de mai jos pentru a va activa contul (valabil 48 de ore):
 
 ${data.verificationLink}
 
@@ -197,8 +197,6 @@ Contul Trial include:
 - 1 asociatie clienta
 - Upload documente (max 5 fisiere: lista, explicatii, distributie, 2 facturi, extras cont)
 - 1 raport de cenzor generat cu AI
-
-Daca nu ati solicitat acest cont, ignorati acest email.
 
 Cu stima,
 Echipa VoSmart
@@ -247,10 +245,6 @@ office@vosmart.ro | 0756 362 828`;
       </ul>
     </td></tr>
     </table>
-    <p style="margin:0 0 8px;color:#888888;font-size:13px;line-height:1.6">
-      Daca butonul nu functioneaza, copiati si lipiti acest link in browser:
-    </p>
-    <p style="margin:0 0 24px;word-break:break-all;font-size:12px;color:#666666">${data.verificationLink}</p>
     <p style="margin:0;color:#888888;font-size:13px;border-top:1px solid #eeeeee;padding-top:16px">
       Daca nu ati solicitat acest cont, ignorati acest email.<br><br>
       Cu stima,<br>
