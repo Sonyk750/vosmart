@@ -72,6 +72,37 @@ export default function AdminDashboard({ user }: { user: User }) {
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
 
+  // Compose email modal
+  const [emailTarget, setEmailTarget] = useState<{ email: string; name: string } | null>(null);
+  const [emailSubject, setEmailSubject] = useState("Mesaj de la echipa VoSmart");
+  const [emailMessage, setEmailMessage] = useState("");
+  const [emailSending, setEmailSending] = useState(false);
+  const [emailResult, setEmailResult] = useState<string | null>(null);
+
+  async function sendClientEmail(e: React.FormEvent) {
+    e.preventDefault();
+    if (!emailTarget) return;
+    setEmailSending(true);
+    setEmailResult(null);
+    try {
+      const res = await fetch("/api/admin/send-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ to: emailTarget.email, subject: emailSubject, message: emailMessage }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setEmailResult("✓ Email trimis cu succes!");
+        setTimeout(() => { setEmailTarget(null); setEmailMessage(""); setEmailResult(null); }, 2000);
+      } else {
+        setEmailResult("✗ " + (data.error || "Eroare la trimitere"));
+      }
+    } catch {
+      setEmailResult("✗ Eroare de rețea");
+    }
+    setEmailSending(false);
+  }
+
   // Colegi form
   const [colegNume, setColegNume] = useState("");
   const [colegFunctia, setColegFunctia] = useState("");
@@ -661,7 +692,7 @@ export default function AdminDashboard({ user }: { user: User }) {
               <div className="rounded-2xl border border-white/8 overflow-visible">
                 {/* Header tabel */}
                 <div className="grid items-center gap-0 border-b border-white/8 bg-white/[0.03] rounded-t-2xl"
-                  style={{ gridTemplateColumns: "minmax(0,1fr) 150px 150px 110px 56px" }}>
+                  style={{ gridTemplateColumns: "minmax(0,1fr) 200px 200px 140px 64px" }}>
                   {["Client", "Pachet", "Zile rămase", "Dosare AI", ""].map((h, i) => (
                     <div key={i} className={`px-5 py-3.5 text-xs font-semibold uppercase tracking-widest text-slate-500 ${i === 4 ? "text-right" : ""}`}>
                       {h}
@@ -693,7 +724,7 @@ export default function AdminDashboard({ user }: { user: User }) {
                         className={`grid items-center gap-0 border-b border-white/5 last:border-0 transition-colors ${
                           isSuspended ? "bg-red-500/[0.03]" : isPending ? "bg-amber-500/[0.03]" : "hover:bg-white/[0.03]"
                         } ${idx === corporates.length - 1 ? "rounded-b-2xl" : ""}`}
-                        style={{ gridTemplateColumns: "minmax(0,1fr) 150px 150px 110px 56px" }}>
+                        style={{ gridTemplateColumns: "minmax(0,1fr) 200px 200px 140px 64px" }}>
 
                         {/* Col 1 — Client */}
                         <div className="flex items-center gap-3.5 px-5 py-4">
@@ -759,11 +790,17 @@ export default function AdminDashboard({ user }: { user: User }) {
                           {isDropOpen && (
                             <div className="absolute right-2 top-full mt-1 z-50 w-48 rounded-xl border border-white/12 bg-[#0d0d1f] shadow-[0_8px_40px_rgba(0,0,0,0.6)] py-1.5 overflow-hidden">
                               {/* Email */}
-                              <a href={`mailto:${corp.email}`}
-                                onClick={() => setOpenDropdownId(null)}
-                                className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-300 hover:bg-white/[0.06] hover:text-white transition">
+                              <button
+                                onClick={() => {
+                                  setEmailTarget({ email: corp.email, name: ca?.companyName || corp.name || corp.email });
+                                  setEmailSubject("Mesaj de la echipa VoSmart");
+                                  setEmailMessage("");
+                                  setEmailResult(null);
+                                  setOpenDropdownId(null);
+                                }}
+                                className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-300 hover:bg-white/[0.06] hover:text-white transition">
                                 <span>✉️</span> Trimite email
-                              </a>
+                              </button>
 
                               {/* Reset contor — doar trial */}
                               {ca?.package === "trial" && assocId && (
@@ -926,6 +963,86 @@ export default function AdminDashboard({ user }: { user: User }) {
           </div>
         )}
       </div>
+
+      {/* Modal compunere email */}
+      {emailTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          {/* Backdrop */}
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setEmailTarget(null)} />
+
+          {/* Panel */}
+          <div className="relative w-full max-w-lg rounded-2xl border border-violet-500/20 bg-[#0d0d1f] shadow-[0_0_80px_rgba(124,58,237,0.25)] overflow-hidden">
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-white/8 bg-gradient-to-r from-violet-500/10 to-cyan-500/5">
+              <div>
+                <h3 className="font-semibold text-white">Trimite email</h3>
+                <p className="text-xs text-slate-400 mt-0.5">Mesaj direct către client</p>
+              </div>
+              <button onClick={() => setEmailTarget(null)}
+                className="w-8 h-8 rounded-lg border border-white/10 flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/[0.08] transition">
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={sendClientEmail} className="p-6 space-y-4">
+              {/* Câtre */}
+              <div>
+                <label className="block text-xs text-slate-500 mb-1.5 uppercase tracking-wider">Către</label>
+                <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-violet-500/[0.06] px-4 py-3">
+                  <div className="w-7 h-7 rounded-lg bg-violet-500/20 flex items-center justify-center text-xs font-bold text-violet-300 flex-shrink-0">
+                    {emailTarget.name.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-white truncate">{emailTarget.name}</p>
+                    <p className="text-xs text-violet-300 truncate">{emailTarget.email}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Subiect */}
+              <div>
+                <label className="block text-xs text-slate-500 mb-1.5 uppercase tracking-wider">Subiect</label>
+                <input
+                  type="text" required value={emailSubject} onChange={e => setEmailSubject(e.target.value)}
+                  className="w-full rounded-xl border border-white/10 bg-[#0a0a18] px-4 py-3 text-white text-sm placeholder-slate-500 outline-none focus:border-violet-500 transition" />
+              </div>
+
+              {/* Mesaj */}
+              <div>
+                <label className="block text-xs text-slate-500 mb-1.5 uppercase tracking-wider">Mesaj</label>
+                <textarea
+                  required rows={6} value={emailMessage} onChange={e => setEmailMessage(e.target.value)}
+                  placeholder="Scrie mesajul tău aici..."
+                  className="w-full rounded-xl border border-white/10 bg-[#0a0a18] px-4 py-3 text-white text-sm placeholder-slate-500 outline-none focus:border-violet-500 transition resize-none" />
+              </div>
+
+              {emailResult && (
+                <p className={`text-sm text-center font-medium ${emailResult.startsWith("✓") ? "text-emerald-400" : "text-red-400"}`}>
+                  {emailResult}
+                </p>
+              )}
+
+              <div className="flex gap-3 pt-1">
+                <button type="button" onClick={() => setEmailTarget(null)}
+                  className="flex-1 rounded-xl border border-white/10 px-4 py-3 text-sm text-slate-300 hover:bg-white/[0.06] transition">
+                  Anulează
+                </button>
+                <button type="submit" disabled={emailSending}
+                  className="flex-1 rounded-xl bg-violet-600 px-4 py-3 text-sm font-semibold text-white hover:bg-violet-500 transition disabled:opacity-50 flex items-center justify-center gap-2">
+                  {emailSending ? (
+                    <>
+                      <span className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                      Se trimite...
+                    </>
+                  ) : (
+                    <>✉ Trimite email</>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
