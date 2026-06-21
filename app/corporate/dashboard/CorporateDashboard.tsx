@@ -7,6 +7,7 @@ import { CORPORATE_PACKAGES, CorporatePackage } from "@/lib/billing";
 
 interface Association {
   id: string; name: string; cui: string | null; address: string | null;
+  filesUploadedCount: number; maxDocuments: number;
   user: { name: string | null; email: string };
   documents: any[]; reports: any[];
   _count: { documents: number; reports: number };
@@ -52,6 +53,41 @@ export default function CorporateDashboard({ user, corporate, isAdmin = false }:
   const [assocPhone, setAssocPhone] = useState("");
   const [creating, setCreating] = useState(false);
   const [createMsg, setCreateMsg] = useState("");
+
+  const [clientActionMsg, setClientActionMsg] = useState("");
+  const [clientActionWorking, setClientActionWorking] = useState(false);
+
+  async function resetClientDocs(assoc: Association) {
+    if (!confirm(`Resetezi contorul de documente pentru ${assoc.name}?`)) return;
+    setClientActionWorking(true);
+    setClientActionMsg("");
+    const res = await fetch(`/api/corporate/clients/${assoc.id}`, {
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "reset_docs" }),
+    });
+    const data = await res.json();
+    setClientActionMsg(res.ok ? "✓ Contor resetat" : data.error || "Eroare");
+    if (res.ok) {
+      setAssociations(prev => prev.map(a => a.id === assoc.id ? { ...a, filesUploadedCount: 0 } : a));
+      setSelectedAssoc(prev => prev?.id === assoc.id ? { ...prev, filesUploadedCount: 0 } : prev);
+    }
+    setClientActionWorking(false);
+  }
+
+  async function deleteClient(assoc: Association) {
+    if (!confirm(`Ștergi clientul "${assoc.name}"? Această acțiune este ireversibilă.`)) return;
+    setClientActionWorking(true);
+    setClientActionMsg("");
+    const res = await fetch(`/api/corporate/clients/${assoc.id}`, { method: "DELETE" });
+    const data = await res.json();
+    if (res.ok) {
+      setAssociations(prev => prev.filter(a => a.id !== assoc.id));
+      setSelectedAssoc(null);
+    } else {
+      setClientActionMsg(data.error || "Eroare la ștergere");
+    }
+    setClientActionWorking(false);
+  }
 
   const canAddMore = associations.length < effectiveMaxAssoc;
 
@@ -395,8 +431,30 @@ export default function CorporateDashboard({ user, corporate, isAdmin = false }:
             <div className="sticky top-24">
               {selectedAssoc ? (
                 <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6">
-                  <h3 className="text-lg font-semibold mb-1">{selectedAssoc.name}</h3>
-                  <p className="text-sm text-slate-400 mb-4">{selectedAssoc.user.email}</p>
+                  <div className="flex items-start justify-between gap-3 mb-4">
+                    <div>
+                      <h3 className="text-lg font-semibold mb-0.5">{selectedAssoc.name}</h3>
+                      <p className="text-sm text-slate-400">{selectedAssoc.user.email}</p>
+                      <p className="text-xs text-slate-500 mt-1">
+                        Documente: <span className={selectedAssoc.filesUploadedCount >= selectedAssoc.maxDocuments ? "text-red-400 font-semibold" : "text-slate-300"}>
+                          {selectedAssoc.filesUploadedCount}/{selectedAssoc.maxDocuments}
+                        </span>
+                      </p>
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <button onClick={() => resetClientDocs(selectedAssoc)} disabled={clientActionWorking}
+                        className="rounded-lg border border-blue-500/30 bg-blue-500/10 px-3 py-1.5 text-xs font-semibold text-blue-300 hover:bg-blue-500/20 disabled:opacity-50 transition whitespace-nowrap">
+                        🔄 Reset documente
+                      </button>
+                      <button onClick={() => deleteClient(selectedAssoc)} disabled={clientActionWorking}
+                        className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-xs font-semibold text-red-400 hover:bg-red-500/20 disabled:opacity-50 transition">
+                        🗑 Șterge client
+                      </button>
+                    </div>
+                  </div>
+                  {clientActionMsg && (
+                    <p className={`text-xs mb-3 ${clientActionMsg.startsWith("✓") ? "text-emerald-400" : "text-red-400"}`}>{clientActionMsg}</p>
+                  )}
 
                   {selectedAssoc.documents[0] && (
                     <>
