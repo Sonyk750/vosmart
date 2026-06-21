@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { writeFile, mkdir } from "fs/promises";
@@ -136,17 +136,19 @@ export async function POST(req: NextRequest) {
       data: { filesUploadedCount: { increment: 1 } },
     });
 
-    // Await explicit — pe Vercel funcția e tăiată după response, deci analiza trebuie terminată înainte
-    await analyzeDocuments({
-      documentId: mainDoc.id,
-      associationId: associationId,
-      associationName,
-      cui,
-      address,
-      period,
-      monthName,
-      year,
-      savedFiles,
+    // Trimitem răspunsul imediat — analiza AI rulează în background după response
+    after(async () => {
+      await analyzeDocuments({
+        documentId: mainDoc.id,
+        associationId: associationId,
+        associationName,
+        cui,
+        address,
+        period,
+        monthName,
+        year,
+        savedFiles,
+      });
     });
 
     return NextResponse.json({ success: true, documentId: mainDoc.id });

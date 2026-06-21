@@ -67,6 +67,17 @@ export default function CorporateDashboard({ user, corporate, isAdmin = false }:
     fetchReports();
   }, []);
 
+  // Auto-polling cât timp există documente în analiză
+  useEffect(() => {
+    const hasAnalyzing = documents.some((d: any) => d.status === "analyzing");
+    if (!hasAnalyzing) return;
+    const interval = setInterval(() => {
+      fetchDocuments();
+      fetchReports();
+    }, 8000);
+    return () => clearInterval(interval);
+  }, [documents]);
+
   async function fetchDocuments() {
     const res = await fetch("/api/dashboard/documents");
     if (res.ok) setDocuments(await res.json());
@@ -205,15 +216,18 @@ export default function CorporateDashboard({ user, corporate, isAdmin = false }:
 
     if (res.ok) {
       setAnalysisProgress(100);
-      setAnalysisStep("Analiză completă!");
-      setUploadMsg("✓ Dosar trimis! Analiza AI este completă.");
+      setAnalysisStep("Dosar trimis!");
+      setUploadMsg("✓ Dosar trimis! Analiza AI rulează în fundal — rezultatul apare în câteva secunde.");
       setUploadFiles(prev => prev.map(f => ({ ...f, file: null })));
       setInvoiceFiles([]);
       setZipFile(null); setZipExtracted([]);
       setUploadMonth(""); setAssocName("");
       fetchDocuments(); fetchReports();
       router.refresh();
-      setTimeout(() => { setAnalysisProgress(0); setAnalysisStep(""); }, 4000);
+      setTimeout(() => { setAnalysisProgress(0); setAnalysisStep(""); }, 3000);
+      // Auto-refresh la 15s și 40s ca să prindă rezultatul analizei
+      setTimeout(() => { fetchDocuments(); fetchReports(); router.refresh(); }, 15000);
+      setTimeout(() => { fetchDocuments(); fetchReports(); router.refresh(); }, 40000);
     } else {
       setUploadMsg("✗ " + (data.error || "Eroare la upload"));
       setTimeout(() => { setAnalysisProgress(0); setAnalysisStep(""); }, 3000);
