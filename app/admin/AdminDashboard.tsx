@@ -68,8 +68,9 @@ export default function AdminDashboard({ user }: { user: User }) {
   const [creatingCorp, setCreatingCorp] = useState(false);
   const [createCorpMsg, setCreateCorpMsg] = useState("");
 
-  // Confirmare stergere
+  // Confirmare stergere + dropdown actiuni
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
 
   // Colegi form
   const [colegNume, setColegNume] = useState("");
@@ -621,15 +622,15 @@ export default function AdminDashboard({ user }: { user: User }) {
                 <form onSubmit={createCorporate} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                   <input type="text" required value={newCorpName} onChange={e => setNewCorpName(e.target.value)}
                     placeholder="Numele firmei *"
-                    className="rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-violet-500 transition text-sm" />
+                    className="rounded-xl border border-white/10 bg-[#0d0d1a] px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-violet-500 transition text-sm" />
                   <input type="email" required value={newCorpEmail} onChange={e => setNewCorpEmail(e.target.value)}
                     placeholder="Email *"
-                    className="rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-violet-500 transition text-sm" />
+                    className="rounded-xl border border-white/10 bg-[#0d0d1a] px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-violet-500 transition text-sm" />
                   <input type="password" required minLength={8} value={newCorpPass} onChange={e => setNewCorpPass(e.target.value)}
                     placeholder="Parolă *"
-                    className="rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-violet-500 transition text-sm" />
+                    className="rounded-xl border border-white/10 bg-[#0d0d1a] px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-violet-500 transition text-sm" />
                   <select value={newCorpPackage} onChange={e => setNewCorpPackage(e.target.value)}
-                    className="rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white outline-none focus:border-violet-500 transition text-sm">
+                    className="rounded-xl border border-white/10 bg-[#0d0d1a] px-4 py-3 text-white outline-none focus:border-violet-500 transition text-sm">
                     <option value="trial">Trial (gratuit)</option>
                     <option value="starter">Starter — 250 lei</option>
                     <option value="business">Business — 500 lei</option>
@@ -644,6 +645,11 @@ export default function AdminDashboard({ user }: { user: User }) {
               </div>
             )}
 
+            {/* Overlay inchidere dropdown */}
+            {openDropdownId && (
+              <div className="fixed inset-0 z-40" onClick={() => setOpenDropdownId(null)} />
+            )}
+
             {/* Lista clienți */}
             {corporates.length === 0 ? (
               <div className="rounded-2xl border border-white/8 bg-white/[0.02] p-16 text-center">
@@ -652,17 +658,18 @@ export default function AdminDashboard({ user }: { user: User }) {
                 <p className="text-slate-600 text-sm mt-1">Apasă „Adaugă client" pentru a crea primul cont</p>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="rounded-2xl border border-white/8 overflow-visible">
                 {/* Header tabel */}
-                <div className="hidden lg:grid grid-cols-[1fr_140px_130px_110px_auto] gap-4 px-5 text-xs font-semibold uppercase tracking-widest text-slate-500">
-                  <span>Client</span>
-                  <span>Pachet</span>
-                  <span>Zile rămase</span>
-                  <span>Dosare AI</span>
-                  <span className="text-right">Acțiuni</span>
+                <div className="grid items-center gap-0 border-b border-white/8 bg-white/[0.03] rounded-t-2xl"
+                  style={{ gridTemplateColumns: "minmax(0,1fr) 150px 150px 110px 56px" }}>
+                  {["Client", "Pachet", "Zile rămase", "Dosare AI", ""].map((h, i) => (
+                    <div key={i} className={`px-5 py-3.5 text-xs font-semibold uppercase tracking-widest text-slate-500 ${i === 4 ? "text-right" : ""}`}>
+                      {h}
+                    </div>
+                  ))}
                 </div>
 
-                {corporates.map(corp => {
+                {corporates.map((corp, idx) => {
                   const ca = corp.corporateAccount;
                   const assoc = ca?.associations?.[0];
                   const assocId = assoc?.id ?? null;
@@ -670,153 +677,158 @@ export default function AdminDashboard({ user }: { user: User }) {
                   const initials = (ca?.companyName || corp.name || "?").slice(0, 2).toUpperCase();
                   const isSuspended = corp.status === "rejected";
                   const isPending = corp.status === "pending";
-                  const isActive = corp.status === "active";
+                  const isDropOpen = openDropdownId === corp.id;
+                  const isDeleting = confirmDeleteId === corp.id;
 
-                  // Zile rămase
                   let daysLeft: number | null = null;
                   if (ca?.currentPeriodEnd) {
                     daysLeft = Math.ceil((new Date(ca.currentPeriodEnd).getTime() - Date.now()) / 86400000);
                   }
-                  const daysColor = daysLeft === null ? "" : daysLeft <= 0 ? "text-red-400" : daysLeft <= 7 ? "text-amber-400" : "text-emerald-400";
-                  const daysLabel = ca?.package === "trial" ? "Trial ∞" : daysLeft === null ? "—" : daysLeft <= 0 ? "Expirat" : `${daysLeft} zile`;
-
-                  const isDeleting = confirmDeleteId === corp.id;
+                  const daysColor = daysLeft === null ? "text-slate-500" : daysLeft <= 0 ? "text-red-400" : daysLeft <= 7 ? "text-amber-400" : "text-emerald-400";
+                  const daysLabel = ca?.package === "trial" ? "∞" : daysLeft === null ? "—" : daysLeft <= 0 ? "Expirat" : `${daysLeft} zile`;
 
                   return (
-                    <div key={corp.id}
-                      className={`relative rounded-2xl border transition-all duration-200 overflow-hidden ${
-                        isDeleting ? "border-red-500/40 bg-red-500/5" :
-                        isSuspended ? "border-red-500/15 bg-red-500/[0.02]" :
-                        isPending ? "border-amber-500/15 bg-amber-500/[0.02]" :
-                        "border-white/8 bg-white/[0.025] hover:border-violet-500/25 hover:bg-white/[0.04]"
-                      }`}>
-                      {/* Bara colorata stanga */}
-                      <div className={`absolute left-0 top-0 bottom-0 w-1 rounded-l-2xl ${
-                        isSuspended ? "bg-red-500/60" : isPending ? "bg-amber-500/60" : "bg-violet-500/40"
-                      }`} />
+                    <div key={corp.id}>
+                      <div
+                        className={`grid items-center gap-0 border-b border-white/5 last:border-0 transition-colors ${
+                          isSuspended ? "bg-red-500/[0.03]" : isPending ? "bg-amber-500/[0.03]" : "hover:bg-white/[0.03]"
+                        } ${idx === corporates.length - 1 ? "rounded-b-2xl" : ""}`}
+                        style={{ gridTemplateColumns: "minmax(0,1fr) 150px 150px 110px 56px" }}>
 
-                      <div className="pl-4 pr-5 py-4">
-                        {/* Layout tabel pe desktop */}
-                        <div className="lg:grid lg:grid-cols-[1fr_140px_130px_110px_auto] lg:items-center gap-4">
-
-                          {/* Col 1: Client info */}
-                          <div className="flex items-center gap-3 mb-3 lg:mb-0">
-                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm font-bold flex-shrink-0 ${
-                              isSuspended ? "bg-red-500/20 text-red-300 border border-red-500/20" :
-                              "bg-gradient-to-br from-violet-500/30 to-cyan-500/20 text-white border border-violet-500/20"
-                            }`}>
-                              {initials}
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <span className="font-semibold text-sm text-white">{ca?.companyName || corp.name || "—"}</span>
-                                {isSuspended && <span className="rounded-full bg-red-500/15 text-red-400 border border-red-500/20 px-2 py-0.5 text-xs">⛔ Suspendat</span>}
-                                {isPending && <span className="rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/20 px-2 py-0.5 text-xs">⏳ Pending</span>}
-                              </div>
-                              <p className="text-xs text-slate-500 truncate mt-0.5">{corp.email}</p>
-                            </div>
+                        {/* Col 1 — Client */}
+                        <div className="flex items-center gap-3.5 px-5 py-4">
+                          <div className={`w-11 h-11 rounded-xl flex items-center justify-center text-sm font-bold flex-shrink-0 ${
+                            isSuspended ? "bg-red-500/15 text-red-300 border border-red-500/20" :
+                            "bg-gradient-to-br from-violet-500/30 to-cyan-500/20 text-white border border-violet-500/20"
+                          }`}>
+                            {initials}
                           </div>
-
-                          {/* Col 2: Pachet */}
-                          <div className="flex lg:block items-center gap-2 mb-2 lg:mb-0">
-                            <span className="text-xs text-slate-600 lg:hidden">Pachet: </span>
-                            <div>{ca ? packageBadge(ca.package) : <span className="text-slate-600 text-xs">—</span>}</div>
-                          </div>
-
-                          {/* Col 3: Zile rămase */}
-                          <div className="flex lg:block items-center gap-2 mb-2 lg:mb-0">
-                            <span className="text-xs text-slate-600 lg:hidden">Abonament: </span>
-                            <div>
-                              {ca?.package === "trial" ? (
-                                <span className="text-xs text-slate-400">Trial permanent</span>
-                              ) : daysLeft !== null ? (
-                                <div>
-                                  <span className={`text-sm font-semibold ${daysColor}`}>{daysLabel}</span>
-                                  {daysLeft > 0 && daysLeft <= 30 && (
-                                    <div className="mt-1 h-1 w-24 rounded-full bg-white/10 overflow-hidden">
-                                      <div className={`h-full rounded-full ${daysLeft <= 7 ? "bg-red-500" : daysLeft <= 14 ? "bg-amber-500" : "bg-emerald-500"}`}
-                                        style={{ width: `${Math.min(100, (daysLeft / 30) * 100)}%` }} />
-                                    </div>
-                                  )}
-                                </div>
-                              ) : (
-                                <span className="text-xs text-slate-500">—</span>
-                              )}
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-semibold text-white text-sm leading-tight">{ca?.companyName || corp.name || "—"}</span>
+                              {isSuspended && <span className="rounded-full bg-red-500/15 text-red-400 border border-red-500/20 px-2 py-0.5 text-[10px] font-medium">⛔ Suspendat</span>}
+                              {isPending && <span className="rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/20 px-2 py-0.5 text-[10px] font-medium">⏳ Pending</span>}
                             </div>
-                          </div>
-
-                          {/* Col 4: Dosare AI */}
-                          <div className="flex lg:block items-center gap-2 mb-3 lg:mb-0">
-                            <span className="text-xs text-slate-600 lg:hidden">Dosare AI: </span>
-                            <div className="flex items-baseline gap-1">
-                              <span className="text-xl font-bold text-white">{docsCount}</span>
-                              <span className="text-xs text-slate-500">doc</span>
-                            </div>
-                          </div>
-
-                          {/* Col 5: Acțiuni */}
-                          <div className="flex items-center gap-1.5 justify-end flex-wrap">
-                            {/* Email */}
-                            <a href={`mailto:${corp.email}`}
-                              className="flex items-center gap-1 rounded-lg border border-white/10 bg-white/[0.05] px-2.5 py-1.5 text-xs text-slate-300 transition hover:bg-white/[0.10] hover:text-white"
-                              title="Trimite email">
-                              ✉ Email
-                            </a>
-
-                            {/* Reset contor (doar trial) */}
-                            {ca?.package === "trial" && assocId && (
-                              <button onClick={() => clientAction(assocId, "reset_docs")}
-                                disabled={actionWorking === assocId + "reset_docs"}
-                                className="flex items-center gap-1 rounded-lg border border-white/10 bg-white/[0.05] px-2.5 py-1.5 text-xs text-slate-300 transition hover:bg-white/[0.10] hover:text-white disabled:opacity-40"
-                                title="Resetează contor documente">
-                                🔄 Reset
-                              </button>
-                            )}
-
-                            {/* Suspendă / Activează */}
-                            {assocId && (isSuspended ? (
-                              <button onClick={() => clientAction(assocId, "activate")}
-                                disabled={actionWorking === assocId + "activate"}
-                                className="flex items-center gap-1 rounded-lg border border-emerald-500/25 bg-emerald-500/[0.08] px-2.5 py-1.5 text-xs text-emerald-300 transition hover:bg-emerald-500/15 disabled:opacity-40">
-                                ▶ Activează
-                              </button>
-                            ) : (
-                              <button onClick={() => clientAction(assocId, "suspend")}
-                                disabled={actionWorking === assocId + "suspend"}
-                                className="flex items-center gap-1 rounded-lg border border-amber-500/25 bg-amber-500/[0.08] px-2.5 py-1.5 text-xs text-amber-300 transition hover:bg-amber-500/15 disabled:opacity-40">
-                                ⏸ Suspendă
-                              </button>
-                            ))}
-
-                            {/* Șterge */}
-                            {!isDeleting ? (
-                              <button onClick={() => setConfirmDeleteId(corp.id)}
-                                className="flex items-center gap-1 rounded-lg border border-red-500/20 bg-red-500/[0.06] px-2.5 py-1.5 text-xs text-red-400 transition hover:bg-red-500/15">
-                                🗑 Șterge
-                              </button>
-                            ) : (
-                              <div className="flex items-center gap-1.5">
-                                <span className="text-xs text-red-300">Confirmi ștergerea?</span>
-                                <button onClick={() => { if (assocId) clientAction(assocId, "delete"); setConfirmDeleteId(null); fetchCorporates(); }}
-                                  className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-500 transition">
-                                  Da, șterge
-                                </button>
-                                <button onClick={() => setConfirmDeleteId(null)}
-                                  className="rounded-lg border border-white/15 px-3 py-1.5 text-xs text-slate-300 hover:bg-white/[0.08] transition">
-                                  Anulează
-                                </button>
-                              </div>
-                            )}
+                            <p className="text-xs text-slate-500 truncate mt-0.5">{corp.email}</p>
                           </div>
                         </div>
 
-                        {/* Mesaj acțiune */}
-                        {assocId && actionMsg[assocId] && (
-                          <p className={`text-xs mt-2 pl-12 ${actionMsg[assocId].startsWith("✓") ? "text-emerald-400" : "text-red-400"}`}>
-                            {actionMsg[assocId]}
-                          </p>
-                        )}
+                        {/* Col 2 — Pachet */}
+                        <div className="px-5 py-4">
+                          {ca ? packageBadge(ca.package) : <span className="text-slate-600 text-xs">—</span>}
+                        </div>
+
+                        {/* Col 3 — Zile rămase */}
+                        <div className="px-5 py-4">
+                          {ca?.package === "trial" ? (
+                            <span className="text-slate-400 text-sm">Trial permanent</span>
+                          ) : (
+                            <div>
+                              <span className={`text-sm font-semibold ${daysColor}`}>{daysLabel}</span>
+                              {daysLeft !== null && daysLeft > 0 && daysLeft <= 30 && (
+                                <div className="mt-1.5 h-1 w-20 rounded-full bg-white/10 overflow-hidden">
+                                  <div className={`h-full rounded-full ${daysLeft <= 7 ? "bg-red-500" : daysLeft <= 14 ? "bg-amber-500" : "bg-emerald-500"}`}
+                                    style={{ width: `${Math.min(100, (daysLeft / 30) * 100)}%` }} />
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Col 4 — Dosare AI */}
+                        <div className="px-5 py-4">
+                          <div className="flex items-baseline gap-1">
+                            <span className="text-2xl font-bold text-white">{docsCount}</span>
+                            <span className="text-xs text-slate-500">doc</span>
+                          </div>
+                        </div>
+
+                        {/* Col 5 — Dropdown buton */}
+                        <div className="px-3 py-4 flex justify-center relative">
+                          <button
+                            onClick={() => setOpenDropdownId(isDropOpen ? null : corp.id)}
+                            className={`w-9 h-9 rounded-xl border flex items-center justify-center text-lg font-bold transition ${
+                              isDropOpen
+                                ? "border-violet-500/50 bg-violet-500/15 text-violet-300"
+                                : "border-white/10 bg-white/[0.04] text-slate-400 hover:border-white/20 hover:text-white"
+                            }`}>
+                            ⋯
+                          </button>
+
+                          {/* Dropdown menu */}
+                          {isDropOpen && (
+                            <div className="absolute right-2 top-full mt-1 z-50 w-48 rounded-xl border border-white/12 bg-[#0d0d1f] shadow-[0_8px_40px_rgba(0,0,0,0.6)] py-1.5 overflow-hidden">
+                              {/* Email */}
+                              <a href={`mailto:${corp.email}`}
+                                onClick={() => setOpenDropdownId(null)}
+                                className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-300 hover:bg-white/[0.06] hover:text-white transition">
+                                <span>✉️</span> Trimite email
+                              </a>
+
+                              {/* Reset contor — doar trial */}
+                              {ca?.package === "trial" && assocId && (
+                                <button
+                                  onClick={() => { clientAction(assocId, "reset_docs"); setOpenDropdownId(null); }}
+                                  disabled={actionWorking === assocId + "reset_docs"}
+                                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-300 hover:bg-white/[0.06] hover:text-white transition disabled:opacity-40">
+                                  <span>🔄</span> Resetează contor
+                                </button>
+                              )}
+
+                              <div className="h-px bg-white/8 my-1" />
+
+                              {/* Suspendă / Activează */}
+                              {assocId && (isSuspended ? (
+                                <button
+                                  onClick={() => { clientAction(assocId, "activate"); setOpenDropdownId(null); }}
+                                  disabled={actionWorking === assocId + "activate"}
+                                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-emerald-300 hover:bg-emerald-500/10 transition disabled:opacity-40">
+                                  <span>▶️</span> Activează cont
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() => { clientAction(assocId, "suspend"); setOpenDropdownId(null); }}
+                                  disabled={actionWorking === assocId + "suspend"}
+                                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-amber-300 hover:bg-amber-500/10 transition disabled:opacity-40">
+                                  <span>⏸️</span> Suspendă cont
+                                </button>
+                              ))}
+
+                              <div className="h-px bg-white/8 my-1" />
+
+                              {/* Șterge */}
+                              <button
+                                onClick={() => { setConfirmDeleteId(corp.id); setOpenDropdownId(null); }}
+                                className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-400 hover:bg-red-500/10 transition">
+                                <span>🗑️</span> Șterge client
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       </div>
+
+                      {/* Confirmare ștergere — sub rând */}
+                      {isDeleting && (
+                        <div className="flex items-center gap-3 px-5 py-3 bg-red-500/[0.06] border-b border-red-500/15">
+                          <span className="text-sm text-red-300 flex-1">Ștergi definitiv contul <strong>{ca?.companyName || corp.name}</strong>?</span>
+                          <button
+                            onClick={() => { if (assocId) clientAction(assocId, "delete"); setConfirmDeleteId(null); setTimeout(fetchCorporates, 500); }}
+                            className="rounded-lg bg-red-600 px-4 py-1.5 text-xs font-semibold text-white hover:bg-red-500 transition">
+                            Da, șterge
+                          </button>
+                          <button onClick={() => setConfirmDeleteId(null)}
+                            className="rounded-lg border border-white/15 px-4 py-1.5 text-xs text-slate-300 hover:bg-white/[0.08] transition">
+                            Anulează
+                          </button>
+                        </div>
+                      )}
+
+                      {/* Mesaj acțiune */}
+                      {assocId && actionMsg[assocId] && (
+                        <div className={`px-5 py-2 text-xs ${actionMsg[assocId].startsWith("✓") ? "text-emerald-400 bg-emerald-500/[0.06]" : "text-red-400 bg-red-500/[0.06]"}`}>
+                          {actionMsg[assocId]}
+                        </div>
+                      )}
                     </div>
                   );
                 })}
