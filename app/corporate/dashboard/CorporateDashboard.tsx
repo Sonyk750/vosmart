@@ -45,7 +45,7 @@ export default function CorporateDashboard({ user, corporate, isAdmin = false }:
     { type: "distributia_facturilor", label: "Distribuția facturilor", file: null, required: true },
     { type: "extras_cont", label: "Extras cont bancar", file: null, required: false },
   ]);
-  const [invoiceFiles, setInvoiceFiles] = useState<(File | null)[]>([null]);
+  const [invoiceFiles, setInvoiceFiles] = useState<File[]>([]);
   const [zipFile, setZipFile] = useState<File | null>(null);
   const [zipExtracted, setZipExtracted] = useState<{ name: string; assignedType: string; file: File }[]>([]);
   const [zipLoading, setZipLoading] = useState(false);
@@ -53,6 +53,7 @@ export default function CorporateDashboard({ user, corporate, isAdmin = false }:
   const [uploadMsg, setUploadMsg] = useState("");
   const [analysisProgress, setAnalysisProgress] = useState(0);
   const [analysisStep, setAnalysisStep] = useState("");
+  const [analysisDossierName, setAnalysisDossierName] = useState("");
   const analysisTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [documents, setDocuments] = useState<any[]>([]);
 
@@ -161,16 +162,15 @@ export default function CorporateDashboard({ user, corporate, isAdmin = false }:
     let allFiles: { file: File; type: string; label: string }[] = [];
 
     if (uploadSubTab === "fisiere") {
-      for (const uf of uploadFiles) {
-        if (uf.file) allFiles.push({ file: uf.file, type: uf.type, label: uf.label + (uf.required ? " *" : "") });
-      }
-      const validInvoices = invoiceFiles.filter(Boolean) as File[];
-      if (validInvoices.length === 0) { setUploadMsg("Adaugă cel puțin o factură furnizori"); return; }
-      validInvoices.forEach((file, idx) => {
-        allFiles.push({ file, type: idx === 0 ? "facturi" : `facturi_${idx + 1}`, label: validInvoices.length > 1 ? `Factură furnizori (${idx + 1})` : "Facturi furnizori *" });
-      });
       const missing = uploadFiles.filter(f => f.required && !f.file).map(f => f.label);
       if (missing.length > 0) { setUploadMsg("Lipsesc: " + missing.join(", ")); return; }
+      if (invoiceFiles.length === 0) { setUploadMsg("Adaugă cel puțin o factură furnizori"); return; }
+      for (const uf of uploadFiles) {
+        if (uf.file) allFiles.push({ file: uf.file, type: uf.type, label: uf.label });
+      }
+      invoiceFiles.forEach((file, idx) => {
+        allFiles.push({ file, type: idx === 0 ? "facturi" : `facturi_${idx + 1}`, label: invoiceFiles.length > 1 ? `Factură furnizori (${idx + 1})` : "Facturi furnizori" });
+      });
     } else {
       if (zipExtracted.length === 0) { setUploadMsg("Alege o arhivă ZIP validă"); return; }
       const hasReq = ["lista_plata", "explicatii_lista", "distributia_facturilor"].every(t => zipExtracted.some(z => z.assignedType === t));
@@ -179,6 +179,8 @@ export default function CorporateDashboard({ user, corporate, isAdmin = false }:
       allFiles = zipExtracted.map(z => ({ file: z.file, type: z.assignedType, label: guessTypeFromName(z.name).label }));
     }
 
+    const monthLabel = MONTHS_RO.find(m => m.val === uploadMonth)?.name || uploadMonth;
+    setAnalysisDossierName(`${assocName.trim()} — ${monthLabel} ${uploadYear}`);
     startAnalysisProgress();
     setUploading(true);
     setUploadMsg("");
@@ -204,7 +206,7 @@ export default function CorporateDashboard({ user, corporate, isAdmin = false }:
       setAnalysisStep("Analiză completă!");
       setUploadMsg("✓ Dosar trimis! Analiza AI este completă.");
       setUploadFiles(prev => prev.map(f => ({ ...f, file: null })));
-      setInvoiceFiles([null]);
+      setInvoiceFiles([]);
       setZipFile(null); setZipExtracted([]);
       setUploadMonth(""); setAssocName("");
       fetchDocuments(); fetchReports();
@@ -436,7 +438,7 @@ export default function CorporateDashboard({ user, corporate, isAdmin = false }:
 
         {/* DOCUMENTE */}
         {tab === "documente" && (() => {
-          const docsFilled = uploadFiles.filter(f => f.file).length + invoiceFiles.filter(Boolean).length;
+          const docsFilled = uploadFiles.filter(f => f.file).length + invoiceFiles.length;
           const docsMax = 5;
           const barHue = Math.round(120 - (docsFilled / docsMax) * 120);
           const barPct = Math.min(100, (docsFilled / docsMax) * 100);
@@ -524,36 +526,37 @@ export default function CorporateDashboard({ user, corporate, isAdmin = false }:
                         <span className="text-xs text-red-400">●</span>
                         <span className="text-sm text-slate-300">Facturi furnizori</span>
                         <span className="text-red-400 text-xs">*</span>
-                        <span className="text-xs text-slate-600 ml-1">(poți adăuga mai multe)</span>
+                        <span className="text-xs text-slate-600 ml-1">(selectează una sau mai multe deodată)</span>
                       </div>
-                      <div className="space-y-2">
-                        {invoiceFiles.map((file, idx) => (
-                          <div key={idx} className="flex items-center gap-2">
-                            <label className={`flex-1 flex items-center gap-2.5 rounded-xl border px-4 py-2.5 cursor-pointer transition text-sm ${
-                              file ? "border-emerald-500/40 bg-emerald-500/8 text-emerald-300" : "border-white/8 bg-white/[0.03] text-slate-500 hover:border-violet-500/40 hover:text-slate-300"
-                            }`}>
-                              <span>{file ? "🧾" : "📄"}</span>
-                              <span className="truncate flex-1">{file ? file.name : `Factură ${idx + 1}...`}</span>
-                              {file && <button type="button" onClick={e => { e.preventDefault(); setInvoiceFiles(p => { const n=[...p]; n[idx]=null; return n; }); }} className="text-slate-500 hover:text-red-400 transition">✕</button>}
-                              <input type="file" accept=".pdf,.jpg,.jpeg,.png,.xlsx,.xls" className="hidden"
-                                onChange={e => { const f=e.target.files?.[0]||null; setInvoiceFiles(p=>{ const n=[...p]; n[idx]=f; return n; }); }} />
-                            </label>
-                            {idx > 0 && (
-                              <button type="button" onClick={() => setInvoiceFiles(p=>p.filter((_,i)=>i!==idx))}
-                                className="w-9 h-9 rounded-lg border border-red-500/20 text-red-400 hover:bg-red-500/10 transition flex items-center justify-center text-sm">
-                                ✕
-                              </button>
-                            )}
-                          </div>
-                        ))}
-                        {invoiceFiles.length < 10 && (
-                          <button type="button" onClick={() => setInvoiceFiles(p=>[...p,null])}
-                            className="flex items-center gap-2 text-xs text-violet-400 hover:text-violet-300 transition mt-1">
-                            <span className="w-5 h-5 rounded-full border border-violet-500/40 flex items-center justify-center">+</span>
-                            Adaugă factură
-                          </button>
-                        )}
-                      </div>
+                      {/* Fișiere selectate deja */}
+                      {invoiceFiles.length > 0 && (
+                        <div className="space-y-1.5 mb-2">
+                          {invoiceFiles.map((file, idx) => (
+                            <div key={idx} className="flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/8 px-3 py-2.5">
+                              <span className="text-base">🧾</span>
+                              <span className="text-sm text-emerald-300 flex-1 truncate">{file.name}</span>
+                              <span className="text-xs text-emerald-600 shrink-0">{Math.round(file.size / 1024)} KB</span>
+                              <button type="button" onClick={() => setInvoiceFiles(p => p.filter((_, i) => i !== idx))}
+                                className="text-slate-500 hover:text-red-400 transition ml-1 text-sm">✕</button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {/* Buton selectare (multiple) */}
+                      <label className={`flex items-center gap-3 rounded-xl border px-4 py-3 cursor-pointer transition text-sm w-full ${
+                        invoiceFiles.length > 0
+                          ? "border-violet-500/30 bg-violet-500/5 text-violet-300 hover:bg-violet-500/10"
+                          : "border-white/8 bg-white/[0.03] text-slate-500 hover:border-violet-500/40 hover:text-slate-300"
+                      }`}>
+                        <span>📁</span>
+                        <span className="flex-1">{invoiceFiles.length > 0 ? `+ Adaugă mai multe facturi` : "Selectează facturi (una sau mai multe)"}</span>
+                        <input type="file" accept=".pdf,.jpg,.jpeg,.png,.xlsx,.xls" multiple className="hidden"
+                          onChange={e => {
+                            const files = Array.from(e.target.files || []);
+                            if (files.length > 0) setInvoiceFiles(p => [...p, ...files]);
+                            e.target.value = "";
+                          }} />
+                      </label>
                     </div>
 
                     {/* Bara progres documente (verde → rosu) */}
@@ -657,25 +660,6 @@ export default function CorporateDashboard({ user, corporate, isAdmin = false }:
                   </div>
                 )}
 
-                {/* Bara progres analiză */}
-                {uploading && analysisProgress > 0 && (
-                  <div className="rounded-xl border border-violet-500/20 bg-violet-500/5 p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm text-violet-300 font-medium">{analysisStep}</span>
-                      <span className="text-sm font-bold text-violet-200">{analysisProgress}%</span>
-                    </div>
-                    <div className="h-2.5 rounded-full bg-white/8 overflow-hidden">
-                      <div className="h-full rounded-full transition-all duration-700 relative"
-                        style={{ width: `${analysisProgress}%`, background: "linear-gradient(90deg,#7c3aed,#06b6d4)" }}>
-                        <div className="absolute inset-0 animate-pulse opacity-50 rounded-full" style={{ background: "linear-gradient(90deg,transparent,rgba(255,255,255,0.3),transparent)" }} />
-                      </div>
-                    </div>
-                    <div className="flex justify-between mt-1.5 text-[10px] text-slate-600">
-                      <span>Pregătire</span><span>Procesare</span><span>Analiză AI</span><span>Raport</span><span>Complet</span>
-                    </div>
-                  </div>
-                )}
-
                 {uploadMsg && (
                   <div className={`rounded-xl border px-4 py-3 text-sm ${
                     uploadMsg.startsWith("✓") ? "border-emerald-500/30 bg-emerald-500/8 text-emerald-300"
@@ -693,6 +677,30 @@ export default function CorporateDashboard({ user, corporate, isAdmin = false }:
                   ) : "🤖 Trimite dosar la analiză AI"}
                 </button>
               </form>
+
+              {/* Bara progres analiză — apare DOAR după apăsarea butonului */}
+              {uploading && (
+                <div className="mt-4 rounded-xl border border-violet-500/20 bg-violet-500/5 p-4">
+                  <div className="mb-2">
+                    <p className="text-xs text-slate-500 uppercase tracking-wider mb-0.5">Se analizează dosar</p>
+                    <p className="text-sm font-semibold text-violet-200">{analysisDossierName}</p>
+                  </div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs text-violet-300">{analysisStep}</span>
+                    <span className="text-sm font-bold text-violet-200">{analysisProgress}%</span>
+                  </div>
+                  <div className="h-2.5 rounded-full bg-white/8 overflow-hidden">
+                    <div className="h-full rounded-full transition-all duration-700 relative"
+                      style={{ width: `${analysisProgress}%`, background: "linear-gradient(90deg,#7c3aed,#06b6d4)" }}>
+                      <div className="absolute inset-0 animate-pulse opacity-40 rounded-full"
+                        style={{ background: "linear-gradient(90deg,transparent,rgba(255,255,255,0.4),transparent)" }} />
+                    </div>
+                  </div>
+                  <div className="flex justify-between mt-1.5 text-[10px] text-slate-600">
+                    <span>Pregătire</span><span>Procesare</span><span>Analiză AI</span><span>Raport</span><span>Complet</span>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Dosarele mele */}

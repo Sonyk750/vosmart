@@ -105,8 +105,8 @@ export async function POST(req: NextRequest) {
     }
 
     // Creăm un document principal în DB pentru dosar
-    const [month, year] = period.split("-");
-    const monthName = new Date(period + "-01").toLocaleString("ro-RO", { month: "long" });
+    const [year, monthNum] = period.split("-");
+    const monthName = new Date(`${year}-${monthNum}-01`).toLocaleString("ro-RO", { month: "long" });
 
     const titleAssoc = (associationName || "").trim();
     const mainDoc = await prisma.document.create({
