@@ -311,7 +311,7 @@ export default function CorporateDashboard({ user, corporate, isAdmin = false }:
               <div className="rounded-3xl border border-white/8 bg-white/[0.03] p-12 text-center">
                 <div className="text-5xl mb-4">📤</div>
                 <p className="text-slate-300 font-medium">Nu ai documente încă</p>
-                <p className="text-sm text-slate-500 mt-2">Încarcă primul dosar pentru a genera un raport de cenzor</p>
+                <p className="text-sm text-slate-500 mt-2">Încarcă primul dosar pentru a genera un raport de admin</p>
                 <button onClick={() => setTab("documente")}
                   className="mt-4 rounded-xl bg-violet-600 px-6 py-2.5 text-sm font-semibold transition hover:bg-violet-500">
                   Încarcă documente →
@@ -440,7 +440,7 @@ export default function CorporateDashboard({ user, corporate, isAdmin = false }:
         {/* RAPOARTE */}
         {tab === "rapoarte" && (
           <div className="space-y-4">
-            <h2 className="text-lg font-semibold mb-4">Rapoartele mele de cenzor</h2>
+            <h2 className="text-lg font-semibold mb-4">Rapoartele mele</h2>
             {reports.length === 0 ? (
               <div className="rounded-3xl border border-white/8 bg-white/[0.03] p-12 text-center text-slate-400">
                 <div className="text-4xl mb-3">📋</div>
@@ -489,7 +489,7 @@ export default function CorporateDashboard({ user, corporate, isAdmin = false }:
                       </button>
                     )}
                     {report.status !== "published" && (
-                      <p className="text-xs text-slate-500">Raportul este în curs de procesare de către cenzor.</p>
+                      <p className="text-xs text-slate-500">Raportul este în curs de procesare de către admin.</p>
                     )}
                   </div>
                 ))}

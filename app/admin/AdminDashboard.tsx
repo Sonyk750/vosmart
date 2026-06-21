@@ -277,7 +277,7 @@ export default function AdminDashboard({ user }: { user: User }) {
   const sectionTitle: Record<string, string> = {
     clienti: "Clienți",
     documente: "Documente",
-    cenzori: "Cenzori",
+    cenzori: "Admini",
   };
 
   return (
@@ -293,7 +293,7 @@ export default function AdminDashboard({ user }: { user: User }) {
             <Image src="/logo-vosmart.png" alt="VoSmart" width={90} height={40}
               className="h-auto" style={{ mixBlendMode: "screen", width: "75px" }} />
             <span className="rounded-full bg-violet-600/20 border border-violet-500/30 px-3 py-1 text-xs text-violet-300 font-medium">
-              {user.role === "admin" ? "Administrator" : "Cenzor"}
+              {user.role === "admin" ? "Administrator" : "Admin"}
             </span>
           </div>
           <div className="flex items-center gap-3">
@@ -339,7 +339,7 @@ export default function AdminDashboard({ user }: { user: User }) {
                 { icon: "📄", label: "De revizuit", value: pendingDocs.length, sub: "documente analizate", color: "amber", action: () => setTab("documente") },
                 { icon: "✅", label: "Rapoarte publicate", value: associations.reduce((a, c) => a + c.reports?.filter(r => r.status === "published").length, 0), sub: "rapoarte aprobate", color: "emerald", action: () => setTab("documente") },
                 { icon: "⚡", label: "Se analizează", value: allDocs.filter(d => d.status === "analyzing").length, sub: "în procesare AI", color: "blue", action: () => setTab("documente") },
-                { icon: "🔑", label: "Cenzori", value: cenzori.length, sub: "cenzori activi", color: "indigo", action: () => setTab("cenzori") },
+                { icon: "🔑", label: "Admini", value: cenzori.length, sub: "admini activi", color: "indigo", action: () => setTab("cenzori") },
                 { icon: "⏳", label: "În așteptare", value: associations.filter(a => a.user.status === "pending").length, sub: "necesită aprobare", color: "rose", action: () => { setTab("clienti"); setClientiSubTab("associations"); } },
               ].map(card => {
                 const colorMap: Record<string, { border: string; bg: string; badge: string; text: string; glow: string; ring: string }> = {
@@ -505,7 +505,7 @@ export default function AdminDashboard({ user }: { user: User }) {
 
                   {/* Draft raport */}
                   <div className="border-t border-white/5 pt-4 mt-4">
-                    <p className="text-sm font-semibold mb-3">Raport de cenzor</p>
+                    <p className="text-sm font-semibold mb-3">Raport de admin</p>
                     <textarea
                       value={draftText}
                       onChange={e => setDraftText(e.target.value)}
@@ -528,7 +528,7 @@ export default function AdminDashboard({ user }: { user: User }) {
                             const url = URL.createObjectURL(blob);
                             const a = document.createElement("a");
                             a.href = url;
-                            a.download = `Raport_Cenzor_${selectedDoc.title.replace(/\s+/g, "_")}.txt`;
+                            a.download = `Raport_Admin_${selectedDoc.title.replace(/\s+/g, "_")}.txt`;
                             a.click();
                             URL.revokeObjectURL(url);
                           }}
@@ -781,12 +781,12 @@ export default function AdminDashboard({ user }: { user: User }) {
           </div>
         )}
 
-        {/* CENZORI - doar admin */}
+        {/* ADMINI - doar admin */}
         {tab === "cenzori" && user.role === "admin" && (
           <div className="grid gap-6 lg:grid-cols-2">
-            {/* Lista cenzori */}
+            {/* Lista admini */}
             <div>
-              <h2 className="text-lg font-semibold mb-4">Cenzori activi</h2>
+              <h2 className="text-lg font-semibold mb-4">Admini activi</h2>
               <div className="space-y-4">
                 {cenzori.map(c => (
                   <div key={c.id} className="rounded-2xl border border-white/8 bg-white/[0.03] p-5">
@@ -795,7 +795,7 @@ export default function AdminDashboard({ user }: { user: User }) {
                         <p className="font-semibold">{c.name}</p>
                         <p className="text-sm text-slate-400">{c.email}</p>
                       </div>
-                      <span className="rounded-full bg-cyan-500/15 px-3 py-1 text-xs text-cyan-300">Cenzor</span>
+                      <span className="rounded-full bg-cyan-500/15 px-3 py-1 text-xs text-cyan-300">Admin</span>
                     </div>
                     <div>
                       <p className="text-xs text-slate-500 mb-2">Asociații alocate:</p>
@@ -824,9 +824,9 @@ export default function AdminDashboard({ user }: { user: User }) {
               </div>
             </div>
 
-            {/* Creare cenzor nou */}
+            {/* Creare admin nou */}
             <div>
-              <h2 className="text-lg font-semibold mb-4">Adaugă cenzor nou</h2>
+              <h2 className="text-lg font-semibold mb-4">Adaugă admin nou</h2>
               <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6">
                 <form onSubmit={createCenzor} className="space-y-4">
                   <input type="text" required value={newCenzorName} onChange={e => setNewCenzorName(e.target.value)}
@@ -840,7 +840,7 @@ export default function AdminDashboard({ user }: { user: User }) {
                     className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-violet-500 transition" />
                   <button type="submit" disabled={creatingCenzor}
                     className="w-full rounded-xl bg-violet-600 px-6 py-3 font-semibold transition hover:bg-violet-500 disabled:opacity-50">
-                    {creatingCenzor ? "Se creează..." : "Creează cont cenzor"}
+                    {creatingCenzor ? "Se creează..." : "Creează cont admin"}
                   </button>
                 </form>
               </div>

@@ -91,13 +91,13 @@ const steps = [
   {
     id: 5,
     icon: "📋",
-    title: "Raportul de cenzor",
+    title: "Raportul de admin",
     color: "emerald",
     summary: "Cum primești și folosești raportul final",
     content: [
-      { bold: "1.", text: " După analiză, cenzorul VoSmart " }, { bold: "revizuiește", text: " raportul generat de AI." },
+      { bold: "1.", text: " După analiză, adminul VoSmart " }, { bold: "revizuiește", text: " raportul generat de AI." },
       { nl: true },
-      { bold: "2.", text: " Cenzorul poate " }, { bold: "modifica și completa", text: " raportul înainte de publicare." },
+      { bold: "2.", text: " Adminul poate " }, { bold: "modifica și completa", text: " raportul înainte de publicare." },
       { nl: true },
       { bold: "3.", text: " Raportul aprobat apare în secțiunea " }, { bold: "Rapoarte", text: " din dashboard-ul tău." },
       { nl: true },
@@ -206,7 +206,7 @@ export default function HelpPage() {
             </span>
           </h1>
           <p className="mt-5 text-lg text-slate-400 max-w-xl mx-auto">
-            Tot ce trebuie să știi pentru a folosi platforma de cenzorat online
+            Tot ce trebuie să știi pentru a folosi platforma de audit online
           </p>
         </div>
       </section>
@@ -275,7 +275,7 @@ export default function HelpPage() {
       {/* Footer */}
       <footer className="border-t border-white/5 py-8 text-center">
         <div className="flex items-center justify-center gap-2 text-slate-600 text-xs">
-          <span>© 2026 VoSmart — Platformă de cenzorat asociații</span>
+          <span>© 2026 VoSmart — Platformă de audit asociații</span>
         </div>
       </footer>
     </main>
