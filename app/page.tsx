@@ -122,10 +122,10 @@ export default function Home() {
               <a href="#platforma" className="transition hover:text-violet-300">Platformă</a>
               <a href="#pachete" className="transition hover:text-violet-300">Pachete</a>
               <a href="#servicii" className="transition hover:text-violet-300">Servicii</a>
-              <a href="/clienti" className="transition hover:text-cyan-300 text-cyan-400 font-medium">Clienți</a>
               <a href="/corporate/login" className="transition hover:text-emerald-200 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-emerald-300 font-medium">Corporate</a>
               <a href="/admin/login" className="transition hover:text-violet-200 rounded-lg border border-violet-500/40 bg-violet-500/10 px-3 py-1.5 text-violet-300 font-medium">Cenzor</a>
               <a href="/blog" className="transition hover:text-emerald-300">Blog</a>
+              <a href="/help" className="transition hover:text-cyan-300">Ajutor</a>
               <a href="#contact" className="transition hover:text-violet-300">Contact</a>
             </nav>
             <a href="#contact" className="hidden rounded-xl bg-violet-600 px-5 py-2.5 text-sm font-semibold shadow-[0_0_25px_rgba(124,58,237,0.4)] transition hover:bg-violet-500 hover:shadow-[0_0_35px_rgba(124,58,237,0.6)] md:inline-flex">Solicită ofertă</a>
@@ -135,7 +135,7 @@ export default function Home() {
             <a href="#platforma" className="hover:text-white">Platformă</a>
             <a href="#pachete" className="hover:text-white">Pachete</a>
             <a href="#servicii" className="hover:text-white">Servicii</a>
-            <a href="/clienti" className="hover:text-cyan-300 text-cyan-400">Clienți</a>
+            <a href="/help" className="hover:text-cyan-300 text-cyan-400">Ajutor</a>
             <a href="/corporate/login" className="hover:text-emerald-200 text-emerald-300 border border-emerald-500/30 rounded-lg px-2 py-0.5">Corporate</a>
             <a href="/admin/login" className="hover:text-violet-200 text-violet-300 border border-violet-500/30 rounded-lg px-2 py-0.5">Cenzor</a>
           </nav>

@@ -1,22 +1,15 @@
 "use client";
-import { useState, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import CardPaymentForm from "@/app/components/CardPaymentForm";
 import { CORPORATE_PACKAGES, CorporatePackage } from "@/lib/billing";
 
-interface Association {
-  id: string; name: string; cui: string | null; address: string | null;
-  filesUploadedCount: number; maxDocuments: number;
-  user: { name: string | null; email: string; status: string };
-  documents: any[]; reports: any[];
-  _count: { documents: number; reports: number };
-}
 interface Corporate {
   id: string; companyName: string; package: string; maxAssoc: number;
   status: string; logoUrl: string | null; cui: string | null;
   subscriptionStatus: string | null; currentPeriodEnd: string | null;
-  associations: Association[];
+  associations: any[];
 }
 interface User { id: string; name: string | null; email: string; role: string; }
 
@@ -24,87 +17,91 @@ const ALL_PACKAGES: CorporatePackage[] = ["trial", "starter", "business", "profe
 
 export default function CorporateDashboard({ user, corporate, isAdmin = false }: { user: User; corporate: Corporate; isAdmin?: boolean }) {
   const router = useRouter();
-  const [tab, setTab] = useState<"overview" | "clienti" | "adauga" | "abonament">("overview");
+  const [tab, setTab] = useState<"overview" | "documente" | "rapoarte" | "abonament">("overview");
 
   // Admin: comutare între pachete pentru testare
   const [previewPackage, setPreviewPackage] = useState<CorporatePackage>(
-    isAdmin ? (corporate.package as CorporatePackage) : (corporate.package as CorporatePackage)
+    corporate.package as CorporatePackage
   );
   const effectivePackageKey: CorporatePackage = isAdmin ? previewPackage : (corporate.package as CorporatePackage);
   const pkg = CORPORATE_PACKAGES[effectivePackageKey] as { name: string; priceRon: number; maxAssoc: number } | undefined;
-  const effectiveMaxAssoc: number = isAdmin ? (pkg?.maxAssoc ?? corporate.maxAssoc) : corporate.maxAssoc;
 
-  const [associations, setAssociations] = useState<Association[]>(corporate.associations);
-  const [selectedAssoc, setSelectedAssoc] = useState<Association | null>(null);
-  const [draftText, setDraftText] = useState("");
-  const [generating, setGenerating] = useState(false);
-  const [publishing, setPublishing] = useState(false);
-  const [msg, setMsg] = useState("");
   const [logoPreview, setLogoPreview] = useState(corporate.logoUrl || "");
-  const logoRef = useRef<HTMLInputElement>(null);
-
-  // Formular de creare client
-  const [clientName, setClientName] = useState("");
-  const [clientEmail, setClientEmail] = useState("");
-  const [clientPassword, setClientPassword] = useState("");
-  const [assocName, setAssocName] = useState("");
-  const [assocCui, setAssocCui] = useState("");
-  const [assocAddress, setAssocAddress] = useState("");
-  const [assocPhone, setAssocPhone] = useState("");
-  const [creating, setCreating] = useState(false);
-  const [createMsg, setCreateMsg] = useState("");
-
-  const [clientActionMsg, setClientActionMsg] = useState("");
-  const [clientActionWorking, setClientActionWorking] = useState(false);
-
-  async function deleteClient(assoc: Association) {
-    if (!confirm(`Ștergi clientul "${assoc.name}"? Această acțiune este ireversibilă.`)) return;
-    setClientActionWorking(true);
-    setClientActionMsg("");
-    const res = await fetch(`/api/corporate/clients/${assoc.id}`, { method: "DELETE" });
-    const data = await res.json();
-    if (res.ok) {
-      setAssociations(prev => prev.filter(a => a.id !== assoc.id));
-      setSelectedAssoc(null);
-    } else {
-      setClientActionMsg(data.error || "Eroare la ștergere");
-    }
-    setClientActionWorking(false);
-  }
-
-  async function toggleSuspendClient(assoc: Association) {
-    const isSuspended = assoc.user.status === "rejected";
-    const action = isSuspended ? "activate" : "suspend";
-    const confirmMsg = isSuspended
-      ? `Reactivezi contul clientului "${assoc.name}"?`
-      : `Suspendezi contul clientului "${assoc.name}"? Nu va mai putea accesa platforma.`;
-    if (!confirm(confirmMsg)) return;
-    setClientActionWorking(true);
-    setClientActionMsg("");
-    const res = await fetch(`/api/corporate/clients/${assoc.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action }),
-    });
-    const data = await res.json();
-    if (res.ok) {
-      setAssociations(prev => prev.map(a =>
-        a.id === assoc.id ? { ...a, user: { ...a.user, status: isSuspended ? "active" : "rejected" } } : a
-      ));
-      setSelectedAssoc(prev => prev?.id === assoc.id ? { ...prev, user: { ...prev.user, status: isSuspended ? "active" : "rejected" } } : prev);
-      setClientActionMsg(isSuspended ? "✓ Cont reactivat" : "✓ Cont suspendat");
-    } else {
-      setClientActionMsg(data.error || "Eroare");
-    }
-    setClientActionWorking(false);
-  }
-
-  const canAddMore = associations.length < effectiveMaxAssoc;
 
   // Abonament corporate
   const [subscribing, setSubscribing] = useState(false);
   const [subscribeClientSecret, setSubscribeClientSecret] = useState("");
   const [subMsg, setSubMsg] = useState("");
+
+  // Upload state
+  const [uploadPeriod, setUploadPeriod] = useState("");
+  const [uploadFiles, setUploadFiles] = useState<{ type: string; label: string; file: File | null }[]>([
+    { type: "lista_plata", label: "Lista de plată *", file: null },
+    { type: "explicatii_lista", label: "Explicații listă *", file: null },
+    { type: "distributia_facturilor", label: "Distribuția facturilor *", file: null },
+    { type: "facturi", label: "Facturi furnizori *", file: null },
+    { type: "extras_cont", label: "Extras cont bancar", file: null },
+  ]);
+  const [uploading, setUploading] = useState(false);
+  const [uploadMsg, setUploadMsg] = useState("");
+  const [documents, setDocuments] = useState<any[]>([]);
+
+  // Rapoarte state
+  const [reports, setReports] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetchDocuments();
+    fetchReports();
+  }, []);
+
+  async function fetchDocuments() {
+    const res = await fetch("/api/dashboard/documents");
+    if (res.ok) setDocuments(await res.json());
+  }
+
+  async function fetchReports() {
+    const res = await fetch("/api/dashboard/reports");
+    if (res.ok) setReports(await res.json());
+  }
+
+  async function handleUpload(e: React.FormEvent) {
+    e.preventDefault();
+    if (!uploadPeriod) { setUploadMsg("Selectează perioada"); return; }
+    const required = ["lista_plata", "explicatii_lista", "distributia_facturilor", "facturi"];
+    const missing = required.filter(r => !uploadFiles.find(f => f.type === r && f.file));
+    if (missing.length > 0) { setUploadMsg("Documentele obligatorii lipsă: " + missing.join(", ")); return; }
+
+    setUploading(true);
+    setUploadMsg("Se încarcă și se analizează... (30-60 secunde)");
+
+    const form = new FormData();
+    form.append("period", uploadPeriod);
+    form.append("associationName", corporate.companyName);
+    form.append("cui", corporate.cui || "");
+    form.append("address", "");
+
+    for (const uf of uploadFiles) {
+      if (uf.file) {
+        form.append("files", uf.file);
+        form.append("fileTypes", uf.type);
+        form.append("fileLabels", uf.label);
+      }
+    }
+
+    const res = await fetch("/api/dashboard/upload-structured", { method: "POST", body: form });
+    const data = await res.json();
+
+    if (res.ok) {
+      setUploadMsg("✓ Dosar trimis cu succes! Analiza AI este completă.");
+      setUploadFiles(prev => prev.map(f => ({ ...f, file: null })));
+      setUploadPeriod("");
+      fetchDocuments();
+      fetchReports();
+    } else {
+      setUploadMsg("✗ " + (data.error || "Eroare la upload"));
+    }
+    setUploading(false);
+  }
 
   async function handleLogout() {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -133,80 +130,6 @@ export default function CorporateDashboard({ user, corporate, isAdmin = false }:
     setSubscribeClientSecret("");
     setSubMsg("✓ Plata a fost procesată. Abonamentul va fi activat în câteva minute.");
     setTimeout(() => router.refresh(), 3000);
-  }
-
-  async function createClient(e: React.FormEvent) {
-    e.preventDefault();
-    setCreating(true);
-    setCreateMsg("");
-    try {
-      const res = await fetch("/api/corporate/clients", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          clientName, clientEmail, clientPassword,
-          assocName, assocCui, assocAddress, assocPhone,
-          corporateId: corporate.id,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) { setCreateMsg("✗ " + (data.error || "Eroare")); return; }
-      setCreateMsg("✓ Client creat cu succes!");
-      setAssociations(prev => [...prev, data.association]);
-      setClientName(""); setClientEmail(""); setClientPassword("");
-      setAssocName(""); setAssocCui(""); setAssocAddress(""); setAssocPhone("");
-      setTimeout(() => { setTab("clienti"); setCreateMsg(""); }, 1500);
-    } catch { setCreateMsg("✗ Eroare de conexiune"); }
-    finally { setCreating(false); }
-  }
-
-  async function loadDraft(assoc: Association) {
-    if (!assoc.documents[0]) return;
-    setGenerating(true);
-    setDraftText("");
-    setMsg("");
-    const res = await fetch(`/api/corporate/reports/draft?documentId=${assoc.documents[0].id}`);
-    if (res.ok) {
-      const data = await res.json();
-      if (data.draft) { setDraftText(data.draft); setMsg("✓ Draft încărcat"); }
-      else setMsg("Nu există draft generat încă.");
-    }
-    setGenerating(false);
-  }
-
-  async function generateDraft(assoc: Association) {
-    if (!assoc.documents[0]) return;
-    setGenerating(true);
-    setDraftText("");
-    setMsg("");
-    const res = await fetch("/api/corporate/reports/generate", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ documentId: assoc.documents[0].id }),
-    });
-    const data = await res.json();
-    if (res.ok) { setDraftText(data.draft); setMsg("✓ Draft generat"); }
-    else setMsg("✗ " + (data.error || "Eroare"));
-    setGenerating(false);
-  }
-
-  async function publishDraft(assoc: Association) {
-    if (!draftText || !assoc.documents[0]) return;
-    setPublishing(true);
-    const res = await fetch("/api/corporate/reports/publish", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ documentId: assoc.documents[0].id, draft: draftText, associationId: assoc.id }),
-    });
-    if (res.ok) {
-      setMsg("✓ Raport publicat! Clientul îl poate vedea.");
-      setDraftText("");
-      setSelectedAssoc(null);
-    } else {
-      const data = await res.json();
-      setMsg("✗ " + (data.error || "Eroare"));
-    }
-    setPublishing(false);
   }
 
   const statusBadge = (status: string) => {
@@ -245,12 +168,11 @@ export default function CorporateDashboard({ user, corporate, isAdmin = false }:
       <header className="sticky top-0 z-50 border-b border-white/5 bg-[#050814]/95 backdrop-blur-xl">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-3">
           <div className="flex items-center gap-4">
-            {/* Logo firmei corporate (dacă există) sau VoSmart */}
             {logoPreview ? (
               <img src={logoPreview} alt="Logo" className="h-9 w-auto object-contain" />
             ) : (
               <Image src="/logo-vosmart.png" alt="VoSmart" width={80} height={36}
-                className="h-auto" style={{ mixBlendMode:"screen", width:"70px" }} />
+                className="h-auto" style={{ mixBlendMode: "screen", width: "70px" }} />
             )}
             <div className="hidden sm:block">
               <p className="text-sm font-semibold">{corporate.companyName}</p>
@@ -258,7 +180,7 @@ export default function CorporateDashboard({ user, corporate, isAdmin = false }:
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <span className="text-xs text-slate-500 hidden sm:block">{associations.length}/{effectiveMaxAssoc === 9999 ? "∞" : effectiveMaxAssoc} asociații</span>
+            <a href="/help" className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-1.5 text-xs text-slate-300 transition hover:bg-white/[0.08]">Ajutor</a>
             <a href="/" className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-1.5 text-xs text-slate-300 transition hover:bg-white/[0.08]">← Site</a>
             <button onClick={handleLogout}
               className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-1.5 text-xs text-slate-300 transition hover:bg-white/[0.08]">
@@ -294,9 +216,6 @@ export default function CorporateDashboard({ user, corporate, isAdmin = false }:
                   );
                 })}
               </div>
-              <span className="text-xs text-slate-500 ml-auto hidden md:block">
-                Max asociații: <strong className="text-amber-300">{effectiveMaxAssoc === 9999 ? "∞" : effectiveMaxAssoc}</strong>
-              </span>
             </div>
           </div>
         </div>
@@ -306,7 +225,7 @@ export default function CorporateDashboard({ user, corporate, isAdmin = false }:
         <div className="mb-6">
           <h1 className="text-2xl font-bold">Panou {corporate.companyName}</h1>
           <p className="text-slate-400 mt-1 text-sm">
-            Gestionare clienți și rapoarte
+            Dashboard corporate — documente și rapoarte
             {isAdmin && <span className="ml-2 text-amber-400">· Pachet simulat: <strong>{pkg?.name}</strong></span>}
           </p>
         </div>
@@ -314,10 +233,10 @@ export default function CorporateDashboard({ user, corporate, isAdmin = false }:
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           {[
-            ["👥", "Clienți activi", associations.length.toString()],
-            ["📋", "Locuri disponibile", effectiveMaxAssoc === 9999 ? "∞" : (effectiveMaxAssoc - associations.length).toString()],
-            ["📄", "Doc. de revizuit", associations.reduce((a, c) => a + c.documents.filter((d: any) => d.status === "analyzed").length, 0).toString()],
-            ["✅", "Rapoarte publicate", associations.reduce((a, c) => a + c.reports.filter((r: any) => r.status === "published").length, 0).toString()],
+            ["📄", "Documente", documents.length.toString()],
+            ["✅", "Rapoarte publicate", reports.filter((r: any) => r.status === "published").length.toString()],
+            ["🤖", "Se analizează", documents.filter((d: any) => d.status === "analyzing").length.toString()],
+            ["📋", "Rapoarte draft", reports.filter((r: any) => r.status === "draft").length.toString()],
           ].map(([icon, label, value]) => (
             <div key={label} className="rounded-2xl border border-white/8 bg-white/[0.03] p-5">
               <div className="text-2xl mb-2">{icon}</div>
@@ -331,8 +250,8 @@ export default function CorporateDashboard({ user, corporate, isAdmin = false }:
         <div className="flex gap-2 mb-6 border-b border-white/5 pb-1 flex-wrap">
           {[
             { key: "overview", label: "📊 Prezentare" },
-            { key: "clienti", label: `👥 Clienți (${associations.length})` },
-            { key: "adauga", label: "➕ Adaugă client" },
+            { key: "documente", label: "📁 Documente" },
+            { key: "rapoarte", label: "📋 Rapoarte" },
             { key: "abonament", label: "💳 Abonament" },
           ].map(t => (
             <button key={t.key} onClick={() => setTab(t.key as any)}
@@ -354,261 +273,226 @@ export default function CorporateDashboard({ user, corporate, isAdmin = false }:
                   {pkg && <p className="text-sm text-violet-300">{pkg.priceRon} lei/lună</p>}
                 </div>
                 <div className="text-right">
-                  <p className="text-sm text-slate-400">Asociații folosite</p>
-                  <p className="text-3xl font-bold">{associations.length}<span className="text-lg text-slate-400">/{effectiveMaxAssoc === 9999 ? "∞" : effectiveMaxAssoc}</span></p>
+                  <p className="text-sm text-slate-400">Documente încărcate</p>
+                  <p className="text-3xl font-bold">{documents.length}</p>
                 </div>
-              </div>
-              <div className="mt-4 w-full bg-white/10 rounded-full h-2">
-                <div className="h-2 rounded-full bg-gradient-to-r from-violet-500 to-cyan-500 transition-all"
-                  style={{ width: effectiveMaxAssoc === 9999 ? "30%" : `${Math.min(100, (associations.length / effectiveMaxAssoc) * 100)}%` }} />
               </div>
             </div>
 
-            {/* Documente care asteapta */}
-            {associations.some(a => a.documents.some((d: any) => d.status === "analyzed")) && (
-              <div className="rounded-2xl border border-yellow-500/20 bg-yellow-500/5 p-5">
-                <p className="text-sm font-semibold text-yellow-300 mb-3">⚠️ Documente care așteaptă revizuire</p>
-                <div className="space-y-2">
-                  {associations.filter(a => a.documents.some((d: any) => d.status === "analyzed")).map(a => (
-                    <div key={a.id} className="flex items-center justify-between rounded-xl bg-black/20 p-3">
-                      <div>
-                        <p className="text-sm font-medium">{a.name}</p>
-                        <p className="text-xs text-slate-400">{a.documents.filter((d: any) => d.status === "analyzed").length} doc. de revizuit</p>
-                      </div>
-                      <button onClick={() => { setSelectedAssoc(a); setTab("clienti"); setDraftText(""); setMsg(""); }}
-                        className="rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-semibold transition hover:bg-violet-500">
-                        Revizuiește
-                      </button>
-                    </div>
-                  ))}
-                </div>
+            {/* Documente în analiză */}
+            {documents.filter((d: any) => d.status === "analyzing").length > 0 && (
+              <div className="rounded-2xl border border-violet-500/20 bg-violet-500/5 p-5">
+                <p className="text-sm font-semibold text-violet-300 mb-2 flex items-center gap-2">
+                  <span className="animate-pulse">●</span> Documente în analiză AI
+                </p>
+                <p className="text-xs text-slate-400">Analiza poate dura 30-60 secunde. Reîncarcă pagina pentru a verifica statusul.</p>
               </div>
             )}
 
-            {associations.length === 0 && (
+            {/* Acces rapid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <button onClick={() => setTab("documente")}
+                className="rounded-2xl border border-white/8 bg-white/[0.03] p-6 text-left hover:bg-white/[0.06] hover:border-violet-500/30 transition group">
+                <div className="text-3xl mb-3">📁</div>
+                <p className="font-semibold">Încarcă documente</p>
+                <p className="text-sm text-slate-400 mt-1">Trimite dosarul lunar pentru analiză AI</p>
+                <span className="text-violet-400 text-sm mt-3 inline-block group-hover:translate-x-1 transition-transform">Deschide →</span>
+              </button>
+              <button onClick={() => setTab("rapoarte")}
+                className="rounded-2xl border border-white/8 bg-white/[0.03] p-6 text-left hover:bg-white/[0.06] hover:border-cyan-500/30 transition group">
+                <div className="text-3xl mb-3">📋</div>
+                <p className="font-semibold">Rapoartele mele</p>
+                <p className="text-sm text-slate-400 mt-1">{reports.filter((r: any) => r.status === "published").length} rapoarte publicate</p>
+                <span className="text-cyan-400 text-sm mt-3 inline-block group-hover:translate-x-1 transition-transform">Vezi rapoarte →</span>
+              </button>
+            </div>
+
+            {documents.length === 0 && (
               <div className="rounded-3xl border border-white/8 bg-white/[0.03] p-12 text-center">
-                <div className="text-5xl mb-4">👥</div>
-                <p className="text-slate-300 font-medium">Nu ai clienți încă</p>
-                <button onClick={() => setTab("adauga")}
+                <div className="text-5xl mb-4">📤</div>
+                <p className="text-slate-300 font-medium">Nu ai documente încă</p>
+                <p className="text-sm text-slate-500 mt-2">Încarcă primul dosar pentru a genera un raport de cenzor</p>
+                <button onClick={() => setTab("documente")}
                   className="mt-4 rounded-xl bg-violet-600 px-6 py-2.5 text-sm font-semibold transition hover:bg-violet-500">
-                  Adaugă primul client →
+                  Încarcă documente →
                 </button>
               </div>
             )}
           </div>
         )}
 
-        {/* CLIENȚI */}
-        {tab === "clienti" && (
-          <div className="grid gap-6 lg:grid-cols-2">
-            {/* Lista */}
-            <div className="space-y-3">
-              <h2 className="text-lg font-semibold mb-4">Clienții tăi</h2>
-              {associations.length === 0 ? (
-                <div className="rounded-2xl border border-white/8 bg-white/[0.03] p-8 text-center text-slate-400">
-                  <p>Nu ai clienți încă.</p>
-                  <button onClick={() => setTab("adauga")} className="mt-3 text-violet-400 hover:text-violet-300 text-sm">Adaugă primul →</button>
+        {/* DOCUMENTE */}
+        {tab === "documente" && (
+          <div className="space-y-6">
+            {/* Upload form */}
+            <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6">
+              <h2 className="text-lg font-semibold mb-1">Trimite dosar la analiză AI</h2>
+              <p className="text-sm text-slate-400 mb-6">Încarcă documentele lunare pentru verificare automată. Analiza durează 30-60 secunde.</p>
+
+              <form onSubmit={handleUpload} className="space-y-5">
+                {/* Selector perioadă */}
+                <div>
+                  <label className="block text-xs text-slate-400 uppercase tracking-wider mb-2">Perioada *</label>
+                  <input
+                    type="month"
+                    value={uploadPeriod}
+                    onChange={e => setUploadPeriod(e.target.value)}
+                    className="w-full max-w-xs rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white outline-none focus:border-violet-500 transition"
+                  />
                 </div>
-              ) : associations.map(a => (
-                <div key={a.id}
-                  onClick={() => { setSelectedAssoc(a); setDraftText(""); setMsg(""); loadDraft(a); }}
-                  className={`rounded-2xl border p-5 cursor-pointer transition ${selectedAssoc?.id === a.id ? "border-violet-500/50 bg-violet-500/8" : "border-white/8 bg-white/[0.03] hover:bg-white/[0.06]"}`}>
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="font-semibold">{a.name}</p>
-                      <p className="text-xs text-slate-400 mt-0.5">{a.user.email}</p>
-                    </div>
-                    <div className="flex flex-col items-end gap-1 text-xs text-slate-400">
-                      <span>📁 {a._count.documents}</span>
-                      <span>📋 {a._count.reports}</span>
-                    </div>
-                  </div>
-                  {a.documents[0] && (
-                    <div className="mt-3 flex items-center gap-2">
-                      {statusBadge(a.documents[0].status)}
-                      {a.documents[0].aiScore !== null && (
-                        <span className={`text-xs font-bold ${a.documents[0].aiScore >= 80 ? "text-emerald-400" : a.documents[0].aiScore >= 60 ? "text-yellow-400" : "text-red-400"}`}>
-                          {a.documents[0].aiScore.toFixed(0)}%
-                        </span>
-                      )}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
 
-            {/* Panou dreapta */}
-            <div className="sticky top-24">
-              {selectedAssoc ? (
-                <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6">
-                  <div className="flex items-start justify-between gap-3 mb-4">
-                    <div>
-                      <h3 className="text-lg font-semibold mb-0.5">{selectedAssoc.name}</h3>
-                      <p className="text-sm text-slate-400">{selectedAssoc.user.email}</p>
-                      <p className="text-xs text-slate-500 mt-1">
-                        Documente: <span className={selectedAssoc.filesUploadedCount >= selectedAssoc.maxDocuments ? "text-red-400 font-semibold" : "text-slate-300"}>
-                          {selectedAssoc.filesUploadedCount}/{selectedAssoc.maxDocuments}
-                        </span>
-                      </p>
-                    </div>
-                    <div className="flex flex-col gap-1.5">
-                      <button onClick={() => toggleSuspendClient(selectedAssoc)} disabled={clientActionWorking}
-                        className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition disabled:opacity-50 ${
-                          selectedAssoc.user.status === "rejected"
-                            ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20"
-                            : "border-yellow-500/30 bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20"
-                        }`}>
-                        {selectedAssoc.user.status === "rejected" ? "▶ Activează" : "⏸ Suspendă"}
-                      </button>
-                      <button onClick={() => deleteClient(selectedAssoc)} disabled={clientActionWorking}
-                        className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-xs font-semibold text-red-400 hover:bg-red-500/20 disabled:opacity-50 transition">
-                        🗑 Șterge client
-                      </button>
-                    </div>
-                  </div>
-                  {clientActionMsg && (
-                    <p className={`text-xs mb-3 ${clientActionMsg.startsWith("✓") ? "text-emerald-400" : "text-red-400"}`}>{clientActionMsg}</p>
-                  )}
-
-                  {selectedAssoc.documents[0] && (
-                    <>
-                      {selectedAssoc.documents[0].aiScore !== null && (
-                        <div className="mb-4">
-                          <div className="flex items-center gap-3 mb-2">
-                            <span className="text-sm text-slate-400">Scor AI:</span>
-                            <span className={`text-xl font-bold ${selectedAssoc.documents[0].aiScore >= 80 ? "text-emerald-400" : selectedAssoc.documents[0].aiScore >= 60 ? "text-yellow-400" : "text-red-400"}`}>
-                              {selectedAssoc.documents[0].aiScore.toFixed(0)}%
-                            </span>
-                          </div>
-                          <div className="w-full bg-white/10 rounded-full h-2">
-                            <div className={`h-2 rounded-full ${selectedAssoc.documents[0].aiScore >= 80 ? "bg-emerald-400" : selectedAssoc.documents[0].aiScore >= 60 ? "bg-yellow-400" : "bg-red-400"}`}
-                              style={{ width: `${selectedAssoc.documents[0].aiScore}%` }} />
-                          </div>
+                {/* Fișiere */}
+                <div>
+                  <label className="block text-xs text-slate-400 uppercase tracking-wider mb-3">Documente</label>
+                  <div className="space-y-3">
+                    {uploadFiles.map((uf, idx) => (
+                      <div key={uf.type} className="flex items-center gap-4">
+                        <label className="w-52 text-sm text-slate-300 shrink-0">{uf.label}</label>
+                        <div className="flex-1">
+                          <label className={`flex items-center gap-3 rounded-xl border px-4 py-2.5 cursor-pointer transition ${
+                            uf.file
+                              ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-300"
+                              : "border-white/10 bg-black/10 text-slate-400 hover:border-violet-500/40 hover:bg-violet-500/5"
+                          }`}>
+                            <span className="text-lg">{uf.file ? "✓" : "📄"}</span>
+                            <span className="text-sm truncate">{uf.file ? uf.file.name : "Alege fișier..."}</span>
+                            <input
+                              type="file"
+                              accept=".pdf,.jpg,.jpeg,.png,.xlsx,.xls,.doc,.docx"
+                              className="hidden"
+                              onChange={e => {
+                                const file = e.target.files?.[0] || null;
+                                setUploadFiles(prev => prev.map((f, i) => i === idx ? { ...f, file } : f));
+                              }}
+                            />
+                          </label>
                         </div>
-                      )}
-
-                      {selectedAssoc.documents[0].aiFindings && (() => {
-                        try {
-                          const f = JSON.parse(selectedAssoc.documents[0].aiFindings);
-                          return f.length > 0 ? (
-                            <div className="mb-4 rounded-xl border border-yellow-500/20 bg-yellow-500/5 p-4">
-                              <p className="text-xs font-semibold text-yellow-300 mb-2">Probleme găsite:</p>
-                              <ul className="space-y-1.5">
-                                {f.slice(0, 4).map((item: string, i: number) => (
-                                  <li key={i} className="text-xs text-slate-300 flex gap-2">
-                                    <span className="text-yellow-400 flex-shrink-0">▸</span>{item}
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                          ) : null;
-                        } catch { return null; }
-                      })()}
-                    </>
-                  )}
-
-                  <div className="border-t border-white/5 pt-4">
-                    <p className="text-sm font-semibold mb-3">Raport de cenzor</p>
-
-                    {generating && !draftText && (
-                      <div className="mb-4 rounded-xl border border-violet-500/20 bg-violet-500/5 p-4 text-center">
-                        <div className="flex items-center justify-center gap-2 text-violet-300">
-                          <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-                          </svg>
-                          <span className="text-sm">AI generează raportul...</span>
-                        </div>
-                        <p className="text-xs text-slate-500 mt-1">20-40 secunde</p>
                       </div>
-                    )}
-
-                    <textarea value={draftText} onChange={e => setDraftText(e.target.value)} rows={8}
-                      placeholder="Apasă 'Draft AI' pentru a genera raportul..."
-                      className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-white placeholder-slate-500 outline-none focus:border-violet-500 transition resize-none" />
-
-                    {msg && <p className={`text-xs mt-1 ${msg.startsWith("✓") ? "text-emerald-400" : "text-red-400"}`}>{msg}</p>}
-
-                    <div className="flex gap-3 mt-3">
-                      <button onClick={() => generateDraft(selectedAssoc)} disabled={generating}
-                        className="flex-1 rounded-xl border border-cyan-500/30 bg-cyan-500/10 px-4 py-2.5 text-sm font-semibold text-cyan-300 transition hover:bg-cyan-500/20 disabled:opacity-50 flex items-center justify-center gap-2">
-                        {generating ? <><svg className="animate-spin h-3 w-3" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>Generează...</> : "✨ Draft AI"}
-                      </button>
-                      <button onClick={() => publishDraft(selectedAssoc)} disabled={publishing || !draftText}
-                        className="flex-1 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold transition hover:bg-emerald-500 disabled:opacity-50">
-                        {publishing ? "Se publică..." : "✅ Aprobă & Publică"}
-                      </button>
-                    </div>
+                    ))}
                   </div>
                 </div>
-              ) : (
-                <div className="rounded-2xl border border-white/8 bg-white/[0.03] p-12 text-center text-slate-400">
-                  <div className="text-4xl mb-3">👆</div>
-                  <p>Selectează un client</p>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
 
-        {/* ADAUGĂ CLIENT */}
-        {tab === "adauga" && (
-          <div className="max-w-xl">
-            {!canAddMore ? (
-              <div className="rounded-3xl border border-red-500/20 bg-red-500/5 p-8 text-center">
-                <div className="text-4xl mb-3">🔒</div>
-                <p className="font-semibold text-red-300 mb-2">Limită atinsă</p>
-                <p className="text-sm text-slate-400">Ai atins limita de {effectiveMaxAssoc} asociații pentru pachetul {pkg ? pkg.name : corporate.package}.</p>
-                <p className="text-sm text-slate-400 mt-2">Contactează VoSmart pentru upgrade la un pachet superior.</p>
-              </div>
-            ) : (
-              <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-8">
-                <h2 className="text-xl font-semibold mb-1">Adaugă client nou</h2>
-                <p className="text-sm text-slate-400 mb-6">Creează cont pentru o asociație clientă. Ei se vor putea loga și încărca documente.</p>
-
-                {createMsg && (
-                  <div className={`mb-4 rounded-xl border px-4 py-3 text-sm ${createMsg.startsWith("✓") ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300" : "border-red-500/30 bg-red-500/10 text-red-300"}`}>
-                    {createMsg}
+                {uploadMsg && (
+                  <div className={`rounded-xl border px-4 py-3 text-sm ${
+                    uploadMsg.startsWith("✓")
+                      ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300"
+                      : uploadMsg.startsWith("✗")
+                      ? "border-red-500/30 bg-red-500/10 text-red-300"
+                      : "border-violet-500/30 bg-violet-500/10 text-violet-300"
+                  }`}>
+                    {uploading && (
+                      <span className="inline-flex items-center gap-2">
+                        <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                        </svg>
+                      </span>
+                    )}
+                    {uploadMsg}
                   </div>
                 )}
 
-                <form onSubmit={createClient} className="space-y-4">
-                  <div>
-                    <p className="text-xs text-slate-400 uppercase tracking-wider mb-3">Date asociație</p>
-                    <div className="space-y-3">
-                      <input type="text" required value={assocName} onChange={e => setAssocName(e.target.value)}
-                        placeholder="Numele asociației *"
-                        className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-violet-500 transition" />
-                      <input type="text" value={assocCui} onChange={e => setAssocCui(e.target.value)}
-                        placeholder="CUI asociație"
-                        className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-violet-500 transition" />
-                      <input type="text" value={assocAddress} onChange={e => setAssocAddress(e.target.value)}
-                        placeholder="Adresa"
-                        className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-violet-500 transition" />
-                      <input type="text" value={assocPhone} onChange={e => setAssocPhone(e.target.value)}
-                        placeholder="Telefon"
-                        className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-violet-500 transition" />
+                <button
+                  type="submit"
+                  disabled={uploading}
+                  className="w-full rounded-xl bg-violet-600 px-6 py-3.5 font-semibold transition hover:bg-violet-500 disabled:opacity-50 flex items-center justify-center gap-2">
+                  {uploading ? (
+                    <>
+                      <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                      </svg>
+                      Se analizează...
+                    </>
+                  ) : "🤖 Trimite dosar la analiză AI"}
+                </button>
+              </form>
+            </div>
+
+            {/* Lista documente existente */}
+            {documents.length > 0 && (
+              <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6">
+                <h2 className="text-lg font-semibold mb-4">Dosarele mele</h2>
+                <div className="space-y-3">
+                  {documents.map((doc: any) => (
+                    <div key={doc.id} className="flex items-center justify-between rounded-xl border border-white/8 bg-black/20 p-4">
+                      <div>
+                        <p className="font-medium text-sm">{doc.title}</p>
+                        <p className="text-xs text-slate-500 mt-0.5">{doc.fileName}</p>
+                        {doc.aiSummary && <p className="text-xs text-slate-400 mt-1">{doc.aiSummary}</p>}
+                      </div>
+                      <div className="flex flex-col items-end gap-2">
+                        {statusBadge(doc.status)}
+                        {doc.aiScore !== null && doc.aiScore !== undefined && (
+                          <span className={`text-xs font-bold ${doc.aiScore >= 80 ? "text-emerald-400" : doc.aiScore >= 60 ? "text-yellow-400" : "text-red-400"}`}>
+                            {doc.aiScore.toFixed(0)}%
+                          </span>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                  <div className="border-t border-white/5 pt-4">
-                    <p className="text-xs text-slate-400 uppercase tracking-wider mb-3">Cont de acces client</p>
-                    <div className="space-y-3">
-                      <input type="text" required value={clientName} onChange={e => setClientName(e.target.value)}
-                        placeholder="Numele reprezentantului *"
-                        className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-violet-500 transition" />
-                      <input type="email" required value={clientEmail} onChange={e => setClientEmail(e.target.value)}
-                        placeholder="Email *"
-                        className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-violet-500 transition" />
-                      <input type="password" required minLength={8} value={clientPassword} onChange={e => setClientPassword(e.target.value)}
-                        placeholder="Parolă pentru client *"
-                        className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-violet-500 transition" />
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* RAPOARTE */}
+        {tab === "rapoarte" && (
+          <div className="space-y-4">
+            <h2 className="text-lg font-semibold mb-4">Rapoartele mele de cenzor</h2>
+            {reports.length === 0 ? (
+              <div className="rounded-3xl border border-white/8 bg-white/[0.03] p-12 text-center text-slate-400">
+                <div className="text-4xl mb-3">📋</div>
+                <p>Nu există rapoarte încă.</p>
+                <p className="text-sm mt-2">Trimite un dosar la analiză pentru a genera primul raport.</p>
+                <button onClick={() => setTab("documente")}
+                  className="mt-4 rounded-xl bg-violet-600 px-6 py-2.5 text-sm font-semibold transition hover:bg-violet-500">
+                  Încarcă documente →
+                </button>
+              </div>
+            ) : (
+              <div className="grid gap-4 sm:grid-cols-2">
+                {reports.map((report: any) => (
+                  <div key={report.id} className="rounded-2xl border border-white/8 bg-white/[0.03] p-5 hover:border-violet-500/30 transition">
+                    <div className="flex items-start justify-between gap-3 mb-3">
+                      <div>
+                        <p className="font-semibold">{report.title}</p>
+                        {report.month && report.year && (
+                          <p className="text-xs text-slate-400 mt-0.5">{report.month} {report.year}</p>
+                        )}
+                      </div>
+                      <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+                        report.status === "published"
+                          ? "bg-emerald-500/15 text-emerald-300"
+                          : report.status === "draft"
+                          ? "bg-slate-500/15 text-slate-300"
+                          : "bg-yellow-500/15 text-yellow-300"
+                      }`}>
+                        {report.status === "published" ? "✓ Publicat" : report.status === "draft" ? "Draft" : report.status}
+                      </span>
                     </div>
+                    {report.status === "published" && (
+                      <button
+                        onClick={() => {
+                          const content = report.aiDraft || report.content || "";
+                          const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+                          const url = URL.createObjectURL(blob);
+                          const a = document.createElement("a");
+                          a.href = url;
+                          a.download = `${report.title.replace(/\s+/g, "_")}.txt`;
+                          a.click();
+                          URL.revokeObjectURL(url);
+                        }}
+                        className="w-full rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-2 text-sm font-semibold text-emerald-300 transition hover:bg-emerald-500/20">
+                        📄 Descarcă raport
+                      </button>
+                    )}
+                    {report.status !== "published" && (
+                      <p className="text-xs text-slate-500">Raportul este în curs de procesare de către cenzor.</p>
+                    )}
                   </div>
-                  <button type="submit" disabled={creating}
-                    className="w-full rounded-xl bg-violet-600 px-6 py-3.5 font-semibold transition hover:bg-violet-500 disabled:opacity-50">
-                    {creating ? "Se creează..." : "Creează cont client →"}
-                  </button>
-                </form>
+                ))}
               </div>
             )}
           </div>
@@ -655,17 +539,41 @@ export default function CorporateDashboard({ user, corporate, isAdmin = false }:
                   </div>
                 )}
               </div>
+
+              {/* Pachete disponibile */}
+              <div className="mt-6 rounded-2xl border border-white/8 bg-white/[0.03] p-5">
+                <p className="text-sm font-semibold mb-3 text-slate-300">Pachete disponibile</p>
+                <div className="space-y-2">
+                  {[
+                    { key: "trial", name: "Trial", price: "Gratuit", assoc: "1 dosar (5 documente)" },
+                    { key: "starter", name: "Starter", price: "250 lei/lună", assoc: "10 asociații" },
+                    { key: "business", name: "Business", price: "500 lei/lună", assoc: "25 asociații" },
+                    { key: "professional", name: "Professional", price: "900 lei/lună", assoc: "50 asociații" },
+                  ].map(p => (
+                    <div key={p.key} className={`flex items-center justify-between rounded-xl border p-3 ${corporate.package === p.key ? "border-violet-500/40 bg-violet-500/10" : "border-white/5 bg-white/[0.02]"}`}>
+                      <div>
+                        <span className="text-sm font-medium">{p.name}</span>
+                        <span className="text-xs text-slate-500 ml-2">{p.assoc}</span>
+                      </div>
+                      <span className="text-sm text-violet-300">{p.price}</span>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs text-slate-500 mt-4">
+                  Pentru upgrade contactează <a href="mailto:office@vosmart.ro" className="text-violet-400 hover:underline">office@vosmart.ro</a>
+                </p>
+              </div>
             </div>
           );
         })()}
       </div>
 
-      {/* Footer cu VoSmart */}
+      {/* Footer */}
       <footer className="mt-16 border-t border-white/5 py-6 text-center">
         <div className="flex items-center justify-center gap-2 text-slate-600 text-xs">
           <span>Powered by</span>
           <Image src="/logo-vosmart.png" alt="VoSmart" width={60} height={26}
-            className="h-auto opacity-40" style={{ mixBlendMode:"screen", width:"50px" }} />
+            className="h-auto opacity-40" style={{ mixBlendMode: "screen", width: "50px" }} />
         </div>
       </footer>
     </main>

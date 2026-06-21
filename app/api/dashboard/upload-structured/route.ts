@@ -8,7 +8,18 @@ export const maxDuration = 60;
 
 export async function POST(req: NextRequest) {
   const user = await getSession();
-  if (!user || !user.association) return NextResponse.json({ error: "Neautorizat" }, { status: 401 });
+  if (!user || (!user.association && user.role !== "corporate"))
+    return NextResponse.json({ error: "Neautorizat" }, { status: 401 });
+
+  let associationId = user.association?.id;
+  if (!associationId && user.role === "corporate") {
+    const corp = await prisma.corporateAccount.findUnique({
+      where: { userId: user.id },
+      include: { associations: { take: 1 } },
+    });
+    associationId = corp?.associations[0]?.id;
+  }
+  if (!associationId) return NextResponse.json({ error: "Nu există asociație" }, { status: 400 });
 
   try {
     const form = await req.formData();
@@ -38,7 +49,7 @@ export async function POST(req: NextRequest) {
     // Trial: verificăm tipurile de documente permise
     const TRIAL_ALLOWED_TYPES = ["lista_plata", "explicatii_lista", "distributia_facturilor", "facturi", "extras_cont"];
     const association = await prisma.association.findUnique({
-      where: { id: user.association.id },
+      where: { id: associationId },
       select: { filesUploadedCount: true, maxDocuments: true, corporateId: true },
     });
 
@@ -74,15 +85,15 @@ export async function POST(req: NextRequest) {
       const buffer = Buffer.from(await file.arrayBuffer());
 
       // Încercăm să scriem pe disc (funcționează local, eșuează silențios pe Vercel)
-      let fileUrl = `/uploads/${user.association.id}/${period.replace("-", "_")}/${safeName}`;
+      let fileUrl = `/uploads/${associationId}/${period.replace("-", "_")}/${safeName}`;
       try {
-        const uploadDir = path.join(process.cwd(), "public", "uploads", user.association.id, period.replace("-", "_"));
+        const uploadDir = path.join(process.cwd(), "public", "uploads", associationId, period.replace("-", "_"));
         await mkdir(uploadDir, { recursive: true });
         await writeFile(path.join(uploadDir, safeName), buffer);
       } catch {
         // Pe Vercel scriem în /tmp pentru durata funcției
         try {
-          const tmpDir = path.join("/tmp", "vosmart", user.association.id, period.replace("-", "_"));
+          const tmpDir = path.join("/tmp", "vosmart", associationId, period.replace("-", "_"));
           await mkdir(tmpDir, { recursive: true });
           await writeFile(path.join(tmpDir, safeName), buffer);
         } catch { /* AI analiza foloseste buffer-ul, nu fisierul de pe disc */ }
@@ -97,11 +108,11 @@ export async function POST(req: NextRequest) {
 
     const mainDoc = await prisma.document.create({
       data: {
-        associationId: user.association.id,
+        associationId: associationId,
         title: `Dosar verificare ${monthName} ${year}`,
         type: "dosar_lunar",
         fileName: `dosar_${period}.zip`,
-        fileUrl: `/uploads/${user.association.id}/${period.replace("-", "_")}/`,
+        fileUrl: `/uploads/${associationId}/${period.replace("-", "_")}/`,
         month: monthName,
         year: parseInt(year),
         status: "analyzing",
@@ -110,14 +121,14 @@ export async function POST(req: NextRequest) {
 
     // Incrementăm contorul de documente încărcate
     await prisma.association.update({
-      where: { id: user.association.id },
+      where: { id: associationId },
       data: { filesUploadedCount: { increment: files.length } },
     });
 
     // Await explicit — pe Vercel funcția e tăiată după response, deci analiza trebuie terminată înainte
     await analyzeDocuments({
       documentId: mainDoc.id,
-      associationId: user.association.id,
+      associationId: associationId,
       associationName,
       cui,
       address,

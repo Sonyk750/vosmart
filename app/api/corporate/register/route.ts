@@ -60,6 +60,20 @@ export async function POST(req: NextRequest) {
       include: { corporateAccount: true },
     });
 
+    // Creăm asociația implicită pentru utilizatorul corporate
+    await prisma.association.create({
+      data: {
+        userId: user.id,
+        corporateId: user.corporateAccount!.id,
+        name: companyName || "Asociația mea",
+        cui: cui || null,
+        address: address || null,
+        package: "trial",
+        maxDocuments: 5,
+        filesUploadedCount: 0,
+      },
+    });
+
     if (isTrial) {
       const token = createVerificationToken(user.corporateAccount!.id);
       const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://vosmart.ro";

@@ -42,7 +42,7 @@ export default function AdminDashboard({ user }: { user: User }) {
   const [allDocs, setAllDocs] = useState<Document[]>([]);
   const [cenzori, setCenzori] = useState<Cenzor[]>([]);
   const [corporates, setCorporates] = useState<CorporateAdmin[]>([]);
-  const [clientiSubTab, setClientiSubTab] = useState<"corporates" | "associations">("corporates");
+  const [clientiSubTab, setClientiSubTab] = useState<"corporates" | "associations" | "adauga-corporate">("corporates");
   const [actionMsg, setActionMsg] = useState<Record<string, string>>({});
   const [actionWorking, setActionWorking] = useState<string | null>(null);
   const [selectedDoc, setSelectedDoc] = useState<Document | null>(null);
@@ -57,6 +57,14 @@ export default function AdminDashboard({ user }: { user: User }) {
   const [newCenzorEmail, setNewCenzorEmail] = useState("");
   const [newCenzorPass, setNewCenzorPass] = useState("");
   const [creatingCenzor, setCreatingCenzor] = useState(false);
+
+  // New corporate form
+  const [newCorpName, setNewCorpName] = useState("");
+  const [newCorpEmail, setNewCorpEmail] = useState("");
+  const [newCorpPass, setNewCorpPass] = useState("");
+  const [newCorpPackage, setNewCorpPackage] = useState("trial");
+  const [creatingCorp, setCreatingCorp] = useState(false);
+  const [createCorpMsg, setCreateCorpMsg] = useState("");
 
   useEffect(() => {
     // Încărcăm tot de la start ca cardurile overview să aibă date complete
@@ -183,6 +191,26 @@ export default function AdminDashboard({ user }: { user: User }) {
       fetchCenzori();
     }
     setCreatingCenzor(false);
+  }
+
+  async function createCorporate(e: React.FormEvent) {
+    e.preventDefault();
+    setCreatingCorp(true);
+    setCreateCorpMsg("");
+    const res = await fetch("/api/admin/create-corporate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ companyName: newCorpName, email: newCorpEmail, password: newCorpPass, packageType: newCorpPackage }),
+    });
+    const data = await res.json();
+    if (res.ok) {
+      setCreateCorpMsg("✓ " + (data.message || "Cont creat cu succes!"));
+      setNewCorpName(""); setNewCorpEmail(""); setNewCorpPass(""); setNewCorpPackage("trial");
+      fetchCorporates();
+    } else {
+      setCreateCorpMsg("✗ " + (data.error || "Eroare la creare"));
+    }
+    setCreatingCorp(false);
   }
 
   async function allocateCenzor(cenzorId: string, associationId: string) {
@@ -529,10 +557,11 @@ export default function AdminDashboard({ user }: { user: User }) {
         {tab === "clienti" && (
           <div>
             {/* Sub-tab switcher stilizat */}
-            <div className="flex gap-2 mb-6 p-1 rounded-xl bg-white/[0.04] border border-white/8 w-fit">
+            <div className="flex gap-2 mb-6 p-1 rounded-xl bg-white/[0.04] border border-white/8 w-fit flex-wrap">
               {[
                 { key: "corporates" as const, label: "🏢 Admini Corporate", count: corporates.length },
                 { key: "associations" as const, label: "👥 Asociații", count: associations.length },
+                { key: "adauga-corporate" as const, label: "➕ Adaugă Corporate", count: null },
               ].map(t => (
                 <button key={t.key} onClick={() => setClientiSubTab(t.key)}
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2 ${
@@ -541,9 +570,11 @@ export default function AdminDashboard({ user }: { user: User }) {
                       : "text-slate-400 hover:text-white"
                   }`}>
                   {t.label}
-                  <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${clientiSubTab === t.key ? "bg-white/20" : "bg-white/[0.08]"}`}>
-                    {t.count}
-                  </span>
+                  {t.count !== null && (
+                    <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${clientiSubTab === t.key ? "bg-white/20" : "bg-white/[0.08]"}`}>
+                      {t.count}
+                    </span>
+                  )}
                 </button>
               ))}
             </div>
@@ -706,6 +737,45 @@ export default function AdminDashboard({ user }: { user: User }) {
                     </div>
                   );
                 })}
+              </div>
+            )}
+            {/* Sub-tab: Adaugă Corporate */}
+            {clientiSubTab === "adauga-corporate" && (
+              <div className="max-w-xl">
+                <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-8">
+                  <h2 className="text-xl font-semibold mb-1">Adaugă cont corporate</h2>
+                  <p className="text-sm text-slate-400 mb-6">Creează un cont corporate direct din panoul de admin. Contul va fi activ imediat.</p>
+
+                  {createCorpMsg && (
+                    <div className={`mb-4 rounded-xl border px-4 py-3 text-sm ${createCorpMsg.startsWith("✓") ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300" : "border-red-500/30 bg-red-500/10 text-red-300"}`}>
+                      {createCorpMsg}
+                    </div>
+                  )}
+
+                  <form onSubmit={createCorporate} className="space-y-4">
+                    <input type="text" required value={newCorpName} onChange={e => setNewCorpName(e.target.value)}
+                      placeholder="Numele firmei *"
+                      className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-violet-500 transition" />
+                    <input type="email" required value={newCorpEmail} onChange={e => setNewCorpEmail(e.target.value)}
+                      placeholder="Email *"
+                      className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-violet-500 transition" />
+                    <input type="password" required minLength={8} value={newCorpPass} onChange={e => setNewCorpPass(e.target.value)}
+                      placeholder="Parolă (minim 8 caractere) *"
+                      className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-violet-500 transition" />
+                    <select value={newCorpPackage} onChange={e => setNewCorpPackage(e.target.value)}
+                      className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white outline-none focus:border-violet-500 transition">
+                      <option value="trial">Trial (gratuit, 1 dosar)</option>
+                      <option value="starter">Starter (10 asociații, 250 lei/lună)</option>
+                      <option value="business">Business (25 asociații, 500 lei/lună)</option>
+                      <option value="professional">Professional (50 asociații, 900 lei/lună)</option>
+                      <option value="enterprise">Enterprise (nelimitat, 1500 lei/lună)</option>
+                    </select>
+                    <button type="submit" disabled={creatingCorp}
+                      className="w-full rounded-xl bg-violet-600 px-6 py-3.5 font-semibold transition hover:bg-violet-500 disabled:opacity-50">
+                      {creatingCorp ? "Se creează..." : "Creează cont corporate →"}
+                    </button>
+                  </form>
+                </div>
               </div>
             )}
           </div>
