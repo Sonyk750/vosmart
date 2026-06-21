@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
 
+export const maxDuration = 60;
+
 export async function POST(req: NextRequest) {
   const user = await getSession();
   if (!user || !user.association) return NextResponse.json({ error: "Neautorizat" }, { status: 401 });
@@ -61,10 +63,7 @@ export async function POST(req: NextRequest) {
       }, { status: 403 });
     }
 
-    // Salvăm fișierele local
-    const uploadDir = path.join(process.cwd(), "public", "uploads", user.association.id, period.replace("-", "_"));
-    await mkdir(uploadDir, { recursive: true });
-
+    // Citim fișierele în memorie (buffer); scrierea pe disc e opțională — pe Vercel filesystem-ul e read-only
     const savedFiles: { type: string; label: string; fileName: string; fileUrl: string; buffer: Buffer; mimeType: string }[] = [];
 
     for (let i = 0; i < files.length; i++) {
@@ -72,10 +71,23 @@ export async function POST(req: NextRequest) {
       const type = fileTypes[i];
       const label = fileLabels[i];
       const safeName = `${type}_${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
-      const filePath = path.join(uploadDir, safeName);
       const buffer = Buffer.from(await file.arrayBuffer());
-      await writeFile(filePath, buffer);
-      const fileUrl = `/uploads/${user.association.id}/${period.replace("-", "_")}/${safeName}`;
+
+      // Încercăm să scriem pe disc (funcționează local, eșuează silențios pe Vercel)
+      let fileUrl = `/uploads/${user.association.id}/${period.replace("-", "_")}/${safeName}`;
+      try {
+        const uploadDir = path.join(process.cwd(), "public", "uploads", user.association.id, period.replace("-", "_"));
+        await mkdir(uploadDir, { recursive: true });
+        await writeFile(path.join(uploadDir, safeName), buffer);
+      } catch {
+        // Pe Vercel scriem în /tmp pentru durata funcției
+        try {
+          const tmpDir = path.join("/tmp", "vosmart", user.association.id, period.replace("-", "_"));
+          await mkdir(tmpDir, { recursive: true });
+          await writeFile(path.join(tmpDir, safeName), buffer);
+        } catch { /* AI analiza foloseste buffer-ul, nu fisierul de pe disc */ }
+      }
+
       savedFiles.push({ type, label, fileName: file.name, fileUrl, buffer, mimeType: file.type });
     }
 
