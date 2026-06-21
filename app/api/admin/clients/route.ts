@@ -8,7 +8,7 @@ export async function GET() {
 
   const whereClause = user.role === "cenzor"
     ? { allocations: { some: { cenzorId: user.id } } }
-    : {};
+    : { user: { role: { not: "corporate" } } };
 
   const associations = await prisma.association.findMany({
     where: whereClause,
