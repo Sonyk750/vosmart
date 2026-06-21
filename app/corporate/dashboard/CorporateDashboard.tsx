@@ -57,23 +57,6 @@ export default function CorporateDashboard({ user, corporate, isAdmin = false }:
   const [clientActionMsg, setClientActionMsg] = useState("");
   const [clientActionWorking, setClientActionWorking] = useState(false);
 
-  async function resetClientDocs(assoc: Association) {
-    if (!confirm(`Resetezi contorul de documente pentru ${assoc.name}?`)) return;
-    setClientActionWorking(true);
-    setClientActionMsg("");
-    const res = await fetch(`/api/corporate/clients/${assoc.id}`, {
-      method: "PATCH", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "reset_docs" }),
-    });
-    const data = await res.json();
-    setClientActionMsg(res.ok ? "✓ Contor resetat" : data.error || "Eroare");
-    if (res.ok) {
-      setAssociations(prev => prev.map(a => a.id === assoc.id ? { ...a, filesUploadedCount: 0 } : a));
-      setSelectedAssoc(prev => prev?.id === assoc.id ? { ...prev, filesUploadedCount: 0 } : prev);
-    }
-    setClientActionWorking(false);
-  }
-
   async function deleteClient(assoc: Association) {
     if (!confirm(`Ștergi clientul "${assoc.name}"? Această acțiune este ireversibilă.`)) return;
     setClientActionWorking(true);
@@ -442,10 +425,6 @@ export default function CorporateDashboard({ user, corporate, isAdmin = false }:
                       </p>
                     </div>
                     <div className="flex flex-col gap-1.5">
-                      <button onClick={() => resetClientDocs(selectedAssoc)} disabled={clientActionWorking}
-                        className="rounded-lg border border-blue-500/30 bg-blue-500/10 px-3 py-1.5 text-xs font-semibold text-blue-300 hover:bg-blue-500/20 disabled:opacity-50 transition whitespace-nowrap">
-                        🔄 Reset documente
-                      </button>
                       <button onClick={() => deleteClient(selectedAssoc)} disabled={clientActionWorking}
                         className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-xs font-semibold text-red-400 hover:bg-red-500/20 disabled:opacity-50 transition">
                         🗑 Șterge client
