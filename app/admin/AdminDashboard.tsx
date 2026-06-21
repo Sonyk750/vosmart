@@ -20,7 +20,10 @@ interface CorporateAdmin {
     subscriptionStatus: string | null; maxAssoc: number;
     currentPeriodEnd: string | null;
     _count: { associations: number };
-    associations: Array<{ id: string; filesUploadedCount: number; _count: { documents: number } }>;
+    associations: Array<{ id: string; filesUploadedCount: number; _count: { documents: number; reports: number } }>;
+    totalReports: number;
+    totalDocs: number;
+    totalCostRon: number;
   } | null;
 }
 interface Document {
@@ -692,9 +695,9 @@ export default function AdminDashboard({ user }: { user: User }) {
               <div className="rounded-2xl border border-white/8 overflow-visible">
                 {/* Header tabel */}
                 <div className="grid items-center gap-0 border-b border-white/8 bg-white/[0.03] rounded-t-2xl"
-                  style={{ gridTemplateColumns: "minmax(0,1fr) 200px 200px 140px 64px" }}>
-                  {["Client", "Pachet", "Zile rămase", "Dosare AI", ""].map((h, i) => (
-                    <div key={i} className={`px-5 py-3.5 text-xs font-semibold uppercase tracking-widest text-slate-500 ${i === 4 ? "text-right" : ""}`}>
+                  style={{ gridTemplateColumns: "minmax(0,1fr) 150px 150px 100px 100px 110px 64px" }}>
+                  {["Client", "Pachet", "Zile rămase", "Dosare", "Rapoarte", "Cost AI", ""].map((h, i) => (
+                    <div key={i} className={`px-4 py-3.5 text-xs font-semibold uppercase tracking-widest text-slate-500 ${i === 6 ? "text-right" : ""}`}>
                       {h}
                     </div>
                   ))}
@@ -704,7 +707,9 @@ export default function AdminDashboard({ user }: { user: User }) {
                   const ca = corp.corporateAccount;
                   const assoc = ca?.associations?.[0];
                   const assocId = assoc?.id ?? null;
-                  const docsCount = assoc?._count?.documents ?? 0;
+                  const docsCount = ca?.totalDocs ?? 0;
+                  const reportsCount = ca?.totalReports ?? 0;
+                  const costRon = ca?.totalCostRon ?? 0;
                   const initials = (ca?.companyName || corp.name || "?").slice(0, 2).toUpperCase();
                   const isSuspended = corp.status === "rejected";
                   const isPending = corp.status === "pending";
@@ -724,7 +729,7 @@ export default function AdminDashboard({ user }: { user: User }) {
                         className={`grid items-center gap-0 border-b border-white/5 last:border-0 transition-colors ${
                           isSuspended ? "bg-red-500/[0.03]" : isPending ? "bg-amber-500/[0.03]" : "hover:bg-white/[0.03]"
                         } ${idx === corporates.length - 1 ? "rounded-b-2xl" : ""}`}
-                        style={{ gridTemplateColumns: "minmax(0,1fr) 200px 200px 140px 64px" }}>
+                        style={{ gridTemplateColumns: "minmax(0,1fr) 150px 150px 100px 100px 110px 64px" }}>
 
                         {/* Col 1 — Client */}
                         <div className="flex items-center gap-3.5 px-5 py-4">
@@ -766,15 +771,39 @@ export default function AdminDashboard({ user }: { user: User }) {
                           )}
                         </div>
 
-                        {/* Col 4 — Dosare AI */}
-                        <div className="px-5 py-4">
+                        {/* Col 4 — Dosare */}
+                        <div className="px-4 py-4">
                           <div className="flex items-baseline gap-1">
-                            <span className="text-2xl font-bold text-white">{docsCount}</span>
-                            <span className="text-xs text-slate-500">doc</span>
+                            <span className="text-xl font-bold text-white">{docsCount}</span>
+                            <span className="text-xs text-slate-500">dos.</span>
                           </div>
                         </div>
 
-                        {/* Col 5 — Dropdown buton */}
+                        {/* Col 5 — Rapoarte */}
+                        <div className="px-4 py-4">
+                          {reportsCount > 0 ? (
+                            <div className="flex items-baseline gap-1">
+                              <span className="text-xl font-bold text-cyan-400">{reportsCount}</span>
+                              <span className="text-xs text-slate-500">rap.</span>
+                            </div>
+                          ) : (
+                            <span className="text-slate-600 text-sm">—</span>
+                          )}
+                        </div>
+
+                        {/* Col 6 — Cost AI */}
+                        <div className="px-4 py-4">
+                          {costRon > 0 ? (
+                            <div>
+                              <span className="text-sm font-semibold text-violet-400">{costRon.toFixed(2)}</span>
+                              <span className="text-xs text-slate-500 ml-1">RON</span>
+                            </div>
+                          ) : (
+                            <span className="text-slate-600 text-sm">—</span>
+                          )}
+                        </div>
+
+                        {/* Col 7 — Dropdown buton */}
                         <div className="px-3 py-4 flex justify-center relative">
                           <button
                             onClick={() => setOpenDropdownId(isDropOpen ? null : corp.id)}

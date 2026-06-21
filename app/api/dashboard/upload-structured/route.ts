@@ -395,6 +395,8 @@ IMPORTANT:
     }
 
     const data = await response.json();
+    const tokensIn: number = data.usage?.input_tokens || 0;
+    const tokensOut: number = data.usage?.output_tokens || 0;
     const reportText = data.content?.[0]?.text || "";
 
     // Extragem scorul din raport
@@ -414,6 +416,8 @@ IMPORTANT:
         aiScore: score,
         aiFindings: JSON.stringify(findings.slice(0, 10)),
         aiSummary: `Dosar ${monthName} ${year} - ${savedFiles.length} documente analizate`,
+        aiTokensIn: tokensIn,
+        aiTokensOut: tokensOut,
       }
     });
 

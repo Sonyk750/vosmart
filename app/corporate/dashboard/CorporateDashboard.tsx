@@ -476,7 +476,7 @@ ${body}
           {[
             { key: "overview", label: "📊 Prezentare" },
             { key: "documente", label: "📁 Documente" },
-            { key: "rapoarte", label: "📋 Rapoarte" },
+            ...(!isAdmin ? [{ key: "rapoarte", label: "📋 Rapoarte" }] : []),
             { key: "abonament", label: "💳 Abonament" },
           ].map(t => (
             <button key={t.key} onClick={() => setTab(t.key as any)}
@@ -523,13 +523,15 @@ ${body}
                 <p className="text-sm text-slate-400 mt-1">Trimite dosarul lunar pentru analiză AI</p>
                 <span className="text-violet-400 text-sm mt-3 inline-block group-hover:translate-x-1 transition-transform">Deschide →</span>
               </button>
-              <button onClick={() => setTab("rapoarte")}
-                className="rounded-2xl border border-white/8 bg-white/[0.03] p-6 text-left hover:bg-white/[0.06] hover:border-cyan-500/30 transition group">
-                <div className="text-3xl mb-3">📋</div>
-                <p className="font-semibold">Rapoartele mele</p>
-                <p className="text-sm text-slate-400 mt-1">{reports.filter((r: any) => r.status === "published").length} rapoarte publicate</p>
-                <span className="text-cyan-400 text-sm mt-3 inline-block group-hover:translate-x-1 transition-transform">Vezi rapoarte →</span>
-              </button>
+              {!isAdmin && (
+                <button onClick={() => setTab("rapoarte")}
+                  className="rounded-2xl border border-white/8 bg-white/[0.03] p-6 text-left hover:bg-white/[0.06] hover:border-cyan-500/30 transition group">
+                  <div className="text-3xl mb-3">📋</div>
+                  <p className="font-semibold">Rapoartele mele</p>
+                  <p className="text-sm text-slate-400 mt-1">{reports.filter((r: any) => r.status === "published").length} rapoarte publicate</p>
+                  <span className="text-cyan-400 text-sm mt-3 inline-block group-hover:translate-x-1 transition-transform">Vezi rapoarte →</span>
+                </button>
+              )}
             </div>
 
             {documents.length === 0 && (
@@ -907,7 +909,7 @@ ${body}
 
                           {/* Butoane */}
                           <div className="shrink-0 flex items-center gap-2">
-                            {doc.status === "analyzed" && (
+                            {doc.status === "analyzed" && !isAdmin && (
                               <button type="button" onClick={() => setTab("rapoarte")}
                                 className="rounded-lg border border-cyan-500/30 bg-cyan-500/10 px-3 py-1.5 text-xs text-cyan-300 hover:bg-cyan-500/20 transition font-medium">
                                 📋 Raport

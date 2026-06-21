@@ -123,6 +123,8 @@ model Document {
   aiScore       Float?
   aiFindings    String?
   aiSummary     String?
+  aiTokensIn    Int?
+  aiTokensOut   Int?
   createdAt     DateTime @default(now())
 
   association Association @relation(fields: [associationId], references: [id], onDelete: Cascade)
