@@ -21,8 +21,8 @@ const PLANS = {
     colorLight: '#ECFEFF',
     colorMid: '#A5F3FC',
     badge: 'PACHET SMART',
-    price: 1.9,
-    priceDisplay: '1,9 RON',
+    price: 3.3,
+    priceDisplay: '3,3 RON',
     timeline: '30 – 60 min',
     timelineSub: 'de la încărcarea documentelor',
     features: [
@@ -38,11 +38,11 @@ const PLANS = {
     highlight:
       'Soluția ideală pentru asociații care doresc digitalizare rapidă, rapoarte lunare de calitate și costuri minime.',
     tableRows: [
-      { ap: 50, luna: 95, an: 1140 },
-      { ap: 100, luna: 190, an: 2280 },
-      { ap: 150, luna: 285, an: 3420 },
-      { ap: 200, luna: 380, an: 4560 },
-      { ap: 300, luna: 570, an: 6840 },
+      { ap: 50, luna: 165, an: 1980 },
+      { ap: 100, luna: 330, an: 3960 },
+      { ap: 150, luna: 495, an: 5940 },
+      { ap: 200, luna: 660, an: 7920 },
+      { ap: 300, luna: 990, an: 11880 },
     ],
   },
   premium: {
