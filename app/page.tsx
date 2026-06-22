@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import SplashScreen from "./components/SplashScreen";
 import { downloadOferta } from "./components/OfertaPDF";
@@ -16,7 +16,15 @@ function ContactForm() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(form),
     })
-    setStatus(res.ok ? "success" : "error")
+    if (res.ok) {
+      setStatus("success")
+      setTimeout(() => {
+        setStatus("idle")
+        setForm({ nume: "", email: "", telefon: "", mesaj: "" })
+      }, 4000)
+    } else {
+      setStatus("error")
+    }
   }
 
   if (status === "success") {
@@ -82,17 +90,30 @@ const services = [
 
 export default function Home() {
   const [splashDone, setSplashDone] = useState(false);
+  const [skipAnim, setSkipAnim] = useState(false);
+
+  useEffect(() => {
+    if (sessionStorage.getItem("splashShown")) {
+      setSplashDone(true);
+      setSkipAnim(true);
+    }
+  }, []);
+
+  const handleSplashDone = () => {
+    sessionStorage.setItem("splashShown", "1");
+    setSplashDone(true);
+  };
 
   return (
     <>
-      {!splashDone && <SplashScreen onDone={() => setSplashDone(true)} />}
+      {!splashDone && <SplashScreen onDone={handleSplashDone} />}
 
       <main
         className="min-h-screen overflow-hidden bg-[#050814] text-white"
         style={{
           opacity: splashDone ? 1 : 0,
           transform: splashDone ? "translateY(0)" : "translateY(16px)",
-          transition: "opacity 0.65s cubic-bezier(0.16,1,0.3,1), transform 0.65s cubic-bezier(0.16,1,0.3,1)",
+          transition: skipAnim ? "none" : "opacity 0.65s cubic-bezier(0.16,1,0.3,1), transform 0.65s cubic-bezier(0.16,1,0.3,1)",
         }}
       >
         {/* BACKGROUND */}
