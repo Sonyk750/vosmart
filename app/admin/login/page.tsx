@@ -60,6 +60,9 @@ export default function AdminLogin() {
             </button>
           </form>
         </div>
+        <div className="mt-6 text-center">
+          <a href="/" className="text-sm text-slate-500 hover:text-slate-300 transition">← Înapoi la site</a>
+        </div>
       </div>
     </main>
   );
