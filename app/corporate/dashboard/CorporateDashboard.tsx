@@ -563,7 +563,7 @@ ${body}
           const atLimit = filesUsed >= filesMax;
 
           const docsFilled = uploadFiles.filter(f => f.file).length + invoiceFiles.length;
-          const docsMax = 5;
+          const docsMax = corporate.package === "trial" ? 5 : 30;
           const barHue = Math.round(120 - (docsFilled / docsMax) * 120);
           const barPct = Math.min(100, (docsFilled / docsMax) * 100);
 
@@ -594,8 +594,8 @@ ${body}
                   <div>
                     <p className="text-sm font-semibold text-red-300">Limita de dosare a fost atinsă</p>
                     <p className="text-xs text-red-400/80 mt-0.5">
-                      Pachetul <strong>Trial</strong> permite maximum <strong>{filesMax} dosare</strong>.
-                      Șterge un dosar existent sau contactează administratorul pentru upgrade.
+                      Pachetul <strong>{corporate.package}</strong> permite maximum <strong>{filesMax} dosare</strong>.
+                      Contactează administratorul pentru upgrade sau dosare suplimentare (40 lei/dosar).
                     </p>
                   </div>
                 </div>
@@ -606,7 +606,7 @@ ${body}
                 <div className="mb-5 rounded-xl border border-yellow-500/30 bg-yellow-500/8 px-4 py-3 flex items-start gap-3">
                   <span className="text-xl shrink-0">⚠️</span>
                   <p className="text-xs text-yellow-300">
-                    Atenție: mai ai un singur dosar disponibil în pachetul Trial.
+                    Atenție: mai ai un singur dosar disponibil. Poți cumpăra dosare suplimentare la <strong>40 lei/dosar</strong> — contactează <a href="mailto:office@vosmart.ro" className="underline">office@vosmart.ro</a>.
                   </p>
                 </div>
               )}
@@ -1096,10 +1096,11 @@ ${body}
                 <p className="text-sm font-semibold mb-3 text-slate-300">Pachete disponibile</p>
                 <div className="space-y-2">
                   {[
-                    { key: "trial", name: "Trial", price: "Gratuit", assoc: "1 dosar (5 documente)" },
-                    { key: "starter", name: "Starter", price: "250 lei/lună", assoc: "10 asociații" },
-                    { key: "business", name: "Business", price: "500 lei/lună", assoc: "25 asociații" },
-                    { key: "professional", name: "Professional", price: "900 lei/lună", assoc: "50 asociații" },
+                    { key: "trial",        name: "Trial",        price: "Gratuit",          assoc: "1 dosar · 5 doc/dosar" },
+                    { key: "starter",      name: "Starter",      price: "350 lei/lună",     assoc: "10 dosare · 30 doc/dosar" },
+                    { key: "business",     name: "Business",     price: "720 lei/lună",     assoc: "25 dosare · 30 doc/dosar" },
+                    { key: "professional", name: "Professional",  price: "1.390 lei/lună",   assoc: "50 dosare · 30 doc/dosar" },
+                    { key: "enterprise",   name: "Enterprise",   price: "Personalizat",     assoc: "Nelimitat · 30 doc/dosar" },
                   ].map(p => (
                     <div key={p.key} className={`flex items-center justify-between rounded-xl border p-3 ${corporate.package === p.key ? "border-violet-500/40 bg-violet-500/10" : "border-white/5 bg-white/[0.02]"}`}>
                       <div>
@@ -1110,8 +1111,13 @@ ${body}
                     </div>
                   ))}
                 </div>
-                <p className="text-xs text-slate-500 mt-4">
-                  Pentru upgrade contactează <a href="mailto:office@vosmart.ro" className="text-violet-400 hover:underline">office@vosmart.ro</a>
+                <div className="mt-4 rounded-xl border border-white/5 bg-white/[0.02] p-3 space-y-1">
+                  <p className="text-xs text-slate-400 font-medium">Suplimentare disponibile:</p>
+                  <p className="text-xs text-slate-500">• Dosar suplimentar (30 documente incluse) — <span className="text-white">40 lei</span></p>
+                  <p className="text-xs text-slate-500">• Document suplimentar (peste limita dosarului) — <span className="text-white">1,3 lei/doc</span></p>
+                </div>
+                <p className="text-xs text-slate-500 mt-3">
+                  Upgrade sau suplimentare: <a href="mailto:office@vosmart.ro" className="text-violet-400 hover:underline">office@vosmart.ro</a>
                 </p>
               </div>
             </div>

@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
         cui: cui || null,
         address: address || null,
         package: "trial",
-        maxDocuments: 5,
+        maxDocuments: pkgInfo.maxAssoc,
         filesUploadedCount: 0,
       },
     });

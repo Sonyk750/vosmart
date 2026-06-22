@@ -323,10 +323,10 @@ export default function Home() {
 
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-12">
               {[
-                { key:"starter", name:"Starter", price:"250", assoc:"1 – 5 asociații", color:"cyan", features:["Până la 5 asociații cliente","Portal clienți dedicat","Analiză AI documente","Rapoarte automate","Logo propriu în portal","Suport email"] },
-                { key:"business", name:"Business", price:"500", assoc:"5 – 15 asociații", color:"emerald", recommended:true, features:["Până la 15 asociații cliente","Portal clienți dedicat","Analiză AI documente","Rapoarte automate","Logo propriu în portal","Cenzori multipli","Suport prioritar"] },
-                { key:"professional", name:"Professional", price:"900", assoc:"15 – 50 asociații", color:"cyan", features:["Până la 50 asociații cliente","Portal clienți dedicat","Analiză AI documente","Rapoarte automate","Logo propriu în portal","Cenzori multipli","Suport dedicat"] },
-                { key:"enterprise", name:"Enterprise", price:"1500", assoc:"50+ asociații", color:"emerald", features:["Asociații nelimitate","Portal clienți dedicat","Analiză AI documente","Rapoarte automate","Logo propriu în portal","Cenzori multipli","API access","Manager cont dedicat"] },
+                { key:"starter", name:"Starter", price:"350", assoc:"10 dosare · 30 doc/dosar", color:"cyan", features:["10 dosare/lună","30 documente/dosar","Portal clienți dedicat","Analiză AI documente","Rapoarte automate","Suport email","Dosare suplimentare (40 lei)"] },
+                { key:"business", name:"Business", price:"720", assoc:"25 dosare · 30 doc/dosar", color:"emerald", recommended:true, features:["25 dosare/lună","30 documente/dosar","Portal clienți dedicat","Analiză AI documente","Rapoarte automate","Logo propriu în portal","Cenzori multipli","Suport prioritar"] },
+                { key:"professional", name:"Professional", price:"1.390", assoc:"50 dosare · 30 doc/dosar", color:"cyan", features:["50 dosare/lună","30 documente/dosar","Portal clienți dedicat","Analiză AI documente","Rapoarte automate","Logo propriu în portal","Cenzori multipli","Suport dedicat"] },
+                { key:"enterprise", name:"Enterprise", price:"Personalizat", assoc:"50+ dosare · 30 doc/dosar", color:"emerald", features:["Dosare nelimitate","30 documente/dosar","Portal clienți dedicat","Analiză AI documente","Rapoarte automate","Logo propriu în portal","Cenzori multipli","API access","Manager cont dedicat"] },
               ].map((pkg)=>(
                 <div key={pkg.name} className={`relative rounded-[2rem] border p-8 transition hover:-translate-y-1
                   ${pkg.color==="emerald"
@@ -342,7 +342,7 @@ export default function Home() {
                   </div>
                   <div className="mb-2">
                     <span className="text-4xl font-bold">{pkg.price}</span>
-                    <span className="text-slate-400"> lei/lună</span>
+                    {pkg.key !== "enterprise" && <span className="text-slate-400"> lei/lună</span>}
                   </div>
                   <p className={`text-sm font-semibold mb-6 ${pkg.color==="emerald" ? "text-emerald-300" : "text-cyan-300"}`}>{pkg.assoc}</p>
                   <ul className="space-y-3 mb-8">
@@ -357,7 +357,7 @@ export default function Home() {
                       ${pkg.color==="emerald"
                         ? "bg-emerald-600 hover:bg-emerald-500 shadow-[0_0_20px_rgba(52,211,153,0.3)]"
                         : "bg-cyan-500/20 border border-cyan-500/40 text-cyan-300 hover:bg-cyan-500/30"}`}>
-                    Solicită {pkg.name}
+                    {pkg.key === "enterprise" ? "Solicită ofertă" : `Solicită ${pkg.name}`}
                   </a>
                 </div>
               ))}

@@ -4,12 +4,12 @@ import { stripe } from "@/lib/stripe";
 export type CorporatePackage = "trial" | "starter" | "business" | "professional" | "enterprise";
 export type AssociationPackage = "smart" | "premium";
 
-export const CORPORATE_PACKAGES: Record<CorporatePackage, { name: string; priceRon: number; maxAssoc: number }> = {
-  trial:        { name: "Trial Gratuit", priceRon: 0,    maxAssoc: 1 },
-  starter:      { name: "Starter",       priceRon: 250,  maxAssoc: 5 },
-  business:     { name: "Business",      priceRon: 500,  maxAssoc: 15 },
-  professional: { name: "Professional",  priceRon: 900,  maxAssoc: 50 },
-  enterprise:   { name: "Enterprise",    priceRon: 1500, maxAssoc: 9999 },
+export const CORPORATE_PACKAGES: Record<CorporatePackage, { name: string; priceRon: number; maxAssoc: number; docsPerDosar: number }> = {
+  trial:        { name: "Trial Gratuit", priceRon: 0,    maxAssoc: 1,    docsPerDosar: 5  },
+  starter:      { name: "Starter",       priceRon: 350,  maxAssoc: 10,   docsPerDosar: 30 },
+  business:     { name: "Business",      priceRon: 720,  maxAssoc: 25,   docsPerDosar: 30 },
+  professional: { name: "Professional",  priceRon: 1390, maxAssoc: 50,   docsPerDosar: 30 },
+  enterprise:   { name: "Enterprise",    priceRon: 0,    maxAssoc: 9999, docsPerDosar: 30 },
 };
 
 export const ASSOCIATION_PACKAGES: Record<AssociationPackage, { name: string; priceRon: number }> = {
@@ -17,9 +17,15 @@ export const ASSOCIATION_PACKAGES: Record<AssociationPackage, { name: string; pr
   premium: { name: "Premium", priceRon: 89 },
 };
 
+export const DOSAR_ADDON = {
+  dosare: 1,
+  docsIncluded: 30,
+  priceRon: 40,
+};
+
 export const DOCUMENT_ADDON = {
-  documents: 10,
-  priceRon: 25,
+  documents: 1,
+  priceRon: 1.3,
 };
 
 export function ronToBani(ron: number): number {

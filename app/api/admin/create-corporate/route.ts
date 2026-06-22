@@ -17,8 +17,15 @@ export async function POST(req: NextRequest) {
   const existing = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
   if (existing) return NextResponse.json({ error: "Email deja folosit" }, { status: 409 });
 
-  const PACKAGE_LIMITS: Record<string, number> = { trial: 1, starter: 10, business: 25, professional: 50, enterprise: 9999 };
-  const maxAssoc = PACKAGE_LIMITS[packageType] ?? 1;
+  const PACKAGE_LIMITS: Record<string, { maxAssoc: number; maxDosare: number }> = {
+    trial:        { maxAssoc: 1,    maxDosare: 1    },
+    starter:      { maxAssoc: 10,   maxDosare: 10   },
+    business:     { maxAssoc: 25,   maxDosare: 25   },
+    professional: { maxAssoc: 50,   maxDosare: 50   },
+    enterprise:   { maxAssoc: 9999, maxDosare: 9999 },
+  };
+  const limits = PACKAGE_LIMITS[packageType] ?? PACKAGE_LIMITS.trial;
+  const maxAssoc = limits.maxAssoc;
 
   const newUser = await prisma.user.create({
     data: { email: email.toLowerCase(), password: hashPassword(password), role: "corporate", status: "active", name: companyName },
@@ -29,7 +36,7 @@ export async function POST(req: NextRequest) {
   });
 
   await prisma.association.create({
-    data: { userId: newUser.id, corporateId: corp.id, name: companyName, package: "trial", maxDocuments: 5 },
+    data: { userId: newUser.id, corporateId: corp.id, name: companyName, package: "trial", maxDocuments: limits.maxDosare },
   });
 
   return NextResponse.json({ success: true, message: `Cont creat pentru ${email}` });

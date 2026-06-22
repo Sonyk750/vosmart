@@ -8,39 +8,43 @@ const PACKAGES = [
   {
     key: "starter",
     name: "Starter",
-    price: "250",
-    assoc: "1 – 5 asociații",
-    max: 5,
+    price: "350",
+    priceLabel: "350 lei/lună",
+    assoc: "10 dosare · 30 doc/dosar",
+    max: 10,
     color: "cyan",
-    features: ["Până la 5 asociații cliente", "Analiză AI documente", "Rapoarte automate", "Portal clienți dedicat", "Suport email"],
+    features: ["10 dosare/lună (30 doc/dosar)", "Analiză AI documente", "Rapoarte automate", "Portal clienți dedicat", "Suport email", "Dosare suplimentare disponibile"],
   },
   {
     key: "business",
     name: "Business",
-    price: "500",
-    assoc: "5 – 15 asociații",
-    max: 15,
+    price: "720",
+    priceLabel: "720 lei/lună",
+    assoc: "25 dosare · 30 doc/dosar",
+    max: 25,
     color: "violet",
     recommended: true,
-    features: ["Până la 15 asociații cliente", "Analiză AI documente", "Rapoarte automate", "Portal clienți dedicat", "Logo propriu în portal", "Suport prioritar"],
+    features: ["25 dosare/lună (30 doc/dosar)", "Analiză AI documente", "Rapoarte automate", "Portal clienți dedicat", "Logo propriu în portal", "Suport prioritar", "Dosare suplimentare disponibile"],
   },
   {
     key: "professional",
     name: "Professional",
-    price: "900",
-    assoc: "15 – 50 asociații",
+    price: "1390",
+    priceLabel: "1.390 lei/lună",
+    assoc: "50 dosare · 30 doc/dosar",
     max: 50,
     color: "cyan",
-    features: ["Până la 50 asociații cliente", "Analiză AI documente", "Rapoarte automate", "Portal clienți dedicat", "Logo propriu în portal", "Cenzori multipli", "Suport dedicat"],
+    features: ["50 dosare/lună (30 doc/dosar)", "Analiză AI documente", "Rapoarte automate", "Portal clienți dedicat", "Logo propriu în portal", "Cenzori multipli", "Suport dedicat"],
   },
   {
     key: "enterprise",
     name: "Enterprise",
-    price: "1500",
-    assoc: "50+ asociații",
+    price: "0",
+    priceLabel: "Preț personalizat",
+    assoc: "50+ dosare · 30 doc/dosar",
     max: 9999,
     color: "violet",
-    features: ["Asociații nelimitate", "Analiză AI documente", "Rapoarte automate", "Portal clienți dedicat", "Logo propriu în portal", "Cenzori multipli", "API access", "Manager de cont dedicat"],
+    features: ["Dosare nelimitate (30 doc/dosar)", "Analiză AI documente", "Rapoarte automate", "Portal clienți dedicat", "Logo propriu în portal", "Cenzori multipli", "API access", "Manager de cont dedicat"],
   },
 ];
 
@@ -252,8 +256,8 @@ export default function CorporatePage() {
                   {pkg.name}
                 </div>
                 <div className="mb-1">
-                  <span className="text-3xl font-bold">{pkg.price}</span>
-                  <span className="text-slate-400 text-sm"> lei/lună</span>
+                  <span className="text-3xl font-bold">{pkg.key === "enterprise" ? "Personalizat" : pkg.price}</span>
+                  {pkg.key !== "enterprise" && <span className="text-slate-400 text-sm"> lei/lună</span>}
                 </div>
                 <p className={`text-sm font-medium mb-4 ${pkg.color === "violet" ? "text-violet-300" : "text-cyan-300"}`}>{pkg.assoc}</p>
                 <ul className="space-y-2">
@@ -316,7 +320,7 @@ export default function CorporatePage() {
                 <p className="text-slate-300 text-sm mb-4">
                   Contul tău corporate este în așteptare. Te vom contacta în maxim 24 ore pentru activare și detalii de plată.
                 </p>
-                <p className="text-xs text-slate-500">Pachet ales: <strong className="text-white">{PACKAGES.find(p => p.key === selectedPackage)?.name}</strong> — {PACKAGES.find(p => p.key === selectedPackage)?.price} lei/lună</p>
+                <p className="text-xs text-slate-500">Pachet ales: <strong className="text-white">{PACKAGES.find(p => p.key === selectedPackage)?.name}</strong> — {PACKAGES.find(p => p.key === selectedPackage)?.priceLabel}</p>
               </div>
             )
           ) : (
@@ -362,7 +366,7 @@ export default function CorporatePage() {
                       <span className={`text-sm font-semibold ${selectedPackage === "trial" ? "text-amber-300" : "text-violet-300"}`}>
                         {selectedPackage === "trial"
                           ? "Trial Gratuit — 0 lei"
-                          : `${PACKAGES.find(p => p.key === selectedPackage)?.name} — ${PACKAGES.find(p => p.key === selectedPackage)?.price} lei/lună`}
+                          : `${PACKAGES.find(p => p.key === selectedPackage)?.name} — ${PACKAGES.find(p => p.key === selectedPackage)?.priceLabel}`}
                       </span>
                     </div>
 

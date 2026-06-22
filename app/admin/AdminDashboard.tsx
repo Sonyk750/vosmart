@@ -665,11 +665,11 @@ export default function AdminDashboard({ user }: { user: User }) {
                     className="rounded-xl border border-white/10 bg-[#0d0d1a] px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-violet-500 transition text-sm" />
                   <select value={newCorpPackage} onChange={e => setNewCorpPackage(e.target.value)}
                     className="rounded-xl border border-white/10 bg-[#0d0d1a] px-4 py-3 text-white outline-none focus:border-violet-500 transition text-sm">
-                    <option value="trial">Trial (gratuit)</option>
-                    <option value="starter">Starter — 250 lei</option>
-                    <option value="business">Business — 500 lei</option>
-                    <option value="professional">Professional — 900 lei</option>
-                    <option value="enterprise">Enterprise — 1500 lei</option>
+                    <option value="trial">Trial — gratuit (1 dosar, 5 doc)</option>
+                    <option value="starter">Starter — 350 lei (10 dosare, 30 doc/dosar)</option>
+                    <option value="business">Business — 720 lei (25 dosare, 30 doc/dosar)</option>
+                    <option value="professional">Professional — 1390 lei (50 dosare, 30 doc/dosar)</option>
+                    <option value="enterprise">Enterprise — pret personalizat (nelimitat)</option>
                   </select>
                   <button type="submit" disabled={creatingCorp}
                     className="sm:col-span-2 lg:col-span-4 rounded-xl bg-violet-600 px-6 py-3 font-semibold transition hover:bg-violet-500 disabled:opacity-50 text-sm">
