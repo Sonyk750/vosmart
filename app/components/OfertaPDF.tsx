@@ -51,7 +51,7 @@ const PLANS = {
     color: '#6D28D9',
     colorLight: '#F5F3FF',
     colorMid: '#C4B5FD',
-    badge: 'PACHET PREMIUM ✦ RECOMANDAT',
+    badge: 'PACHET PREMIUM - RECOMANDAT',
     price: 4.7,
     priceDisplay: '4,7 RON',
     timeline: 'Expert',
@@ -105,7 +105,7 @@ function OfertaDocument({ plan }: { plan: Plan }) {
     // Meta row
     metaRow: { flexDirection: 'row', backgroundColor: '#F8FAFC', borderBottom: '2px solid ' + p.color, paddingHorizontal: 40, paddingVertical: 12, gap: 0 },
     metaItem: { flex: 1, paddingRight: 16 },
-    metaLabel: { fontSize: 8, color: '#94A3B8', fontFamily: 'Roboto', letterSpacing: 1.5, marginBottom: 3, textTransform: 'uppercase' },
+    metaLabel: { fontSize: 8, color: '#94A3B8', fontFamily: 'Roboto', letterSpacing: 1.5, marginBottom: 3 },
     metaValue: { fontSize: 10, color: '#334155', fontFamily: 'Roboto' },
     // Body
     body: { paddingHorizontal: 40, paddingTop: 24, paddingBottom: 20 },
@@ -116,7 +116,7 @@ function OfertaDocument({ plan }: { plan: Plan }) {
     priceAmount: { fontSize: 36, fontFamily: 'Roboto', color: p.color },
     priceUnit: { fontSize: 13, color: '#475569', marginTop: 2 },
     priceRight: { width: 160, borderLeft: '1px solid ' + p.colorMid, paddingLeft: 20 },
-    timingLabel: { fontSize: 8, color: '#94A3B8', fontFamily: 'Roboto', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 4 },
+    timingLabel: { fontSize: 8, color: '#94A3B8', fontFamily: 'Roboto', letterSpacing: 1.5, marginBottom: 4 },
     timingValue: { fontSize: 20, fontFamily: 'Roboto', color: '#1E293B', marginBottom: 3 },
     timingSub: { fontSize: 9, color: '#64748B', lineHeight: 1.4 },
     // Section titles
@@ -138,7 +138,7 @@ function OfertaDocument({ plan }: { plan: Plan }) {
     tableCellHighlight: { flex: 1, fontSize: 9.5, fontFamily: 'Roboto', color: '#0F172A', textAlign: 'center' },
     // Highlight box
     highlightBox: { backgroundColor: p.colorLight, borderRadius: 8, padding: 14, marginBottom: 20, flexDirection: 'row' },
-    highlightIcon: { fontSize: 14, marginRight: 10, color: p.color },
+    highlightIcon: { fontSize: 9, marginRight: 8, color: p.color, fontFamily: 'Roboto', fontWeight: 'bold' },
     highlightText: { fontSize: 9.5, color: '#334155', lineHeight: 1.5, flex: 1, fontFamily: 'Roboto' },
     // Benefits
     benefitsRow: { flexDirection: 'row', gap: 10, marginBottom: 20 },
@@ -177,8 +177,8 @@ function OfertaDocument({ plan }: { plan: Plan }) {
         <View style={s.header}>
           <View style={s.headerTop}>
             <View>
-              <Text style={s.brandName}>VoSmart</Text>
-              <Text style={s.brandSub}>CENZORAT DIGITAL PENTRU ASOCIAȚII</Text>
+              <Text style={s.brandName}>Vosmart Cenzorat</Text>
+              <Text style={s.brandSub}>CENZORAT DIGITAL PENTRU ASOCIATII DE PROPRIETARI</Text>
             </View>
             <View style={s.ofertaBadge}>
               <Text style={s.ofertaBadgeText}>{p.badge}</Text>
@@ -191,19 +191,19 @@ function OfertaDocument({ plan }: { plan: Plan }) {
         {/* META ROW */}
         <View style={s.metaRow}>
           <View style={s.metaItem}>
-            <Text style={s.metaLabel}>Data emiterii</Text>
+            <Text style={s.metaLabel}>DATA EMITERII</Text>
             <Text style={s.metaValue}>{dateStr}</Text>
           </View>
           <View style={s.metaItem}>
-            <Text style={s.metaLabel}>Valabilitate</Text>
-            <Text style={s.metaValue}>30 zile · până la {validStr}</Text>
+            <Text style={s.metaLabel}>VALABILITATE</Text>
+            <Text style={s.metaValue}>30 zile · pana la {validStr}</Text>
           </View>
           <View style={s.metaItem}>
-            <Text style={s.metaLabel}>Referință ofertă</Text>
+            <Text style={s.metaLabel}>REFERINTA OFERTA</Text>
             <Text style={s.metaValue}>VS-{String(refNumber)}</Text>
           </View>
           <View style={[s.metaItem, { paddingRight: 0 }]}>
-            <Text style={s.metaLabel}>Contact</Text>
+            <Text style={s.metaLabel}>CONTACT</Text>
             <Text style={s.metaValue}>office@vosmart.ro</Text>
           </View>
         </View>
@@ -217,7 +217,7 @@ function OfertaDocument({ plan }: { plan: Plan }) {
               <Text style={s.priceUnit}>/ apartament / lună</Text>
             </View>
             <View style={s.priceRight}>
-              <Text style={s.timingLabel}>{p.timeline === 'Expert' ? 'Nivel verificare' : 'Timp estimativ'}</Text>
+              <Text style={s.timingLabel}>{p.timeline === 'Expert' ? 'NIVEL VERIFICARE' : 'TIMP ESTIMATIV'}</Text>
               <Text style={s.timingValue}>{p.timeline}</Text>
               <Text style={s.timingSub}>{p.timelineSub}</Text>
             </View>
@@ -240,7 +240,7 @@ function OfertaDocument({ plan }: { plan: Plan }) {
 
           {/* HIGHLIGHT */}
           <View style={s.highlightBox}>
-            <Text style={s.highlightIcon}>💡</Text>
+            <Text style={s.highlightIcon}>NOTE:</Text>
             <Text style={s.highlightText}>{p.highlight}</Text>
           </View>
 
@@ -270,7 +270,7 @@ function OfertaDocument({ plan }: { plan: Plan }) {
 
           {/* BENEFITS */}
           <View style={s.section}>
-            <Text style={s.sectionTitle}>De ce VoSmart?</Text>
+            <Text style={s.sectionTitle}>De ce Vosmart Cenzorat?</Text>
             <View style={s.benefitsRow}>
               <View style={s.benefitCard}>
                 <Text style={s.benefitTitle}>Rapoarte legale garantate</Text>
@@ -302,7 +302,7 @@ function OfertaDocument({ plan }: { plan: Plan }) {
             </View>
             <View style={s.termItem}>
               <Text style={s.termBullet}>›</Text>
-              <Text style={s.termText}>Plata se efectuează lunar, pe baza facturii emise de VoSmart Solutions SRL.</Text>
+              <Text style={s.termText}>Plata se efectuează lunar, pe baza facturii emise de Vosmart Cenzorat.</Text>
             </View>
             <View style={s.termItem}>
               <Text style={s.termBullet}>›</Text>
@@ -314,7 +314,7 @@ function OfertaDocument({ plan }: { plan: Plan }) {
             </View>
             <View style={s.termItem}>
               <Text style={s.termBullet}>›</Text>
-              <Text style={s.termText}>Datele asociației sunt prelucrate conform GDPR și stocate securizat în infrastructura VoSmart.</Text>
+              <Text style={s.termText}>Datele asociației sunt prelucrate conform GDPR și stocate securizat în infrastructura Vosmart Cenzorat.</Text>
             </View>
           </View>
 
@@ -334,8 +334,8 @@ function OfertaDocument({ plan }: { plan: Plan }) {
         {/* FOOTER */}
         <View style={s.footer} fixed>
           <View style={s.footerLeft}>
-            <Text style={s.footerBrand}>VoSmart Solutions SRL</Text>
-            <Text style={s.footerSub}>Cenzorat digital pentru asociații de proprietari · vosmart.ro</Text>
+            <Text style={s.footerBrand}>Vosmart Cenzorat</Text>
+            <Text style={s.footerSub}>Cenzorat pentru asociatii de proprietari · vosmart.ro</Text>
           </View>
           <View style={s.footerRight}>
             <Text style={s.footerText}>Ofertă comercială confidențială</Text>
