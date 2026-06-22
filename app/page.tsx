@@ -2,6 +2,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import SplashScreen from "./components/SplashScreen";
+import { downloadOferta } from "./components/OfertaPDF";
 
 function ContactForm() {
   const [form, setForm] = useState({ nume: "", email: "", telefon: "", mesaj: "" })
@@ -375,7 +376,10 @@ export default function Home() {
                     <li key={item} className="flex gap-3"><span className="text-cyan-300 mt-0.5">✓</span><span>{item}</span></li>
                   ))}
                 </ul>
-                <a href="#contact" className="mt-8 inline-flex w-full justify-center rounded-xl bg-cyan-500 px-6 py-3.5 font-semibold text-black transition hover:bg-cyan-400 shadow-[0_0_25px_rgba(6,182,212,0.35)]">Solicită Smart</a>
+                <button onClick={() => downloadOferta('smart')} className="mt-8 inline-flex w-full justify-center items-center gap-2 rounded-xl bg-cyan-500 px-6 py-3.5 font-semibold text-black transition hover:bg-cyan-400 shadow-[0_0_25px_rgba(6,182,212,0.35)] cursor-pointer">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                  Descarcă oferta Smart PDF
+                </button>
               </div>
               {/* Premium */}
               <div className="relative rounded-[2rem] border border-violet-500/30 bg-gradient-to-br from-violet-500/10 to-transparent p-8 shadow-[0_0_80px_rgba(124,58,237,0.18)] transition hover:shadow-[0_0_100px_rgba(124,58,237,0.28)]">
@@ -394,7 +398,10 @@ export default function Home() {
                     <li key={item} className="flex gap-3"><span className="text-violet-300 mt-0.5">✓</span><span>{item}</span></li>
                   ))}
                 </ul>
-                <a href="#contact" className="mt-8 inline-flex w-full justify-center rounded-xl bg-violet-600 px-6 py-3.5 font-semibold transition hover:bg-violet-500 shadow-[0_0_30px_rgba(124,58,237,0.45)]">Solicită Premium</a>
+                <button onClick={() => downloadOferta('premium')} className="mt-8 inline-flex w-full justify-center items-center gap-2 rounded-xl bg-violet-600 px-6 py-3.5 font-semibold transition hover:bg-violet-500 shadow-[0_0_30px_rgba(124,58,237,0.45)] cursor-pointer">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                  Descarcă oferta Premium PDF
+                </button>
               </div>
             </div>
           </div>
