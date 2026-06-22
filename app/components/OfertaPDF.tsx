@@ -1,6 +1,15 @@
 'use client';
 
-import { Document, Page, Text, View, StyleSheet, pdf } from '@react-pdf/renderer';
+import { Document, Page, Text, View, StyleSheet, pdf, Font } from '@react-pdf/renderer';
+
+Font.register({
+  family: 'Roboto',
+  fonts: [
+    { src: '/fonts/Roboto-Regular.ttf', fontWeight: 'normal', fontStyle: 'normal' },
+    { src: '/fonts/Roboto-Bold.ttf',    fontWeight: 'bold',   fontStyle: 'normal' },
+    { src: '/fonts/Roboto-Italic.ttf',  fontWeight: 'normal', fontStyle: 'italic' },
+  ],
+});
 
 type Plan = 'smart' | 'premium';
 
@@ -80,79 +89,80 @@ function OfertaDocument({ plan }: { plan: Plan }) {
   validUntil.setDate(today.getDate() + 30);
   const dateStr = today.toLocaleDateString('ro-RO', { day: '2-digit', month: 'long', year: 'numeric' });
   const validStr = validUntil.toLocaleDateString('ro-RO', { day: '2-digit', month: 'long', year: 'numeric' });
+  const refNumber = Math.floor(100000 + Math.random() * 900000);
 
   const s = StyleSheet.create({
-    page: { backgroundColor: '#FFFFFF', fontFamily: 'Helvetica', fontSize: 10, color: '#1E293B' },
+    page: { backgroundColor: '#FFFFFF', fontFamily: 'Roboto', fontSize: 10, color: '#1E293B' },
     // Header
     header: { backgroundColor: p.color, paddingHorizontal: 40, paddingTop: 32, paddingBottom: 24 },
     headerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 },
-    brandName: { fontSize: 22, fontFamily: 'Helvetica-Bold', color: '#FFFFFF', letterSpacing: 1 },
+    brandName: { fontSize: 22, fontFamily: 'Roboto', color: '#FFFFFF', letterSpacing: 1 },
     brandSub: { fontSize: 9, color: 'rgba(255,255,255,0.75)', marginTop: 2, letterSpacing: 2 },
     ofertaBadge: { backgroundColor: 'rgba(255,255,255,0.18)', borderRadius: 4, paddingHorizontal: 10, paddingVertical: 4 },
-    ofertaBadgeText: { fontSize: 9, color: '#FFFFFF', fontFamily: 'Helvetica-Bold', letterSpacing: 1.5 },
-    headerTitle: { fontSize: 28, fontFamily: 'Helvetica-Bold', color: '#FFFFFF', marginBottom: 4 },
+    ofertaBadgeText: { fontSize: 9, color: '#FFFFFF', fontFamily: 'Roboto', letterSpacing: 1.5 },
+    headerTitle: { fontSize: 28, fontFamily: 'Roboto', color: '#FFFFFF', marginBottom: 4 },
     headerTagline: { fontSize: 13, color: 'rgba(255,255,255,0.88)' },
     // Meta row
     metaRow: { flexDirection: 'row', backgroundColor: '#F8FAFC', borderBottom: '2px solid ' + p.color, paddingHorizontal: 40, paddingVertical: 12, gap: 0 },
     metaItem: { flex: 1, paddingRight: 16 },
-    metaLabel: { fontSize: 8, color: '#94A3B8', fontFamily: 'Helvetica-Bold', letterSpacing: 1.5, marginBottom: 3, textTransform: 'uppercase' },
-    metaValue: { fontSize: 10, color: '#334155', fontFamily: 'Helvetica-Bold' },
+    metaLabel: { fontSize: 8, color: '#94A3B8', fontFamily: 'Roboto', letterSpacing: 1.5, marginBottom: 3, textTransform: 'uppercase' },
+    metaValue: { fontSize: 10, color: '#334155', fontFamily: 'Roboto' },
     // Body
     body: { paddingHorizontal: 40, paddingTop: 24, paddingBottom: 20 },
     // Price hero
     priceHero: { flexDirection: 'row', backgroundColor: p.colorLight, borderRadius: 10, padding: 20, marginBottom: 20, alignItems: 'center', borderLeft: '4px solid ' + p.color },
     priceLeft: { flex: 1 },
-    priceTitle: { fontSize: 12, fontFamily: 'Helvetica-Bold', color: p.color, marginBottom: 4 },
-    priceAmount: { fontSize: 36, fontFamily: 'Helvetica-Bold', color: p.color },
+    priceTitle: { fontSize: 12, fontFamily: 'Roboto', color: p.color, marginBottom: 4 },
+    priceAmount: { fontSize: 36, fontFamily: 'Roboto', color: p.color },
     priceUnit: { fontSize: 13, color: '#475569', marginTop: 2 },
     priceRight: { width: 160, borderLeft: '1px solid ' + p.colorMid, paddingLeft: 20 },
-    timingLabel: { fontSize: 8, color: '#94A3B8', fontFamily: 'Helvetica-Bold', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 4 },
-    timingValue: { fontSize: 20, fontFamily: 'Helvetica-Bold', color: '#1E293B', marginBottom: 3 },
+    timingLabel: { fontSize: 8, color: '#94A3B8', fontFamily: 'Roboto', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 4 },
+    timingValue: { fontSize: 20, fontFamily: 'Roboto', color: '#1E293B', marginBottom: 3 },
     timingSub: { fontSize: 9, color: '#64748B', lineHeight: 1.4 },
     // Section titles
-    sectionTitle: { fontSize: 12, fontFamily: 'Helvetica-Bold', color: '#0F172A', marginBottom: 10, paddingBottom: 6, borderBottom: '1px solid #E2E8F0' },
+    sectionTitle: { fontSize: 12, fontFamily: 'Roboto', color: '#0F172A', marginBottom: 10, paddingBottom: 6, borderBottom: '1px solid #E2E8F0' },
     // Features
     featuresGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 0 },
     featureItem: { width: '50%', flexDirection: 'row', paddingRight: 12, marginBottom: 7 },
     featureBullet: { width: 16, height: 16, backgroundColor: p.color, borderRadius: 8, marginRight: 8, marginTop: 1, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-    featureBulletText: { fontSize: 9, color: '#FFFFFF', fontFamily: 'Helvetica-Bold' },
+    featureBulletText: { fontSize: 9, color: '#FFFFFF', fontFamily: 'Roboto' },
     featureText: { fontSize: 9.5, color: '#334155', lineHeight: 1.45, flex: 1 },
     // Table
     table: { marginBottom: 20 },
     tableHeader: { flexDirection: 'row', backgroundColor: p.color, borderRadius: '6px 6px 0 0', paddingHorizontal: 12, paddingVertical: 8 },
-    tableHeaderCell: { flex: 1, fontSize: 9, fontFamily: 'Helvetica-Bold', color: '#FFFFFF', textAlign: 'center' },
+    tableHeaderCell: { flex: 1, fontSize: 9, fontFamily: 'Roboto', color: '#FFFFFF', textAlign: 'center' },
     tableRow: { flexDirection: 'row', paddingHorizontal: 12, paddingVertical: 7, borderBottom: '1px solid #F1F5F9' },
     tableRowAlt: { flexDirection: 'row', paddingHorizontal: 12, paddingVertical: 7, borderBottom: '1px solid #F1F5F9', backgroundColor: '#F8FAFC' },
     tableCell: { flex: 1, fontSize: 9.5, color: '#334155', textAlign: 'center' },
-    tableCellBold: { flex: 1, fontSize: 9.5, fontFamily: 'Helvetica-Bold', color: p.color, textAlign: 'center' },
-    tableCellHighlight: { flex: 1, fontSize: 9.5, fontFamily: 'Helvetica-Bold', color: '#0F172A', textAlign: 'center' },
+    tableCellBold: { flex: 1, fontSize: 9.5, fontFamily: 'Roboto', color: p.color, textAlign: 'center' },
+    tableCellHighlight: { flex: 1, fontSize: 9.5, fontFamily: 'Roboto', color: '#0F172A', textAlign: 'center' },
     // Highlight box
     highlightBox: { backgroundColor: p.colorLight, borderRadius: 8, padding: 14, marginBottom: 20, flexDirection: 'row' },
     highlightIcon: { fontSize: 14, marginRight: 10, color: p.color },
-    highlightText: { fontSize: 9.5, color: '#334155', lineHeight: 1.5, flex: 1, fontFamily: 'Helvetica-Oblique' },
+    highlightText: { fontSize: 9.5, color: '#334155', lineHeight: 1.5, flex: 1, fontFamily: 'Roboto' },
     // Benefits
     benefitsRow: { flexDirection: 'row', gap: 10, marginBottom: 20 },
     benefitCard: { flex: 1, backgroundColor: '#F8FAFC', borderRadius: 8, padding: 12, borderTop: '3px solid ' + p.color },
-    benefitTitle: { fontSize: 10, fontFamily: 'Helvetica-Bold', color: '#0F172A', marginBottom: 4 },
+    benefitTitle: { fontSize: 10, fontFamily: 'Roboto', color: '#0F172A', marginBottom: 4 },
     benefitText: { fontSize: 8.5, color: '#64748B', lineHeight: 1.5 },
     // Terms
     termsBox: { backgroundColor: '#F8FAFC', borderRadius: 8, padding: 14, marginBottom: 20 },
-    termsTitle: { fontSize: 10, fontFamily: 'Helvetica-Bold', color: '#334155', marginBottom: 8 },
+    termsTitle: { fontSize: 10, fontFamily: 'Roboto', color: '#334155', marginBottom: 8 },
     termItem: { flexDirection: 'row', marginBottom: 4 },
-    termBullet: { fontSize: 9, color: p.color, marginRight: 6, fontFamily: 'Helvetica-Bold' },
+    termBullet: { fontSize: 9, color: p.color, marginRight: 6, fontFamily: 'Roboto' },
     termText: { fontSize: 9, color: '#475569', lineHeight: 1.4, flex: 1 },
     // CTA
     ctaBox: { backgroundColor: p.color, borderRadius: 10, padding: 18, marginBottom: 20, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
     ctaLeft: {},
-    ctaTitle: { fontSize: 13, fontFamily: 'Helvetica-Bold', color: '#FFFFFF', marginBottom: 4 },
+    ctaTitle: { fontSize: 13, fontFamily: 'Roboto', color: '#FFFFFF', marginBottom: 4 },
     ctaSub: { fontSize: 9.5, color: 'rgba(255,255,255,0.88)' },
     ctaRight: { alignItems: 'flex-end' },
-    ctaContact: { fontSize: 11, fontFamily: 'Helvetica-Bold', color: '#FFFFFF', marginBottom: 2 },
+    ctaContact: { fontSize: 11, fontFamily: 'Roboto', color: '#FFFFFF', marginBottom: 2 },
     ctaContactSub: { fontSize: 9, color: 'rgba(255,255,255,0.8)' },
     // Footer
     footer: { backgroundColor: '#0F172A', paddingHorizontal: 40, paddingVertical: 14, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
     footerLeft: {},
-    footerBrand: { fontSize: 11, fontFamily: 'Helvetica-Bold', color: '#FFFFFF' },
+    footerBrand: { fontSize: 11, fontFamily: 'Roboto', color: '#FFFFFF' },
     footerSub: { fontSize: 8, color: '#64748B', marginTop: 2 },
     footerRight: { alignItems: 'flex-end' },
     footerText: { fontSize: 8, color: '#94A3B8' },
@@ -190,7 +200,7 @@ function OfertaDocument({ plan }: { plan: Plan }) {
           </View>
           <View style={s.metaItem}>
             <Text style={s.metaLabel}>Referință ofertă</Text>
-            <Text style={s.metaValue}>VS-{plan.toUpperCase()}-{today.getFullYear()}{String(today.getMonth()+1).padStart(2,'0')}</Text>
+            <Text style={s.metaValue}>VS-{String(refNumber)}</Text>
           </View>
           <View style={[s.metaItem, { paddingRight: 0 }]}>
             <Text style={s.metaLabel}>Contact</Text>
@@ -204,7 +214,7 @@ function OfertaDocument({ plan }: { plan: Plan }) {
             <View style={s.priceLeft}>
               <Text style={s.priceTitle}>PREȚ PER APARTAMENT</Text>
               <Text style={s.priceAmount}>{p.priceDisplay}</Text>
-              <Text style={s.priceUnit}>/ apartament / lună · fără TVA</Text>
+              <Text style={s.priceUnit}>/ apartament / lună</Text>
             </View>
             <View style={s.priceRight}>
               <Text style={s.timingLabel}>{p.timeline === 'Expert' ? 'Nivel verificare' : 'Timp estimativ'}</Text>
@@ -254,7 +264,7 @@ function OfertaDocument({ plan }: { plan: Plan }) {
               ))}
             </View>
             <Text style={{ fontSize: 8, color: '#94A3B8', marginTop: 4 }}>
-              * Prețurile nu includ TVA. Formula de calcul: nr. apartamente × {p.priceDisplay} / lună.
+              * Formula de calcul: nr. apartamente × {p.priceDisplay} / lună.
             </Text>
           </View>
 
@@ -288,7 +298,7 @@ function OfertaDocument({ plan }: { plan: Plan }) {
             <Text style={s.termsTitle}>Termeni și condiții ofertă</Text>
             <View style={s.termItem}>
               <Text style={s.termBullet}>›</Text>
-              <Text style={s.termText}>Prețul este de {p.priceDisplay} / apartament / lună, fără TVA. TVA-ul legal se adaugă la facturare.</Text>
+              <Text style={s.termText}>Prețul este de {p.priceDisplay} / apartament / lună. Acesta este prețul final facturat.</Text>
             </View>
             <View style={s.termItem}>
               <Text style={s.termBullet}>›</Text>
