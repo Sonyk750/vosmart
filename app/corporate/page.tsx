@@ -133,12 +133,10 @@ export default function CorporatePage() {
         return;
       }
 
-      if (data.clientSecret) {
-        sessionStorage.setItem("vosmartCheckout", JSON.stringify({
-          clientSecret: data.clientSecret,
-          packageKey: selectedPackage,
-        }));
-        window.location.href = "/corporate/checkout";
+      // Plan plătit: serverul a creat o sesiune Stripe Checkout — mergem direct
+      // la pagina de plată găzduită de Stripe. Același link e trimis și pe email.
+      if (data.checkoutUrl) {
+        window.location.href = data.checkoutUrl;
         return;
       }
 

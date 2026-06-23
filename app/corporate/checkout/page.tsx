@@ -18,6 +18,14 @@ export default function CheckoutPage() {
 
   useEffect(() => {
     try {
+      // Întoarcere din Stripe Checkout (hosted) după plată reușită.
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("paid") === "1") {
+        setDone(true);
+        setReady(true);
+        return;
+      }
+
       const raw = sessionStorage.getItem("vosmartCheckout");
       if (!raw) { window.location.replace("/corporate"); return; }
       const parsed = JSON.parse(raw);

@@ -9,7 +9,6 @@ import {
   notifyAdminForTrialRegistration,
 } from "@/lib/email";
 import crypto from "crypto";
-import type Stripe from "stripe";
 
 function hashPassword(p: string) {
   return crypto.createHash("sha256").update(p + process.env.NEXTAUTH_SECRET).digest("hex");
@@ -105,7 +104,9 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Paid plan notifications
+    // Paid plan: notify admin, then create a Stripe Checkout Session (hosted
+    // payment page) whose URL we both redirect to AND email to the applicant
+    // as a "Finalizează plata" button (valabil 24h).
     notifyAdminForCorporateRegistration({
       companyName,
       name,
@@ -116,49 +117,49 @@ export async function POST(req: NextRequest) {
       isTrial: false,
     }).catch(console.error);
 
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://vosmart.ro";
+    let checkoutUrl: string | null = null;
+    try {
+      const customerId = await getOrCreateStripeCustomer("corporate", user.corporateAccount!.id);
+
+      const session = await stripe.checkout.sessions.create({
+        mode: "subscription",
+        customer: customerId,
+        locale: "ro",
+        line_items: [
+          {
+            quantity: 1,
+            price_data: {
+              currency: "ron",
+              unit_amount: ronToBani(pkgInfo.priceRon),
+              recurring: { interval: "month" },
+              product_data: { name: `Abonament VoSmart Corporate - ${pkgInfo.name}` },
+            },
+          },
+        ],
+        subscription_data: {
+          metadata: { vosmartAccountKind: "corporate", vosmartAccountId: user.corporateAccount!.id },
+        },
+        success_url: `${appUrl}/corporate/checkout?paid=1`,
+        cancel_url: `${appUrl}/corporate`,
+      });
+
+      checkoutUrl = session.url;
+    } catch (stripeError) {
+      console.error("Eroare creare sesiune Checkout Stripe la inregistrare corporate:", stripeError);
+    }
+
+    // Welcome email — includes the payment button when the session was created.
     notifyApplicantCorporateWelcome({
       name,
       email: email.toLowerCase(),
       packageName: pkgInfo.name,
       companyName,
       isTrial: false,
+      paymentUrl: checkoutUrl ?? undefined,
     }).catch(console.error);
 
-    // Create Stripe subscription for paid plans
-    let clientSecret: string | null = null;
-    try {
-      const customerId = await getOrCreateStripeCustomer("corporate", user.corporateAccount!.id);
-
-      const price = await stripe.prices.create({
-        currency: "ron",
-        unit_amount: ronToBani(pkgInfo.priceRon),
-        recurring: { interval: "month" },
-        product_data: { name: `Abonament VoSmart - ${pkgInfo.name}` },
-      });
-
-      const subscription = await stripe.subscriptions.create({
-        customer: customerId,
-        items: [{ price: price.id }],
-        payment_behavior: "default_incomplete",
-        payment_settings: { save_default_payment_method: "on_subscription" },
-        expand: ["latest_invoice", "latest_invoice.confirmation_secret"],
-        metadata: { vosmartAccountKind: "corporate", vosmartAccountId: user.corporateAccount!.id },
-      });
-
-      const invoice = subscription.latest_invoice as Stripe.Invoice | null;
-      clientSecret = invoice?.confirmation_secret?.client_secret ?? null;
-
-      if (clientSecret) {
-        await prisma.corporateAccount.update({
-          where: { id: user.corporateAccount!.id },
-          data: { stripeSubscriptionId: subscription.id },
-        });
-      }
-    } catch (stripeError) {
-      console.error("Eroare creare abonament Stripe la inregistrare corporate:", stripeError);
-    }
-
-    return NextResponse.json({ success: true, clientSecret });
+    return NextResponse.json({ success: true, checkoutUrl });
   } catch (e) {
     console.error(e);
     return NextResponse.json({ error: "Eroare server" }, { status: 500 });

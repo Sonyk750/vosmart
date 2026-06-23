@@ -97,7 +97,7 @@ export async function notifyAdminForCorporateRegistration(data: CorporateRegistr
   });
 }
 
-export async function notifyApplicantCorporateWelcome(data: { name: string; email: string; packageName: string; companyName: string; isTrial?: boolean }) {
+export async function notifyApplicantCorporateWelcome(data: { name: string; email: string; packageName: string; companyName: string; isTrial?: boolean; paymentUrl?: string }) {
   if (!canSendEmail()) {
     console.log("Welcome email pentru:", data.email);
     return;
@@ -135,6 +135,15 @@ export async function notifyApplicantCorporateWelcome(data: { name: string; emai
               <tr><td style="padding:6px 0;color:#64748b;font-size:14px">Email cont:</td><td style="padding:6px 0;font-size:14px;color:#f1f5f9">${data.email}</td></tr>
             </table>
           </div>
+
+          ${!data.isTrial && data.paymentUrl ? `
+          <div style="text-align:center;margin:8px 0 28px">
+            <a href="${data.paymentUrl}" style="display:inline-block;background:linear-gradient(135deg,#7c3aed,#06b6d4);color:#ffffff;text-decoration:none;padding:15px 38px;border-radius:10px;font-weight:700;font-size:16px">
+              Finalizează plata →
+            </a>
+            <p style="margin:12px 0 0;font-size:12px;color:#64748b">Apăsați butonul pentru a finaliza plata securizat prin Stripe. Linkul este valabil 24 de ore.</p>
+          </div>
+          ` : ""}
 
           ${data.isTrial ? `
           <div style="background:#14532d22;border:1px solid #16a34a44;border-radius:12px;padding:16px;margin-bottom:24px">
