@@ -136,7 +136,7 @@ export async function POST(req: NextRequest) {
         subscription_data: {
           metadata: { vosmartAccountKind: "corporate", vosmartAccountId: user.corporateAccount!.id },
         },
-        success_url: `${appUrl}/corporate/checkout?paid=1`,
+        success_url: `${appUrl}/corporate/checkout?paid=1&pkg=${pkgKey}`,
         cancel_url: `${appUrl}/corporate`,
       });
 

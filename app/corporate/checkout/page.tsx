@@ -4,10 +4,10 @@ import Image from "next/image";
 import CardPaymentForm from "@/app/components/CardPaymentForm";
 
 const PACKAGE_LABELS: Record<string, { name: string; price: string }> = {
-  starter:      { name: "Starter",      price: "250" },
-  business:     { name: "Business",     price: "500" },
-  professional: { name: "Professional", price: "900" },
-  enterprise:   { name: "Enterprise",   price: "1.500" },
+  starter:      { name: "Starter",      price: "350" },
+  business:     { name: "Business",     price: "720" },
+  professional: { name: "Professional", price: "1.390" },
+  enterprise:   { name: "Enterprise",   price: "personalizat" },
 };
 
 export default function CheckoutPage() {
@@ -21,6 +21,8 @@ export default function CheckoutPage() {
       // Întoarcere din Stripe Checkout (hosted) după plată reușită.
       const params = new URLSearchParams(window.location.search);
       if (params.get("paid") === "1") {
+        const urlPkg = params.get("pkg");
+        if (urlPkg && urlPkg in PACKAGE_LABELS) setPackageKey(urlPkg);
         setDone(true);
         setReady(true);
         return;
