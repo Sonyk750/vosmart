@@ -1,5 +1,16 @@
 import React from "react";
-import { Document, Page, Text, View, StyleSheet, renderToBuffer } from "@react-pdf/renderer";
+import path from "path";
+import { Document, Page, Text, View, StyleSheet, renderToBuffer, Font } from "@react-pdf/renderer";
+
+// Roboto suportă diacritice românești; înregistrat cu cale absolută
+// pentru că pe server /fonts/... nu e o URL accesibilă.
+Font.register({
+  family: "Roboto",
+  fonts: [
+    { src: path.join(process.cwd(), "public", "fonts", "Roboto-Regular.ttf"), fontWeight: "normal" },
+    { src: path.join(process.cwd(), "public", "fonts", "Roboto-Bold.ttf"),    fontWeight: "bold" },
+  ],
+});
 
 export interface InvoicePDFData {
   invoiceNo: string;
@@ -22,7 +33,7 @@ export interface InvoicePDFData {
 
 const S = StyleSheet.create({
   page: {
-    fontFamily: "Helvetica",
+    fontFamily: "Roboto",
     fontSize: 9,
     paddingTop: 28,
     paddingBottom: 28,
@@ -42,7 +53,8 @@ const S = StyleSheet.create({
   },
   sellerTitle: {
     fontSize: 16,
-    fontFamily: "Helvetica-Bold",
+    fontFamily: "Roboto",
+    fontWeight: "bold",
     color: "#7c3aed",
   },
   sellerSubtitle: {
@@ -55,7 +67,8 @@ const S = StyleSheet.create({
   },
   invoiceLabel: {
     fontSize: 22,
-    fontFamily: "Helvetica-Bold",
+    fontFamily: "Roboto",
+    fontWeight: "bold",
     color: "#1e293b",
   },
   invoiceNo: {
@@ -75,7 +88,8 @@ const S = StyleSheet.create({
   },
   metaLabel: {
     fontSize: 7,
-    fontFamily: "Helvetica-Bold",
+    fontFamily: "Roboto",
+    fontWeight: "bold",
     color: "#94a3b8",
     textTransform: "uppercase",
     letterSpacing: 0.5,
@@ -83,12 +97,14 @@ const S = StyleSheet.create({
   },
   metaValue: {
     fontSize: 9,
-    fontFamily: "Helvetica-Bold",
+    fontFamily: "Roboto",
+    fontWeight: "bold",
     color: "#1e293b",
   },
   metaValueGreen: {
     fontSize: 9,
-    fontFamily: "Helvetica-Bold",
+    fontFamily: "Roboto",
+    fontWeight: "bold",
     color: "#16a34a",
   },
   partiesRow: {
@@ -110,7 +126,8 @@ const S = StyleSheet.create({
   },
   partyLabel: {
     fontSize: 7,
-    fontFamily: "Helvetica-Bold",
+    fontFamily: "Roboto",
+    fontWeight: "bold",
     color: "#94a3b8",
     textTransform: "uppercase",
     letterSpacing: 0.8,
@@ -118,7 +135,8 @@ const S = StyleSheet.create({
   },
   partyName: {
     fontSize: 11,
-    fontFamily: "Helvetica-Bold",
+    fontFamily: "Roboto",
+    fontWeight: "bold",
     color: "#1e293b",
     marginBottom: 5,
   },
@@ -143,7 +161,8 @@ const S = StyleSheet.create({
   thCell: {
     padding: 6,
     fontSize: 7,
-    fontFamily: "Helvetica-Bold",
+    fontFamily: "Roboto",
+    fontWeight: "bold",
     color: "#64748b",
     textTransform: "uppercase",
     letterSpacing: 0.3,
@@ -160,7 +179,8 @@ const S = StyleSheet.create({
     textAlign: "right",
   },
   tdBold: {
-    fontFamily: "Helvetica-Bold",
+    fontFamily: "Roboto",
+    fontWeight: "bold",
   },
   tdSub: {
     fontSize: 8,
@@ -185,12 +205,14 @@ const S = StyleSheet.create({
   },
   totalLabel: {
     fontSize: 11,
-    fontFamily: "Helvetica-Bold",
+    fontFamily: "Roboto",
+    fontWeight: "bold",
     color: "#1e293b",
   },
   totalValue: {
     fontSize: 11,
-    fontFamily: "Helvetica-Bold",
+    fontFamily: "Roboto",
+    fontWeight: "bold",
     color: "#7c3aed",
   },
   noteBox: {
