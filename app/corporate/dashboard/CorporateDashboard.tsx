@@ -45,14 +45,13 @@ export default function CorporateDashboard({ user, corporate, isAdmin = false }:
   const [assocName, setAssocName] = useState("");
   const [uploadSubTab, setUploadSubTab] = useState<"fisiere" | "zip">("fisiere");
   const [uploadFiles, setUploadFiles] = useState<{ type: string; label: string; file: File | null; required: boolean; extended?: boolean }[]>([
-    { type: "lista_plata", label: "Lista de plată", file: null, required: true },
-    { type: "explicatii_lista", label: "Explicații listă", file: null, required: true },
-    { type: "distributia_facturilor", label: "Distribuția facturilor", file: null, required: true },
-    { type: "extras_cont", label: "Extras cont bancar", file: null, required: false },
-    { type: "registru_casa", label: "Registru casă", file: null, required: false, extended: true },
-    { type: "registru_jurnal", label: "Registru jurnal", file: null, required: false, extended: true },
-    { type: "citiri_apometre", label: "Citiri apometre", file: null, required: false, extended: true },
-    { type: "situatie_activ_pasiv", label: "Situație activ/pasiv", file: null, required: false, extended: true },
+    { type: "lista_plata",            label: "Lista de plată",        file: null, required: true },
+    { type: "explicatii_lista",       label: "Explicațiile listei",   file: null, required: true },
+    { type: "distributia_facturilor", label: "Distribuire facturi",   file: null, required: true },
+    { type: "registru_casa",          label: "Registru casă",         file: null, required: false, extended: true },
+    { type: "registru_jurnal",        label: "Registru jurnal",       file: null, required: false, extended: true },
+    { type: "situatie_activ_pasiv",   label: "Situație activ/pasiv",  file: null, required: false, extended: true },
+    { type: "stat_plata",             label: "Stat de plată",         file: null, required: false, extended: true },
   ]);
   const [invoiceFiles, setInvoiceFiles] = useState<File[]>([]);
   // Tipuri care permit mai multe fișiere deodată (doar pachete plătite)
@@ -118,26 +117,29 @@ export default function CorporateDashboard({ user, corporate, isAdmin = false }:
   ];
   const YEARS = ["2024", "2025", "2026", "2027"];
 
-  // Tipuri cu upload multiplu (registre cu mai multe rapoarte) — doar pachete plătite
+  // Tipuri cu upload multiplu — doar pachete plătite
   const EXTRA_MULTI: { type: string; label: string; icon: string }[] = [
-    { type: "registru_banca", label: "Registru bancă", icon: "🏦" },
-    { type: "registru_fond", label: "Registru fond", icon: "💰" },
+    { type: "extras_cont",     label: "Extras de cont",               icon: "🏧" },
+    { type: "registru_banca",  label: "Registru bancă",               icon: "🏦" },
+    { type: "registru_fond",   label: "Registru fond",                icon: "💰" },
+    { type: "citiri_apometre", label: "Citire apometre/repartitoare", icon: "💧" },
   ];
   // Pachetul Trial permite doar documentele de bază; restul tipurilor apar la pachetele plătite
   const showExtended = effectivePackageKey !== "trial";
 
   const ZIP_TYPE_MAP: { patterns: string[]; type: string; label: string }[] = [
-    { patterns: ["lista", "plata", "plată"], type: "lista_plata", label: "Lista de plată" },
-    { patterns: ["explicat"], type: "explicatii_lista", label: "Explicații listă" },
-    { patterns: ["distribut", "repartiz"], type: "distributia_facturilor", label: "Distribuția facturilor" },
-    { patterns: ["factur", "furniz"], type: "facturi", label: "Facturi furnizori" },
-    { patterns: ["extras", "cont", "bancar"], type: "extras_cont", label: "Extras cont bancar" },
-    { patterns: ["casa", "casă"], type: "registru_casa", label: "Registru casă" },
-    { patterns: ["jurnal"], type: "registru_jurnal", label: "Registru jurnal" },
-    { patterns: ["apometr", "citir", "contor"], type: "citiri_apometre", label: "Citiri apometre" },
-    { patterns: ["activ", "pasiv", "bilant", "bilanț"], type: "situatie_activ_pasiv", label: "Situație activ/pasiv" },
-    { patterns: ["banca", "bancă"], type: "registru_banca", label: "Registru bancă" },
-    { patterns: ["fond"], type: "registru_fond", label: "Registru fond" },
+    { patterns: ["lista"],                              type: "lista_plata",            label: "Lista de plată" },
+    { patterns: ["explicat"],                           type: "explicatii_lista",       label: "Explicațiile listei" },
+    { patterns: ["distribut", "repartiz"],              type: "distributia_facturilor", label: "Distribuire facturi" },
+    { patterns: ["factur", "furniz"],                   type: "facturi",                label: "Facturi" },
+    { patterns: ["extras", "cont", "bancar"],           type: "extras_cont",            label: "Extras de cont" },
+    { patterns: ["casa", "casă"],                       type: "registru_casa",          label: "Registru casă" },
+    { patterns: ["banca", "bancă"],                     type: "registru_banca",         label: "Registru bancă" },
+    { patterns: ["jurnal"],                             type: "registru_jurnal",        label: "Registru jurnal" },
+    { patterns: ["fond"],                               type: "registru_fond",          label: "Registru fond" },
+    { patterns: ["activ", "pasiv", "bilant", "bilanț"], type: "situatie_activ_pasiv",   label: "Situație activ/pasiv" },
+    { patterns: ["apometr", "citir", "contor", "repartitor"], type: "citiri_apometre", label: "Citire apometre/repartitoare" },
+    { patterns: ["stat"],                               type: "stat_plata",             label: "Stat de plată" },
   ];
 
   function guessTypeFromName(name: string) {
@@ -211,7 +213,7 @@ export default function CorporateDashboard({ user, corporate, isAdmin = false }:
     if (uploadSubTab === "fisiere") {
       const missing = uploadFiles.filter(f => f.required && !f.file).map(f => f.label);
       if (missing.length > 0) { setUploadMsg("Lipsesc: " + missing.join(", ")); return; }
-      if (invoiceFiles.length === 0) { setUploadMsg("Adaugă cel puțin o factură furnizori"); return; }
+      if (invoiceFiles.length < 2) { setUploadMsg("Adaugă cel puțin 2 facturi (obligatorii pentru raportul de cenzor)"); return; }
       for (const uf of uploadFiles) {
         if (uf.file && (!uf.extended || showExtended)) allFiles.push({ file: uf.file, type: uf.type, label: uf.label });
       }
@@ -230,8 +232,8 @@ export default function CorporateDashboard({ user, corporate, isAdmin = false }:
     } else {
       if (zipExtracted.length === 0) { setUploadMsg("Alege o arhivă ZIP validă"); return; }
       const hasReq = ["lista_plata", "explicatii_lista", "distributia_facturilor"].every(t => zipExtracted.some(z => z.assignedType === t));
-      const hasFacturi = zipExtracted.some(z => z.assignedType === "facturi");
-      if (!hasReq || !hasFacturi) { setUploadMsg("ZIP-ul trebuie să conțină: lista de plată, explicații, distribuția facturilor și facturi"); return; }
+      const hasFacturi = zipExtracted.filter(z => z.assignedType === "facturi").length >= 2;
+      if (!hasReq || !hasFacturi) { setUploadMsg("ZIP-ul trebuie să conțină: lista de plată, explicațiile listei, distribuire facturi și cel puțin 2 facturi"); return; }
       allFiles = zipExtracted.map(z => ({ file: z.file, type: z.assignedType, label: guessTypeFromName(z.name).label }));
     }
 
@@ -740,111 +742,159 @@ ${body}
 
                 {/* TAB: Fisiere individuale */}
                 {uploadSubTab === "fisiere" && (
-                  <div className="space-y-2.5">
-                    {/* Documente fixe (fara facturi) */}
-                    {uploadFiles.map((uf, idx) => (uf.extended && !showExtended) ? null : (
-                      <div key={uf.type} className="flex items-center gap-3">
-                        <div className="w-48 shrink-0 flex items-center gap-1.5">
-                          <span className={`text-xs ${uf.required ? "text-red-400" : "text-slate-600"}`}>
-                            {uf.required ? "●" : "○"}
-                          </span>
-                          <span className="text-sm text-slate-300">{uf.label}</span>
-                          {uf.required && <span className="text-red-400 text-xs">*</span>}
-                        </div>
-                        <label className={`flex-1 flex items-center gap-2.5 rounded-xl border px-4 py-2.5 cursor-pointer transition text-sm ${
-                          uf.file ? "border-emerald-500/40 bg-emerald-500/8 text-emerald-300" : "border-white/8 bg-white/[0.03] text-slate-500 hover:border-violet-500/40 hover:text-slate-300"
-                        }`}>
-                          <span>{uf.file ? "✅" : "📄"}</span>
-                          <span className="truncate flex-1">{uf.file ? uf.file.name : "Alege fișier..."}</span>
-                          {uf.file && <button type="button" onClick={e => { e.preventDefault(); setUploadFiles(p => p.map((f,i)=>i===idx?{...f,file:null}:f)); }} className="text-slate-500 hover:text-red-400 transition ml-1">✕</button>}
-                          <input type="file" accept=".pdf,.jpg,.jpeg,.png,.xlsx,.xls,.doc,.docx" className="hidden"
-                            onChange={e => { const file = e.target.files?.[0]||null; setUploadFiles(p=>p.map((f,i)=>i===idx?{...f,file}:f)); }} />
-                        </label>
-                      </div>
-                    ))}
+                  <div className="space-y-4">
 
-                    {/* Facturi — multiple */}
-                    <div className="mt-1">
+                    {/* SECTIUNEA 1: Documente principale obligatorii */}
+                    <div className="space-y-2.5">
+                      <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+                        Documente principale — obligatorii
+                      </p>
+                      {uploadFiles.filter(f => f.required).map(uf => {
+                        const idx = uploadFiles.indexOf(uf);
+                        return (
+                          <div key={uf.type} className="flex items-center gap-3">
+                            <div className="w-48 shrink-0 flex items-center gap-1.5">
+                              <span className="text-xs text-red-400">●</span>
+                              <span className="text-sm text-slate-300">{uf.label}</span>
+                              <span className="text-red-400 text-xs">*</span>
+                            </div>
+                            <label className={`flex-1 flex items-center gap-2.5 rounded-xl border px-4 py-2.5 cursor-pointer transition text-sm ${
+                              uf.file ? "border-emerald-500/40 bg-emerald-500/8 text-emerald-300" : "border-white/8 bg-white/[0.03] text-slate-500 hover:border-violet-500/40 hover:text-slate-300"
+                            }`}>
+                              <span>{uf.file ? "✅" : "📄"}</span>
+                              <span className="truncate flex-1">{uf.file ? uf.file.name : "Alege fișier..."}</span>
+                              {uf.file && <button type="button" onClick={e => { e.preventDefault(); setUploadFiles(p=>p.map((f,i)=>i===idx?{...f,file:null}:f)); }} className="text-slate-500 hover:text-red-400 transition ml-1 shrink-0">✕</button>}
+                              <input type="file" accept=".pdf,.jpg,.jpeg,.png,.xlsx,.xls,.doc,.docx" className="hidden"
+                                onChange={e => { const file=e.target.files?.[0]||null; setUploadFiles(p=>p.map((f,i)=>i===idx?{...f,file}:f)); }} />
+                            </label>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* SECTIUNEA 2: Documente suplimentare (doar pachete platite) */}
+                    {showExtended && (
+                      <div className="space-y-2.5 border-t border-white/5 pt-4">
+                        <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+                          Documente suplimentare — opționale
+                        </p>
+                        {/* Ordinea: extras_cont(m), registru_casa, registru_banca(m),
+                            registru_jurnal, registru_fond(m), situatie_activ_pasiv,
+                            citiri_apometre(m), stat_plata */}
+                        {([
+                          { kind: "multi",  type: "extras_cont",      label: "Extras de cont",               icon: "🏧" },
+                          { kind: "single", type: "registru_casa" },
+                          { kind: "multi",  type: "registru_banca",    label: "Registru bancă",               icon: "🏦" },
+                          { kind: "single", type: "registru_jurnal" },
+                          { kind: "multi",  type: "registru_fond",     label: "Registru fond",                icon: "💰" },
+                          { kind: "single", type: "situatie_activ_pasiv" },
+                          { kind: "multi",  type: "citiri_apometre",   label: "Citire apometre/repartitoare", icon: "💧" },
+                          { kind: "single", type: "stat_plata" },
+                        ] as { kind: string; type: string; label?: string; icon?: string }[]).map(item => {
+                          if (item.kind === "single") {
+                            const uf = uploadFiles.find(f => f.type === item.type);
+                            const idx = uploadFiles.findIndex(f => f.type === item.type);
+                            if (!uf) return null;
+                            return (
+                              <div key={uf.type} className="flex items-center gap-3">
+                                <div className="w-48 shrink-0 flex items-center gap-1.5">
+                                  <span className="text-xs text-slate-600">○</span>
+                                  <span className="text-sm text-slate-300">{uf.label}</span>
+                                </div>
+                                <label className={`flex-1 flex items-center gap-2.5 rounded-xl border px-4 py-2.5 cursor-pointer transition text-sm ${
+                                  uf.file ? "border-emerald-500/40 bg-emerald-500/8 text-emerald-300" : "border-white/8 bg-white/[0.03] text-slate-500 hover:border-violet-500/40 hover:text-slate-300"
+                                }`}>
+                                  <span>{uf.file ? "✅" : "📄"}</span>
+                                  <span className="truncate flex-1">{uf.file ? uf.file.name : "Alege fișier..."}</span>
+                                  {uf.file && <button type="button" onClick={e => { e.preventDefault(); setUploadFiles(p=>p.map((f,i)=>i===idx?{...f,file:null}:f)); }} className="text-slate-500 hover:text-red-400 transition ml-1 shrink-0">✕</button>}
+                                  <input type="file" accept=".pdf,.jpg,.jpeg,.png,.xlsx,.xls,.doc,.docx" className="hidden"
+                                    onChange={e => { const file=e.target.files?.[0]||null; setUploadFiles(p=>p.map((f,i)=>i===idx?{...f,file}:f)); }} />
+                                </label>
+                              </div>
+                            );
+                          } else {
+                            const m = { type: item.type, label: item.label!, icon: item.icon! };
+                            const arr = multiFiles[m.type] || [];
+                            return (
+                              <div key={m.type}>
+                                <div className="flex items-center gap-1.5 mb-1.5">
+                                  <span className="text-xs text-slate-600">○</span>
+                                  <span className="text-sm text-slate-300">{m.label}</span>
+                                  <span className="text-xs text-slate-600 ml-1">(una sau mai multe)</span>
+                                </div>
+                                {arr.length > 0 && (
+                                  <div className="space-y-1.5 mb-1.5">
+                                    {arr.map((file, fidx) => (
+                                      <div key={fidx} className="flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/8 px-3 py-2.5">
+                                        <span className="text-base">{m.icon}</span>
+                                        <span className="text-sm text-emerald-300 flex-1 truncate">{file.name}</span>
+                                        <span className="text-xs text-emerald-600 shrink-0">{Math.round(file.size/1024)} KB</span>
+                                        <button type="button" onClick={() => setMultiFiles(p=>({...p,[m.type]:(p[m.type]||[]).filter((_,i)=>i!==fidx)}))}
+                                          className="text-slate-500 hover:text-red-400 transition ml-1 text-sm">✕</button>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                                <label className={`flex items-center gap-3 rounded-xl border px-4 py-2.5 cursor-pointer transition text-sm w-full ${
+                                  arr.length > 0 ? "border-violet-500/30 bg-violet-500/5 text-violet-300 hover:bg-violet-500/10" : "border-white/8 bg-white/[0.03] text-slate-500 hover:border-violet-500/40 hover:text-slate-300"
+                                }`}>
+                                  <span>{m.icon}</span>
+                                  <span className="flex-1">{arr.length > 0 ? `+ Adaugă mai multe (${m.label.toLowerCase()})` : `Selectează ${m.label.toLowerCase()}`}</span>
+                                  <input type="file" accept=".pdf,.jpg,.jpeg,.png,.xlsx,.xls,.doc,.docx" multiple className="hidden"
+                                    onChange={e => { const files=Array.from(e.target.files||[]); if(files.length>0) setMultiFiles(p=>({...p,[m.type]:[...(p[m.type]||[]),...files]})); e.target.value=""; }} />
+                                </label>
+                              </div>
+                            );
+                          }
+                        })}
+                      </div>
+                    )}
+
+                    {/* SECTIUNEA 3: Facturi (obligatorii, min. 2) */}
+                    <div className="border-t border-white/5 pt-4">
                       <div className="flex items-center gap-1.5 mb-2">
                         <span className="text-xs text-red-400">●</span>
-                        <span className="text-sm text-slate-300">Facturi furnizori</span>
+                        <span className="text-sm text-slate-300">Facturi</span>
                         <span className="text-red-400 text-xs">*</span>
-                        <span className="text-xs text-slate-600 ml-1">(selectează una sau mai multe deodată)</span>
+                        <span className="text-xs text-slate-500 ml-1">
+                          (minimum 2 obligatorii · necesare pentru raportul de cenzor)
+                        </span>
                       </div>
-                      {/* Fișiere selectate deja */}
                       {invoiceFiles.length > 0 && (
                         <div className="space-y-1.5 mb-2">
                           {invoiceFiles.map((file, idx) => (
                             <div key={idx} className="flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/8 px-3 py-2.5">
                               <span className="text-base">🧾</span>
                               <span className="text-sm text-emerald-300 flex-1 truncate">{file.name}</span>
-                              <span className="text-xs text-emerald-600 shrink-0">{Math.round(file.size / 1024)} KB</span>
-                              <button type="button" onClick={() => setInvoiceFiles(p => p.filter((_, i) => i !== idx))}
+                              <span className="text-xs text-emerald-600 shrink-0">{Math.round(file.size/1024)} KB</span>
+                              <button type="button" onClick={() => setInvoiceFiles(p=>p.filter((_,i)=>i!==idx))}
                                 className="text-slate-500 hover:text-red-400 transition ml-1 text-sm">✕</button>
                             </div>
                           ))}
                         </div>
                       )}
-                      {/* Buton selectare (multiple) */}
                       <label className={`flex items-center gap-3 rounded-xl border px-4 py-3 cursor-pointer transition text-sm w-full ${
-                        invoiceFiles.length > 0
+                        invoiceFiles.length >= 2
                           ? "border-violet-500/30 bg-violet-500/5 text-violet-300 hover:bg-violet-500/10"
+                          : invoiceFiles.length === 1
+                          ? "border-yellow-500/30 bg-yellow-500/8 text-yellow-300 hover:bg-yellow-500/15"
                           : "border-white/8 bg-white/[0.03] text-slate-500 hover:border-violet-500/40 hover:text-slate-300"
                       }`}>
                         <span>📁</span>
-                        <span className="flex-1">{invoiceFiles.length > 0 ? `+ Adaugă mai multe facturi` : "Selectează facturi (una sau mai multe)"}</span>
+                        <span className="flex-1">
+                          {invoiceFiles.length === 0
+                            ? "Selectează facturi (min. 2 obligatorii)"
+                            : invoiceFiles.length === 1
+                            ? "⚠️ Mai adaugă cel puțin o factură"
+                            : `+ Adaugă mai multe facturi`}
+                        </span>
                         <input type="file" accept=".pdf,.jpg,.jpeg,.png,.xlsx,.xls" multiple className="hidden"
-                          onChange={e => {
-                            const files = Array.from(e.target.files || []);
-                            if (files.length > 0) setInvoiceFiles(p => [...p, ...files]);
-                            e.target.value = "";
-                          }} />
+                          onChange={e => { const files=Array.from(e.target.files||[]); if(files.length>0) setInvoiceFiles(p=>[...p,...files]); e.target.value=""; }} />
                       </label>
                     </div>
 
-                    {/* Registre cu mai multe rapoarte (banca, fond) — pachete platite */}
-                    {showExtended && EXTRA_MULTI.map(m => {
-                      const arr = multiFiles[m.type] || [];
-                      return (
-                        <div key={m.type} className="mt-1">
-                          <div className="flex items-center gap-1.5 mb-2">
-                            <span className="text-xs text-slate-600">○</span>
-                            <span className="text-sm text-slate-300">{m.label}</span>
-                            <span className="text-xs text-slate-600 ml-1">(una sau mai multe rapoarte)</span>
-                          </div>
-                          {arr.length > 0 && (
-                            <div className="space-y-1.5 mb-2">
-                              {arr.map((file, idx) => (
-                                <div key={idx} className="flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/8 px-3 py-2.5">
-                                  <span className="text-base">{m.icon}</span>
-                                  <span className="text-sm text-emerald-300 flex-1 truncate">{file.name}</span>
-                                  <span className="text-xs text-emerald-600 shrink-0">{Math.round(file.size / 1024)} KB</span>
-                                  <button type="button" onClick={() => setMultiFiles(p => ({ ...p, [m.type]: (p[m.type] || []).filter((_, i) => i !== idx) }))}
-                                    className="text-slate-500 hover:text-red-400 transition ml-1 text-sm">✕</button>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                          <label className={`flex items-center gap-3 rounded-xl border px-4 py-3 cursor-pointer transition text-sm w-full ${
-                            arr.length > 0
-                              ? "border-violet-500/30 bg-violet-500/5 text-violet-300 hover:bg-violet-500/10"
-                              : "border-white/8 bg-white/[0.03] text-slate-500 hover:border-violet-500/40 hover:text-slate-300"
-                          }`}>
-                            <span>{m.icon}</span>
-                            <span className="flex-1">{arr.length > 0 ? `+ Adaugă mai multe (${m.label.toLowerCase()})` : `Selectează ${m.label.toLowerCase()} (una sau mai multe)`}</span>
-                            <input type="file" accept=".pdf,.jpg,.jpeg,.png,.xlsx,.xls,.doc,.docx" multiple className="hidden"
-                              onChange={e => {
-                                const files = Array.from(e.target.files || []);
-                                if (files.length > 0) setMultiFiles(p => ({ ...p, [m.type]: [...(p[m.type] || []), ...files] }));
-                                e.target.value = "";
-                              }} />
-                          </label>
-                        </div>
-                      );
-                    })}
-
                     {/* Bara progres documente (verde → rosu) */}
-                    <div className="mt-4 pt-4 border-t border-white/5">
+                    <div className="pt-3 border-t border-white/5">
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-xs text-slate-500">Documente pregătite</span>
                         <span className="text-xs font-semibold" style={{ color: `hsl(${barHue},75%,55%)` }}>
@@ -909,17 +959,18 @@ ${body}
                               <select value={z.assignedType} onChange={e => setZipExtracted(p=>p.map((x,xi)=>xi===i?{...x,assignedType:e.target.value}:x))}
                                 className="rounded-lg border border-white/10 bg-[#0d0d1a] px-2 py-1 text-xs text-white outline-none focus:border-violet-500">
                                 <option value="lista_plata">Lista de plată</option>
-                                <option value="explicatii_lista">Explicații listă</option>
-                                <option value="distributia_facturilor">Distribuția facturilor</option>
-                                <option value="facturi">Facturi furnizori</option>
-                                <option value="extras_cont">Extras cont bancar</option>
+                                <option value="explicatii_lista">Explicațiile listei</option>
+                                <option value="distributia_facturilor">Distribuire facturi</option>
+                                <option value="facturi">Facturi</option>
+                                <option value="extras_cont">Extras de cont</option>
                                 {showExtended && <>
                                   <option value="registru_casa">Registru casă</option>
                                   <option value="registru_banca">Registru bancă</option>
-                                  <option value="registru_fond">Registru fond</option>
                                   <option value="registru_jurnal">Registru jurnal</option>
-                                  <option value="citiri_apometre">Citiri apometre</option>
+                                  <option value="registru_fond">Registru fond</option>
                                   <option value="situatie_activ_pasiv">Situație activ/pasiv</option>
+                                  <option value="citiri_apometre">Citire apometre/repartitoare</option>
+                                  <option value="stat_plata">Stat de plată</option>
                                 </>}
                                 <option value="altele">Altele</option>
                               </select>
@@ -935,18 +986,20 @@ ${body}
                         <p className="text-xs font-semibold text-violet-300 mb-2">Structura recomandată în ZIP</p>
                         <div className="space-y-1">
                           {[
-                            "lista_plata.pdf",
-                            "explicatii_lista.pdf",
-                            "distributia_facturilor.pdf",
-                            "facturi.pdf",
-                            "extras_cont.pdf (opțional)",
+                            "lista_plata.pdf  ← obligatoriu",
+                            "explicatii_lista.pdf  ← obligatoriu",
+                            "distribuire_facturi.pdf  ← obligatoriu",
+                            "factura_1.pdf  ← obligatoriu",
+                            "factura_2.pdf  ← obligatoriu",
                             ...(showExtended ? [
+                              "extras_cont.pdf (opțional)",
                               "registru_casa.pdf (opțional)",
                               "registru_banca.pdf (opțional)",
-                              "registru_fond.pdf (opțional)",
                               "registru_jurnal.pdf (opțional)",
-                              "citiri_apometre.pdf (opțional)",
+                              "registru_fond.pdf (opțional)",
                               "situatie_activ_pasiv.pdf (opțional)",
+                              "citiri_apometre.pdf (opțional)",
+                              "stat_plata.pdf (opțional)",
                             ] : []),
                           ].map(f => (
                             <div key={f} className="flex items-center gap-2 text-xs text-slate-400">
