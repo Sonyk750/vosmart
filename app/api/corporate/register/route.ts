@@ -104,19 +104,9 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Paid plan: notify admin, then create a Stripe Checkout Session (hosted
-    // payment page) whose URL we both redirect to AND email to the applicant
-    // as a "Finalizează plata" button (valabil 24h).
-    notifyAdminForCorporateRegistration({
-      companyName,
-      name,
-      email: email.toLowerCase(),
-      packageName: pkgInfo.name,
-      phone,
-      address,
-      isTrial: false,
-    }).catch(console.error);
-
+    // Paid plan: create a Stripe Checkout Session (hosted payment page) whose
+    // URL we both redirect to AND email to the applicant as a "Finalizează
+    // plata" button (valabil 24h).
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://vosmart.ro";
     let checkoutUrl: string | null = null;
     try {
@@ -149,15 +139,28 @@ export async function POST(req: NextRequest) {
       console.error("Eroare creare sesiune Checkout Stripe la inregistrare corporate:", stripeError);
     }
 
-    // Welcome email — includes the payment button when the session was created.
-    notifyApplicantCorporateWelcome({
-      name,
-      email: email.toLowerCase(),
-      packageName: pkgInfo.name,
-      companyName,
-      isTrial: false,
-      paymentUrl: checkoutUrl ?? undefined,
-    }).catch(console.error);
+    // IMPORTANT: pe serverless (Vercel) functia e oprita imediat ce returneaza,
+    // asa ca un email "fire-and-forget" (fara await) nu apuca sa plece. Le
+    // asteptam aici — emailul clientului include butonul de plata.
+    await Promise.allSettled([
+      notifyAdminForCorporateRegistration({
+        companyName,
+        name,
+        email: email.toLowerCase(),
+        packageName: pkgInfo.name,
+        phone,
+        address,
+        isTrial: false,
+      }),
+      notifyApplicantCorporateWelcome({
+        name,
+        email: email.toLowerCase(),
+        packageName: pkgInfo.name,
+        companyName,
+        isTrial: false,
+        paymentUrl: checkoutUrl ?? undefined,
+      }),
+    ]);
 
     return NextResponse.json({ success: true, checkoutUrl });
   } catch (e) {
