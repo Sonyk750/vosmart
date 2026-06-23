@@ -102,24 +102,35 @@ async function syncSubscription(subscription: Stripe.Subscription) {
       const recipientName = corporate.user.name || corporate.companyName;
       const pkgName = pkgInfo?.name || corporate.package;
 
-      notifyApplicantCorporateActivated({
-        name: recipientName,
-        email: corporate.user.email,
-        packageName: pkgName,
-        companyName: corporate.companyName,
-      }).catch(console.error);
-
-      if (pkgInfo?.priceRon > 0) {
-        sendPaymentInvoiceEmail({
+      // Trimitem emailurile secvential (nu in paralel) ca sa evitam
+      // probleme de rata la SMTP si sa garantam ca ambele pleaca inainte
+      // ca functia serverless sa se opreasca.
+      try {
+        await notifyApplicantCorporateActivated({
           name: recipientName,
           email: corporate.user.email,
-          companyName: corporate.companyName,
-          cui: corporate.cui,
-          regCom: corporate.regCom,
-          address: corporate.address,
           packageName: pkgName,
-          priceRon: pkgInfo.priceRon,
-        }).catch(console.error);
+          companyName: corporate.companyName,
+        });
+      } catch (e) {
+        console.error("[webhook] Eroare email activare cont:", e);
+      }
+
+      if (pkgInfo && pkgInfo.priceRon > 0) {
+        try {
+          await sendPaymentInvoiceEmail({
+            name: recipientName,
+            email: corporate.user.email,
+            companyName: corporate.companyName,
+            cui: corporate.cui,
+            regCom: corporate.regCom,
+            address: corporate.address,
+            packageName: pkgName,
+            priceRon: pkgInfo.priceRon,
+          });
+        } catch (e) {
+          console.error("[webhook] Eroare email factura:", e);
+        }
       }
     }
   }
