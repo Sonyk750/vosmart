@@ -104,12 +104,18 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    // Pachete cu pret personalizat (Enterprise, priceRon 0): nu pot trece prin
+    // Checkout (ar activa gratis). Le tratam ca "oferta personalizata / va
+    // contactam" — fara plata, doar notificare admin + email catre client.
+    const isCustomQuote = pkgInfo.priceRon <= 0;
+
     // Paid plan: create a Stripe Checkout Session (hosted payment page) whose
     // URL we both redirect to AND email to the applicant as a "Finalizează
     // plata" button (valabil 24h).
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://vosmart.ro";
     let checkoutUrl: string | null = null;
-    try {
+    if (!isCustomQuote) {
+      try {
       const customerId = await getOrCreateStripeCustomer("corporate", user.corporateAccount!.id);
 
       const session = await stripe.checkout.sessions.create({
@@ -135,8 +141,9 @@ export async function POST(req: NextRequest) {
       });
 
       checkoutUrl = session.url;
-    } catch (stripeError) {
-      console.error("Eroare creare sesiune Checkout Stripe la inregistrare corporate:", stripeError);
+      } catch (stripeError) {
+        console.error("Eroare creare sesiune Checkout Stripe la inregistrare corporate:", stripeError);
+      }
     }
 
     // IMPORTANT: pe serverless (Vercel) functia e oprita imediat ce returneaza,
@@ -159,6 +166,7 @@ export async function POST(req: NextRequest) {
         companyName,
         isTrial: false,
         paymentUrl: checkoutUrl ?? undefined,
+        isCustomQuote,
       }),
     ]);
 

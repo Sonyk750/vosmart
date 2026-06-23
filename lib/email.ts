@@ -97,7 +97,7 @@ export async function notifyAdminForCorporateRegistration(data: CorporateRegistr
   });
 }
 
-export async function notifyApplicantCorporateWelcome(data: { name: string; email: string; packageName: string; companyName: string; isTrial?: boolean; paymentUrl?: string }) {
+export async function notifyApplicantCorporateWelcome(data: { name: string; email: string; packageName: string; companyName: string; isTrial?: boolean; paymentUrl?: string; isCustomQuote?: boolean }) {
   if (!canSendEmail()) {
     console.log("Welcome email pentru:", data.email);
     return;
@@ -107,10 +107,14 @@ export async function notifyApplicantCorporateWelcome(data: { name: string; emai
 
   const subject = data.isTrial
     ? "Bun venit pe VoSmart — Contul Trial a fost activat!"
+    : data.isCustomQuote
+    ? `Cererea pentru pachetul ${data.packageName} a fost înregistrată`
     : "Vă mulțumim pentru înregistrarea pe platforma VoSmart Corporate";
 
   const bodyText = data.isTrial
     ? `Contul Trial este activ și poate fi accesat imediat.`
+    : data.isCustomQuote
+    ? `Cererea dumneavoastră pentru pachetul ${data.packageName} (preț personalizat) a fost înregistrată. Echipa noastră vă va contacta în cel mai scurt timp cu o ofertă adaptată nevoilor dumneavoastră.`
     : `Cererea dumneavoastră de abonament ${data.packageName} a fost înregistrată. Vă rugăm să finalizați plata pentru activarea contului.`;
 
   await createTransporter().sendMail({
@@ -154,6 +158,12 @@ export async function notifyApplicantCorporateWelcome(data: { name: string; emai
               • 1 raport de cenzor generat cu AI<br>
               <br>
               Pentru a extinde capacitățile, puteți oricând alege un pachet plătit.
+            </p>
+          </div>
+          ` : data.isCustomQuote ? `
+          <div style="background:#1e1b4b22;border:1px solid #4c1d9544;border-radius:12px;padding:16px;margin-bottom:24px">
+            <p style="margin:0;color:#c4b5fd;font-size:14px;line-height:1.6">
+              Pachetul ${data.packageName} are preț personalizat. Un consultant VoSmart vă va contacta în curând pentru a stabili oferta și pașii de activare.
             </p>
           </div>
           ` : `

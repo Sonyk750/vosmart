@@ -411,7 +411,9 @@ export default function CorporatePage() {
                         ? "Se procesează..."
                         : selectedPackage === "trial"
                           ? "Activează Trial Gratuit →"
-                          : "Continuă spre plată →"}
+                          : selectedPackage === "enterprise"
+                            ? "Trimite cererea →"
+                            : "Continuă spre plată →"}
                     </button>
                   </form>
                 )}
