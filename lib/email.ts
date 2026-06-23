@@ -360,44 +360,59 @@ export async function sendPaymentInvoiceEmail(data: {
   const from = process.env.EMAIL_FROM || process.env.SMTP_USER!;
   const now = new Date();
 
-  // Numar factura: VOS-YYYYMMDD-XXXXX
   const datePart = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}`;
   const rand = Math.random().toString(36).slice(2, 7).toUpperCase();
   const invoiceNo = `VOS-${datePart}-${rand}`;
 
   const dateStr = now.toLocaleDateString("ro-RO", { day: "2-digit", month: "2-digit", year: "numeric" });
 
-  // TVA 19% — presupunem ca pretul afisat include TVA
-  const totalCuTva = data.priceRon;
-  const totalFaraTva = Math.round((totalCuTva / 1.19) * 100) / 100;
-  const tvaValoare = Math.round((totalCuTva - totalFaraTva) * 100) / 100;
-
-  // Perioada de abonament (luna urmatoare)
-  const perioadaStart = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-  const perioadaEnd = new Date(now.getFullYear(), now.getMonth() + 2, 0);
+  // Perioada = luna curenta a platii
+  const perioadaStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const perioadaEnd   = new Date(now.getFullYear(), now.getMonth() + 1, 0);
   const perioadaStr = `${perioadaStart.toLocaleDateString("ro-RO", { day: "2-digit", month: "long", year: "numeric" })} — ${perioadaEnd.toLocaleDateString("ro-RO", { day: "2-digit", month: "long", year: "numeric" })}`;
 
-  // Date furnizor din env
-  const sellerName  = process.env.COMPANY_NAME  || "VoSmart SRL";
-  const sellerCui   = process.env.COMPANY_CUI   || "";
-  const sellerReg   = process.env.COMPANY_REG_COM || "";
-  const sellerAddr  = process.env.COMPANY_ADDRESS || "Str. Constantin Dobrogeanu Gherea 89, Sector 1, București";
-  const sellerIban  = process.env.COMPANY_IBAN   || "";
-  const sellerBank  = process.env.COMPANY_BANK   || "";
+  // Date furnizor din env (sau valori implicite)
+  const sellerName = process.env.COMPANY_NAME     || "VoSmart Cenzorat SRL";
+  const sellerCui  = process.env.COMPANY_CUI      || "";
+  const sellerReg  = process.env.COMPANY_REG_COM  || "";
+  const sellerAddr = process.env.COMPANY_ADDRESS  || "Str. Constantin Dobrogeanu Gherea 89, Sector 1, București";
+  const sellerIban = process.env.COMPANY_IBAN     || "";
+  const sellerBank = process.env.COMPANY_BANK     || "";
 
   const fmt = (n: number) => n.toLocaleString("ro-RO", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  // Generam PDF-ul facturii
+  const { generateInvoicePDF } = await import("./invoice-pdf");
+  const pdfBuffer = await generateInvoicePDF({
+    invoiceNo, dateStr, perioadaStr,
+    sellerName, sellerCui, sellerReg, sellerAddr, sellerIban, sellerBank,
+    buyerName: data.companyName,
+    buyerCui:  data.cui,
+    buyerReg:  data.regCom,
+    buyerAddr: data.address,
+    buyerEmail: data.email,
+    packageName: data.packageName,
+    priceRon: data.priceRon,
+  });
 
   await createTransporter().sendMail({
     from,
     to: data.email,
     subject: `Factură VoSmart #${invoiceNo} — Abonament ${data.packageName}`,
+    attachments: [
+      {
+        filename: `Factura-VoSmart-${invoiceNo}.pdf`,
+        content: pdfBuffer,
+        contentType: "application/pdf",
+      },
+    ],
     html: `<!DOCTYPE html>
 <html lang="ro"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
   body{margin:0;padding:0;background:#f0f2f5;font-family:Arial,Helvetica,sans-serif}
   .wrap{max-width:680px;margin:24px auto;background:#ffffff;border-radius:8px;overflow:hidden;border:1px solid #e2e8f0}
   .hdr{background:#0a0e1f;padding:28px 36px;border-bottom:4px solid #7c3aed}
-  .hdr h1{margin:0;color:#ffffff;font-size:22px;font-weight:700;letter-spacing:-0.3px}
+  .hdr h1{margin:0;color:#ffffff;font-size:22px;font-weight:700}
   .hdr p{margin:4px 0 0;color:#94a3b8;font-size:13px}
   .meta{background:#f8fafc;border-bottom:1px solid #e2e8f0;padding:16px 36px}
   .meta table{width:100%;border-collapse:collapse}
@@ -413,26 +428,24 @@ export async function sendPaymentInvoiceEmail(data: {
   .items-table{width:100%;border-collapse:collapse;margin-bottom:20px}
   .items-table th{background:#f1f5f9;padding:9px 12px;font-size:11px;text-transform:uppercase;letter-spacing:0.05em;color:#64748b;text-align:left;border:1px solid #e2e8f0}
   .items-table th.right{text-align:right}
-  .items-table td{padding:12px 12px;font-size:13px;color:#374151;border:1px solid #e2e8f0;vertical-align:top}
+  .items-table td{padding:12px;font-size:13px;color:#374151;border:1px solid #e2e8f0;vertical-align:top}
   .items-table td.right{text-align:right;white-space:nowrap}
-  .totals{width:100%;border-collapse:collapse;margin-bottom:24px}
-  .totals td{padding:5px 12px;font-size:13px}
-  .totals td.label{color:#64748b;text-align:right;width:70%}
-  .totals td.val{color:#374151;text-align:right;white-space:nowrap;width:30%}
-  .totals tr.total-row td{font-size:16px;font-weight:700;color:#1e293b;border-top:2px solid #7c3aed;padding-top:10px}
+  .total-row{width:100%;border-collapse:collapse;margin-bottom:20px}
+  .total-row td{padding:10px 12px;font-size:15px;font-weight:700;color:#1e293b;border-top:2px solid #7c3aed}
+  .total-row td.label{color:#475569;text-align:right;width:70%}
+  .total-row td.val{text-align:right;white-space:nowrap;color:#7c3aed;width:30%}
   .badge{display:inline-block;background:#dcfce7;color:#16a34a;font-size:12px;font-weight:700;padding:4px 12px;border-radius:999px;margin-bottom:20px}
+  .note{background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:14px 16px;margin-bottom:20px;font-size:12px;color:#64748b;line-height:1.7}
   .footer{background:#f8fafc;border-top:1px solid #e2e8f0;padding:16px 36px;font-size:12px;color:#94a3b8;line-height:1.6}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <!-- Header -->
   <div class="hdr">
     <h1>VoSmart — Factură</h1>
-    <p>Platformă pentru firme de cenzorat · vosmart.ro</p>
+    <p>Platforma pentru firme de cenzorat · vosmart.ro</p>
   </div>
 
-  <!-- Metadata factura -->
   <div class="meta">
     <table>
       <tr>
@@ -440,35 +453,34 @@ export async function sendPaymentInvoiceEmail(data: {
         <td style="text-align:right"><b>Data emiterii:</b> ${dateStr}</td>
       </tr>
       <tr>
-        <td><b>Tip:</b> Factură abonament lunar</td>
-        <td style="text-align:right"><b>Perioadă:</b> ${perioadaStr}</td>
+        <td><b>Perioadă:</b> ${perioadaStr}</td>
+        <td style="text-align:right"><b>Status:</b> <span style="color:#16a34a;font-weight:700">✓ Achitată</span></td>
       </tr>
     </table>
   </div>
 
   <div class="body">
-    <span class="badge">✓ Plată confirmată</span>
+    <span class="badge">✓ Plată confirmată · PDF atașat</span>
 
-    <!-- Furnizor / Cumparator -->
     <table class="parties">
       <tr>
         <td style="padding-right:12px">
           <div class="party-box">
             <div class="party-label">Furnizor</div>
             <div class="party-name">${sellerName}</div>
-            ${sellerCui   ? `<div class="party-line">CUI: ${sellerCui}</div>` : ""}
-            ${sellerReg   ? `<div class="party-line">Reg. Com.: ${sellerReg}</div>` : ""}
+            ${sellerCui  ? `<div class="party-line">CUI: ${sellerCui}</div>` : ""}
+            ${sellerReg  ? `<div class="party-line">Reg. Com.: ${sellerReg}</div>` : ""}
             <div class="party-line">${sellerAddr}</div>
-            ${sellerIban  ? `<div class="party-line">IBAN: ${sellerIban}</div>` : ""}
-            ${sellerBank  ? `<div class="party-line">Bancă: ${sellerBank}</div>` : ""}
+            ${sellerIban ? `<div class="party-line">IBAN: ${sellerIban}</div>` : ""}
+            ${sellerBank ? `<div class="party-line">Bancă: ${sellerBank}</div>` : ""}
           </div>
         </td>
         <td style="padding-left:12px">
           <div class="party-box">
             <div class="party-label">Cumpărător</div>
             <div class="party-name">${data.companyName}</div>
-            ${data.cui    ? `<div class="party-line">CUI: ${data.cui}</div>` : ""}
-            ${data.regCom ? `<div class="party-line">Reg. Com.: ${data.regCom}</div>` : ""}
+            ${data.cui     ? `<div class="party-line">CUI: ${data.cui}</div>` : ""}
+            ${data.regCom  ? `<div class="party-line">Reg. Com.: ${data.regCom}</div>` : ""}
             ${data.address ? `<div class="party-line">${data.address}</div>` : ""}
             <div class="party-line">Email: ${data.email}</div>
           </div>
@@ -476,15 +488,12 @@ export async function sendPaymentInvoiceEmail(data: {
       </tr>
     </table>
 
-    <!-- Tabel produse -->
     <table class="items-table">
       <thead>
         <tr>
           <th style="width:5%">#</th>
           <th>Descriere</th>
-          <th class="right" style="width:18%">Preț fără TVA</th>
-          <th class="right" style="width:10%">TVA %</th>
-          <th class="right" style="width:18%">Total</th>
+          <th class="right" style="width:24%">Total</th>
         </tr>
       </thead>
       <tbody>
@@ -494,37 +503,23 @@ export async function sendPaymentInvoiceEmail(data: {
             <strong>Abonament VoSmart Corporate — ${data.packageName}</strong><br>
             <span style="font-size:12px;color:#94a3b8">Perioadă: ${perioadaStr}</span>
           </td>
-          <td class="right">${fmt(totalFaraTva)} RON</td>
-          <td class="right">19%</td>
-          <td class="right"><strong>${fmt(totalCuTva)} RON</strong></td>
+          <td class="right"><strong>${fmt(data.priceRon)} RON</strong></td>
         </tr>
       </tbody>
     </table>
 
-    <!-- Totaluri -->
-    <table class="totals">
+    <table class="total-row">
       <tr>
-        <td class="label">Subtotal (fără TVA)</td>
-        <td class="val">${fmt(totalFaraTva)} RON</td>
-      </tr>
-      <tr>
-        <td class="label">TVA 19%</td>
-        <td class="val">${fmt(tvaValoare)} RON</td>
-      </tr>
-      <tr class="total-row">
         <td class="label">TOTAL DE PLATĂ</td>
-        <td class="val">${fmt(totalCuTva)} RON</td>
+        <td class="val">${fmt(data.priceRon)} RON</td>
       </tr>
     </table>
 
-    <p style="font-size:13px;color:#64748b;margin:0 0 8px">
-      Plata a fost procesată securizat prin <strong>Stripe</strong>.
-      Documentul de mai sus reprezintă confirmarea plății dvs. și poate fi folosit în evidența contabilă.
-    </p>
-    <p style="font-size:13px;color:#64748b;margin:0">
-      Pentru orice nelamuriri legate de facturare contactați:<br>
-      <a href="mailto:office@vosmart.ro" style="color:#7c3aed">office@vosmart.ro</a> &nbsp;·&nbsp; 0756 362 828
-    </p>
+    <div class="note">
+      <strong>Neplătitor de TVA</strong> conform art. 9 alin. (2) lit. a) din Directiva 112/2006/CE.<br>
+      Plata a fost procesată securizat prin <strong>Stripe</strong>. Factura în format PDF este atașată acestui email.<br>
+      Pentru orice nelămuriri: <a href="mailto:office@vosmart.ro" style="color:#7c3aed">office@vosmart.ro</a> &nbsp;·&nbsp; 0756 362 828
+    </div>
   </div>
 
   <div class="footer">
