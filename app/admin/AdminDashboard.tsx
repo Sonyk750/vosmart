@@ -74,6 +74,7 @@ export default function AdminDashboard({ user }: { user: User }) {
   // Confirmare stergere + dropdown actiuni
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
+  const [deletingCorpId, setDeletingCorpId] = useState<string | null>(null);
 
   // Compose email modal
   const [emailTarget, setEmailTarget] = useState<{ email: string; name: string } | null>(null);
@@ -180,6 +181,21 @@ export default function AdminDashboard({ user }: { user: User }) {
     setActionMsg(prev => ({ ...prev, [associationId]: res.ok ? "✓ " + data.message : "✗ " + (data.error || "Eroare") }));
     if (res.ok) fetchAssociations();
     setActionWorking(null);
+  }
+
+  // Ștergere definitivă a unui client corporate (User + cont + asociații + documente)
+  async function deleteCorporate(userId: string) {
+    setDeletingCorpId(userId);
+    const res = await fetch(`/api/admin/corporates/${userId}`, { method: "DELETE" });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok) {
+      setCorporates(prev => prev.filter(c => c.id !== userId));
+    } else {
+      setActionMsg(prev => ({ ...prev, [userId]: "✗ " + (data.error || "Eroare la ștergere") }));
+    }
+    setConfirmDeleteId(null);
+    setDeletingCorpId(null);
+    fetchCorporates();
   }
 
   async function generateDraft(doc: Document) {
@@ -878,9 +894,10 @@ export default function AdminDashboard({ user }: { user: User }) {
                         <div className="flex items-center gap-3 px-5 py-3 bg-red-500/[0.06] border-b border-red-500/15">
                           <span className="text-sm text-red-300 flex-1">Ștergi definitiv contul <strong>{ca?.companyName || corp.name}</strong>?</span>
                           <button
-                            onClick={() => { if (assocId) clientAction(assocId, "delete"); setConfirmDeleteId(null); setTimeout(fetchCorporates, 500); }}
-                            className="rounded-lg bg-red-600 px-4 py-1.5 text-xs font-semibold text-white hover:bg-red-500 transition">
-                            Da, șterge
+                            onClick={() => deleteCorporate(corp.id)}
+                            disabled={deletingCorpId === corp.id}
+                            className="rounded-lg bg-red-600 px-4 py-1.5 text-xs font-semibold text-white hover:bg-red-500 transition disabled:opacity-50 disabled:cursor-not-allowed">
+                            {deletingCorpId === corp.id ? "Se șterge..." : "Da, șterge"}
                           </button>
                           <button onClick={() => setConfirmDeleteId(null)}
                             className="rounded-lg border border-white/15 px-4 py-1.5 text-xs text-slate-300 hover:bg-white/[0.08] transition">
@@ -889,12 +906,16 @@ export default function AdminDashboard({ user }: { user: User }) {
                         </div>
                       )}
 
-                      {/* Mesaj acțiune */}
-                      {assocId && actionMsg[assocId] && (
-                        <div className={`px-5 py-2 text-xs ${actionMsg[assocId].startsWith("✓") ? "text-emerald-400 bg-emerald-500/[0.06]" : "text-red-400 bg-red-500/[0.06]"}`}>
-                          {actionMsg[assocId]}
-                        </div>
-                      )}
+                      {/* Mesaj acțiune (asociație sau client corporate) */}
+                      {(() => {
+                        const msgKey = (assocId && actionMsg[assocId]) ? assocId : (actionMsg[corp.id] ? corp.id : null);
+                        if (!msgKey) return null;
+                        return (
+                          <div className={`px-5 py-2 text-xs ${actionMsg[msgKey].startsWith("✓") ? "text-emerald-400 bg-emerald-500/[0.06]" : "text-red-400 bg-red-500/[0.06]"}`}>
+                            {actionMsg[msgKey]}
+                          </div>
+                        );
+                      })()}
                     </div>
                   );
                 })}
