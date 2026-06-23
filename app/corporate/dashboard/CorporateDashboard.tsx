@@ -25,7 +25,12 @@ export default function CorporateDashboard({ user, corporate, isAdmin = false }:
     corporate.package as CorporatePackage
   );
   const effectivePackageKey: CorporatePackage = isAdmin ? previewPackage : (corporate.package as CorporatePackage);
-  const pkg = CORPORATE_PACKAGES[effectivePackageKey] as { name: string; priceRon: number; maxAssoc: number } | undefined;
+  const pkg = CORPORATE_PACKAGES[effectivePackageKey];
+
+  const defaultAssoc = corporate.associations?.[0];
+  const dosareUsed = defaultAssoc?.filesUploadedCount ?? 0;
+  const dosareMax = defaultAssoc?.maxDocuments ?? corporate.maxAssoc;
+  const dosarePct = dosareMax > 0 ? Math.round((dosareUsed / dosareMax) * 100) : 0;
 
   const [logoPreview, setLogoPreview] = useState(corporate.logoUrl || "");
 
@@ -464,18 +469,46 @@ ${body}
 
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          {[
-            ["📄", "Documente", documents.length.toString()],
-            ["✅", "Rapoarte publicate", reports.filter((r: any) => r.status === "published").length.toString()],
-            ["🤖", "Se analizează", documents.filter((d: any) => d.status === "analyzing").length.toString()],
-            ["📋", "Rapoarte draft", reports.filter((r: any) => r.status === "draft").length.toString()],
-          ].map(([icon, label, value]) => (
-            <div key={label} className="rounded-2xl border border-white/8 bg-white/[0.03] p-5">
-              <div className="text-2xl mb-2">{icon}</div>
-              <div className="text-2xl font-bold">{value}</div>
-              <div className="text-xs text-slate-500 mt-1">{label}</div>
+          {/* Pachet activ */}
+          <div className="rounded-2xl border border-violet-500/20 bg-violet-500/5 p-5">
+            <div className="text-2xl mb-2">📦</div>
+            <div className="text-xl font-bold leading-tight">{pkg?.name ?? corporate.package}</div>
+            <div className="text-xs text-slate-400 mt-1">
+              {effectivePackageKey === "enterprise"
+                ? "Dosare nelimitate"
+                : `${pkg?.maxAssoc ?? corporate.maxAssoc} dosare · ${pkg?.docsPerDosar ?? 30} doc/dosar`}
             </div>
-          ))}
+          </div>
+
+          {/* Dosare utilizate */}
+          <div className={`rounded-2xl border p-5 ${dosarePct >= 100 ? "border-red-500/30 bg-red-500/5" : dosarePct >= 80 ? "border-yellow-500/30 bg-yellow-500/5" : "border-white/8 bg-white/[0.03]"}`}>
+            <div className="text-2xl mb-2">📁</div>
+            <div className="text-2xl font-bold">
+              {dosareUsed}
+              <span className="text-slate-500 text-sm font-normal">
+                /{dosareMax >= 9999 ? "∞" : dosareMax}
+              </span>
+            </div>
+            <div className="text-xs text-slate-500 mt-1">Dosare utilizate</div>
+            <div className="mt-2 h-1 rounded-full bg-white/8 overflow-hidden">
+              <div className="h-full rounded-full transition-all duration-500"
+                style={{ width: `${Math.min(100, dosarePct)}%`, background: dosarePct >= 100 ? "#ef4444" : dosarePct >= 80 ? "#eab308" : "#7c3aed" }} />
+            </div>
+          </div>
+
+          {/* Rapoarte publicate */}
+          <div className="rounded-2xl border border-white/8 bg-white/[0.03] p-5">
+            <div className="text-2xl mb-2">✅</div>
+            <div className="text-2xl font-bold">{reports.filter((r: any) => r.status === "published").length}</div>
+            <div className="text-xs text-slate-500 mt-1">Rapoarte publicate</div>
+          </div>
+
+          {/* Se analizează */}
+          <div className="rounded-2xl border border-white/8 bg-white/[0.03] p-5">
+            <div className="text-2xl mb-2">🤖</div>
+            <div className="text-2xl font-bold">{documents.filter((d: any) => d.status === "analyzing").length}</div>
+            <div className="text-xs text-slate-500 mt-1">Se analizează</div>
+          </div>
         </div>
 
         {/* Tabs */}
@@ -498,15 +531,33 @@ ${body}
           <div className="space-y-4">
             {/* Pachet info */}
             <div className="rounded-2xl border border-violet-500/20 bg-violet-500/5 p-5">
-              <div className="flex items-center justify-between flex-wrap gap-4">
+              <div className="flex items-center justify-between flex-wrap gap-6">
                 <div>
-                  <p className="text-sm text-slate-400">Pachet activ</p>
-                  <p className="text-xl font-bold">{pkg ? pkg.name : corporate.package}</p>
-                  {pkg && <p className="text-sm text-violet-300">{pkg.priceRon} lei/lună</p>}
+                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Pachet activ</p>
+                  <p className="text-2xl font-bold">{pkg?.name ?? corporate.package}</p>
+                  {pkg && pkg.priceRon > 0 && <p className="text-sm text-violet-300 mt-0.5">{pkg.priceRon} lei/lună</p>}
+                  {pkg && pkg.priceRon === 0 && effectivePackageKey === "enterprise" && (
+                    <p className="text-sm text-amber-300 mt-0.5">Preț personalizat</p>
+                  )}
                 </div>
-                <div className="text-right">
-                  <p className="text-sm text-slate-400">Documente încărcate</p>
-                  <p className="text-3xl font-bold">{documents.length}</p>
+                <div className="flex gap-8 text-center">
+                  <div>
+                    <p className="text-xs text-slate-500 uppercase tracking-wider">Dosare incluse</p>
+                    <p className="text-3xl font-bold mt-1">{corporate.maxAssoc >= 9999 ? "∞" : corporate.maxAssoc}</p>
+                    <p className="text-xs text-slate-500 mt-0.5">dosare/abonament</p>
+                  </div>
+                  {effectivePackageKey !== "enterprise" && (
+                    <div>
+                      <p className="text-xs text-slate-500 uppercase tracking-wider">Doc/dosar</p>
+                      <p className="text-3xl font-bold mt-1">{pkg?.docsPerDosar ?? 30}</p>
+                      <p className="text-xs text-slate-500 mt-0.5">fișiere PDF max</p>
+                    </div>
+                  )}
+                  <div>
+                    <p className="text-xs text-slate-500 uppercase tracking-wider">Utilizate</p>
+                    <p className="text-3xl font-bold mt-1">{dosareUsed}</p>
+                    <p className="text-xs text-slate-500 mt-0.5">din {dosareMax >= 9999 ? "∞" : dosareMax}</p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -563,7 +614,7 @@ ${body}
           const atLimit = filesUsed >= filesMax;
 
           const docsFilled = uploadFiles.filter(f => f.file).length + invoiceFiles.length;
-          const docsMax = corporate.package === "trial" ? 5 : 30;
+          const docsMax = pkg?.docsPerDosar ?? 30;
           const barHue = Math.round(120 - (docsFilled / docsMax) * 120);
           const barPct = Math.min(100, (docsFilled / docsMax) * 100);
 
