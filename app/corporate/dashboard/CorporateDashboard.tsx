@@ -44,13 +44,19 @@ export default function CorporateDashboard({ user, corporate, isAdmin = false }:
   const [uploadYear, setUploadYear] = useState(new Date().getFullYear().toString());
   const [assocName, setAssocName] = useState("");
   const [uploadSubTab, setUploadSubTab] = useState<"fisiere" | "zip">("fisiere");
-  const [uploadFiles, setUploadFiles] = useState<{ type: string; label: string; file: File | null; required: boolean }[]>([
+  const [uploadFiles, setUploadFiles] = useState<{ type: string; label: string; file: File | null; required: boolean; extended?: boolean }[]>([
     { type: "lista_plata", label: "Lista de plată", file: null, required: true },
     { type: "explicatii_lista", label: "Explicații listă", file: null, required: true },
     { type: "distributia_facturilor", label: "Distribuția facturilor", file: null, required: true },
     { type: "extras_cont", label: "Extras cont bancar", file: null, required: false },
+    { type: "registru_casa", label: "Registru casă", file: null, required: false, extended: true },
+    { type: "registru_jurnal", label: "Registru jurnal", file: null, required: false, extended: true },
+    { type: "citiri_apometre", label: "Citiri apometre", file: null, required: false, extended: true },
+    { type: "situatie_activ_pasiv", label: "Situație activ/pasiv", file: null, required: false, extended: true },
   ]);
   const [invoiceFiles, setInvoiceFiles] = useState<File[]>([]);
+  // Tipuri care permit mai multe fișiere deodată (doar pachete plătite)
+  const [multiFiles, setMultiFiles] = useState<Record<string, File[]>>({});
   const [zipFile, setZipFile] = useState<File | null>(null);
   const [zipExtracted, setZipExtracted] = useState<{ name: string; assignedType: string; file: File }[]>([]);
   const [zipLoading, setZipLoading] = useState(false);
@@ -112,12 +118,26 @@ export default function CorporateDashboard({ user, corporate, isAdmin = false }:
   ];
   const YEARS = ["2024", "2025", "2026", "2027"];
 
+  // Tipuri cu upload multiplu (registre cu mai multe rapoarte) — doar pachete plătite
+  const EXTRA_MULTI: { type: string; label: string; icon: string }[] = [
+    { type: "registru_banca", label: "Registru bancă", icon: "🏦" },
+    { type: "registru_fond", label: "Registru fond", icon: "💰" },
+  ];
+  // Pachetul Trial permite doar documentele de bază; restul tipurilor apar la pachetele plătite
+  const showExtended = effectivePackageKey !== "trial";
+
   const ZIP_TYPE_MAP: { patterns: string[]; type: string; label: string }[] = [
     { patterns: ["lista", "plata", "plată"], type: "lista_plata", label: "Lista de plată" },
     { patterns: ["explicat"], type: "explicatii_lista", label: "Explicații listă" },
     { patterns: ["distribut", "repartiz"], type: "distributia_facturilor", label: "Distribuția facturilor" },
     { patterns: ["factur", "furniz"], type: "facturi", label: "Facturi furnizori" },
     { patterns: ["extras", "cont", "bancar"], type: "extras_cont", label: "Extras cont bancar" },
+    { patterns: ["casa", "casă"], type: "registru_casa", label: "Registru casă" },
+    { patterns: ["jurnal"], type: "registru_jurnal", label: "Registru jurnal" },
+    { patterns: ["apometr", "citir", "contor"], type: "citiri_apometre", label: "Citiri apometre" },
+    { patterns: ["activ", "pasiv", "bilant", "bilanț"], type: "situatie_activ_pasiv", label: "Situație activ/pasiv" },
+    { patterns: ["banca", "bancă"], type: "registru_banca", label: "Registru bancă" },
+    { patterns: ["fond"], type: "registru_fond", label: "Registru fond" },
   ];
 
   function guessTypeFromName(name: string) {
@@ -193,11 +213,20 @@ export default function CorporateDashboard({ user, corporate, isAdmin = false }:
       if (missing.length > 0) { setUploadMsg("Lipsesc: " + missing.join(", ")); return; }
       if (invoiceFiles.length === 0) { setUploadMsg("Adaugă cel puțin o factură furnizori"); return; }
       for (const uf of uploadFiles) {
-        if (uf.file) allFiles.push({ file: uf.file, type: uf.type, label: uf.label });
+        if (uf.file && (!uf.extended || showExtended)) allFiles.push({ file: uf.file, type: uf.type, label: uf.label });
       }
       invoiceFiles.forEach((file, idx) => {
         allFiles.push({ file, type: idx === 0 ? "facturi" : `facturi_${idx + 1}`, label: invoiceFiles.length > 1 ? `Factură furnizori (${idx + 1})` : "Facturi furnizori" });
       });
+      // Registre cu upload multiplu (registru bancă, registru fond) — doar pachete plătite
+      if (showExtended) {
+        for (const m of EXTRA_MULTI) {
+          const arr = multiFiles[m.type] || [];
+          arr.forEach((file, idx) => {
+            allFiles.push({ file, type: idx === 0 ? m.type : `${m.type}_${idx + 1}`, label: arr.length > 1 ? `${m.label} (${idx + 1})` : m.label });
+          });
+        }
+      }
     } else {
       if (zipExtracted.length === 0) { setUploadMsg("Alege o arhivă ZIP validă"); return; }
       const hasReq = ["lista_plata", "explicatii_lista", "distributia_facturilor"].every(t => zipExtracted.some(z => z.assignedType === t));
@@ -234,6 +263,7 @@ export default function CorporateDashboard({ user, corporate, isAdmin = false }:
       setUploadMsg("✓ Dosar trimis! Analiza AI rulează — raportul apare automat când e gata.");
       setUploadFiles(prev => prev.map(f => ({ ...f, file: null })));
       setInvoiceFiles([]);
+      setMultiFiles({});
       setZipFile(null); setZipExtracted([]);
       setUploadMonth(""); setAssocName("");
       fetchDocuments(); fetchReports();
@@ -613,7 +643,8 @@ ${body}
           const filesMax: number = assoc?.maxDocuments ?? 5;
           const atLimit = filesUsed >= filesMax;
 
-          const docsFilled = uploadFiles.filter(f => f.file).length + invoiceFiles.length;
+          const multiCount = showExtended ? Object.values(multiFiles).reduce((s, arr) => s + arr.length, 0) : 0;
+          const docsFilled = uploadFiles.filter(f => f.file && (!f.extended || showExtended)).length + invoiceFiles.length + multiCount;
           const docsMax = pkg?.docsPerDosar ?? 30;
           const barHue = Math.round(120 - (docsFilled / docsMax) * 120);
           const barPct = Math.min(100, (docsFilled / docsMax) * 100);
@@ -711,7 +742,7 @@ ${body}
                 {uploadSubTab === "fisiere" && (
                   <div className="space-y-2.5">
                     {/* Documente fixe (fara facturi) */}
-                    {uploadFiles.map((uf, idx) => (
+                    {uploadFiles.map((uf, idx) => (uf.extended && !showExtended) ? null : (
                       <div key={uf.type} className="flex items-center gap-3">
                         <div className="w-48 shrink-0 flex items-center gap-1.5">
                           <span className={`text-xs ${uf.required ? "text-red-400" : "text-slate-600"}`}>
@@ -770,6 +801,47 @@ ${body}
                           }} />
                       </label>
                     </div>
+
+                    {/* Registre cu mai multe rapoarte (banca, fond) — pachete platite */}
+                    {showExtended && EXTRA_MULTI.map(m => {
+                      const arr = multiFiles[m.type] || [];
+                      return (
+                        <div key={m.type} className="mt-1">
+                          <div className="flex items-center gap-1.5 mb-2">
+                            <span className="text-xs text-slate-600">○</span>
+                            <span className="text-sm text-slate-300">{m.label}</span>
+                            <span className="text-xs text-slate-600 ml-1">(una sau mai multe rapoarte)</span>
+                          </div>
+                          {arr.length > 0 && (
+                            <div className="space-y-1.5 mb-2">
+                              {arr.map((file, idx) => (
+                                <div key={idx} className="flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/8 px-3 py-2.5">
+                                  <span className="text-base">{m.icon}</span>
+                                  <span className="text-sm text-emerald-300 flex-1 truncate">{file.name}</span>
+                                  <span className="text-xs text-emerald-600 shrink-0">{Math.round(file.size / 1024)} KB</span>
+                                  <button type="button" onClick={() => setMultiFiles(p => ({ ...p, [m.type]: (p[m.type] || []).filter((_, i) => i !== idx) }))}
+                                    className="text-slate-500 hover:text-red-400 transition ml-1 text-sm">✕</button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          <label className={`flex items-center gap-3 rounded-xl border px-4 py-3 cursor-pointer transition text-sm w-full ${
+                            arr.length > 0
+                              ? "border-violet-500/30 bg-violet-500/5 text-violet-300 hover:bg-violet-500/10"
+                              : "border-white/8 bg-white/[0.03] text-slate-500 hover:border-violet-500/40 hover:text-slate-300"
+                          }`}>
+                            <span>{m.icon}</span>
+                            <span className="flex-1">{arr.length > 0 ? `+ Adaugă mai multe (${m.label.toLowerCase()})` : `Selectează ${m.label.toLowerCase()} (una sau mai multe)`}</span>
+                            <input type="file" accept=".pdf,.jpg,.jpeg,.png,.xlsx,.xls,.doc,.docx" multiple className="hidden"
+                              onChange={e => {
+                                const files = Array.from(e.target.files || []);
+                                if (files.length > 0) setMultiFiles(p => ({ ...p, [m.type]: [...(p[m.type] || []), ...files] }));
+                                e.target.value = "";
+                              }} />
+                          </label>
+                        </div>
+                      );
+                    })}
 
                     {/* Bara progres documente (verde → rosu) */}
                     <div className="mt-4 pt-4 border-t border-white/5">
@@ -841,6 +913,14 @@ ${body}
                                 <option value="distributia_facturilor">Distribuția facturilor</option>
                                 <option value="facturi">Facturi furnizori</option>
                                 <option value="extras_cont">Extras cont bancar</option>
+                                {showExtended && <>
+                                  <option value="registru_casa">Registru casă</option>
+                                  <option value="registru_banca">Registru bancă</option>
+                                  <option value="registru_fond">Registru fond</option>
+                                  <option value="registru_jurnal">Registru jurnal</option>
+                                  <option value="citiri_apometre">Citiri apometre</option>
+                                  <option value="situatie_activ_pasiv">Situație activ/pasiv</option>
+                                </>}
                                 <option value="altele">Altele</option>
                               </select>
                             </div>
@@ -860,6 +940,14 @@ ${body}
                             "distributia_facturilor.pdf",
                             "facturi.pdf",
                             "extras_cont.pdf (opțional)",
+                            ...(showExtended ? [
+                              "registru_casa.pdf (opțional)",
+                              "registru_banca.pdf (opțional)",
+                              "registru_fond.pdf (opțional)",
+                              "registru_jurnal.pdf (opțional)",
+                              "citiri_apometre.pdf (opțional)",
+                              "situatie_activ_pasiv.pdf (opțional)",
+                            ] : []),
                           ].map(f => (
                             <div key={f} className="flex items-center gap-2 text-xs text-slate-400">
                               <span className="text-slate-600">📄</span> {f}
