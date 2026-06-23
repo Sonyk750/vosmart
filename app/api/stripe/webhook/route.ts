@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { stripe } from "@/lib/stripe";
-import { notifyApplicantCorporateActivated } from "@/lib/email";
+import { notifyApplicantCorporateActivated, sendPaymentInvoiceEmail } from "@/lib/email";
 import { CORPORATE_PACKAGES, CorporatePackage } from "@/lib/billing";
 import type Stripe from "stripe";
 
@@ -99,12 +99,27 @@ async function syncSubscription(subscription: Stripe.Subscription) {
 
     if (isActivatingNow && corporate.user) {
       const pkgInfo = CORPORATE_PACKAGES[corporate.package as CorporatePackage];
+      const recipientName = corporate.user.name || corporate.companyName;
+      const pkgName = pkgInfo?.name || corporate.package;
+
       notifyApplicantCorporateActivated({
-        name: corporate.user.name || corporate.companyName,
+        name: recipientName,
         email: corporate.user.email,
-        packageName: pkgInfo?.name || corporate.package,
+        packageName: pkgName,
         companyName: corporate.companyName,
       }).catch(console.error);
+
+      if (pkgInfo?.priceRon > 0) {
+        sendPaymentInvoiceEmail({
+          name: recipientName,
+          email: corporate.user.email,
+          companyName: corporate.companyName,
+          cui: corporate.cui,
+          address: corporate.address,
+          packageName: pkgName,
+          priceRon: pkgInfo.priceRon,
+        }).catch(console.error);
+      }
     }
   }
 }
