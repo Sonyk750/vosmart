@@ -73,6 +73,7 @@ export default function CorporatePage() {
   // Register
   const [companyName, setCompanyName] = useState("");
   const [cui, setCui] = useState("");
+  const [regCom, setRegCom] = useState("");
   const [city, setCity] = useState("");
   const [street, setStreet] = useState("");
   const [phone, setPhone] = useState("");
@@ -121,7 +122,7 @@ export default function CorporatePage() {
       const res = await fetch("/api/corporate/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ companyName, cui, address: [street, city].filter(Boolean).join(", "), phone, name, email, password, package: selectedPackage }),
+        body: JSON.stringify({ companyName, cui, regCom, address: [street, city].filter(Boolean).join(", "), phone, name, email, password, package: selectedPackage }),
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Eroare"); return; }
@@ -380,6 +381,11 @@ export default function CorporatePage() {
                           {cuiStatus === "found" && <p className="mt-1.5 text-xs text-emerald-400">Date completate automat din ANAF</p>}
                           {cuiStatus === "notfound" && <p className="mt-1.5 text-xs text-slate-500">Firma nu a fost găsită în ANAF — completează manual</p>}
                         </div>
+                        {selectedPackage !== "trial" && (
+                          <input type="text" value={regCom} onChange={e => setRegCom(e.target.value)}
+                            placeholder="Nr. Reg. Com. (ex: J40/1234/2020)"
+                            className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-violet-500 transition" />
+                        )}
                         <input type="text" value={city} onChange={e => setCity(e.target.value)}
                           placeholder="Oraș" className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-violet-500 transition" />
                         <input type="text" value={street} onChange={e => setStreet(e.target.value)}
@@ -388,6 +394,19 @@ export default function CorporatePage() {
                           placeholder="Telefon" className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-violet-500 transition" />
                       </div>
                     </div>
+
+                    {selectedPackage !== "trial" && (
+                      <div className="border-b border-white/5 pb-4">
+                        <p className="text-xs text-slate-400 uppercase tracking-wider mb-1">Date facturare</p>
+                        <p className="text-xs text-slate-600 mb-3">Folosite pe factura emisă după confirmare plată</p>
+                        <div className="rounded-xl border border-violet-500/15 bg-violet-500/5 px-4 py-3 text-xs text-slate-400 space-y-1">
+                          <p>✓ <strong className="text-slate-300">Firmă:</strong> {companyName || "—"}</p>
+                          {cui && <p>✓ <strong className="text-slate-300">CUI:</strong> {cui}</p>}
+                          {regCom && <p>✓ <strong className="text-slate-300">Reg. Com.:</strong> {regCom}</p>}
+                          {(city || street) && <p>✓ <strong className="text-slate-300">Adresă:</strong> {[street, city].filter(Boolean).join(", ")}</p>}
+                        </div>
+                      </div>
+                    )}
 
                     <div>
                       <p className="text-xs text-slate-400 uppercase tracking-wider mb-3">Date cont</p>

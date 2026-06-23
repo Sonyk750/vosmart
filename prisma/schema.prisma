@@ -37,6 +37,7 @@ model CorporateAccount {
   userId       String    @unique
   companyName  String
   cui          String?
+  regCom       String?
   address      String?
   phone        String?
   logoUrl      String?

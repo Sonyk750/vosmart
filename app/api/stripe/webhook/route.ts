@@ -115,6 +115,7 @@ async function syncSubscription(subscription: Stripe.Subscription) {
           email: corporate.user.email,
           companyName: corporate.companyName,
           cui: corporate.cui,
+          regCom: corporate.regCom,
           address: corporate.address,
           packageName: pkgName,
           priceRon: pkgInfo.priceRon,

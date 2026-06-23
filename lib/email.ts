@@ -350,6 +350,7 @@ export async function sendPaymentInvoiceEmail(data: {
   email: string;
   companyName: string;
   cui?: string | null;
+  regCom?: string | null;
   address?: string | null;
   packageName: string;
   priceRon: number;
@@ -466,7 +467,8 @@ export async function sendPaymentInvoiceEmail(data: {
           <div class="party-box">
             <div class="party-label">Cumpărător</div>
             <div class="party-name">${data.companyName}</div>
-            ${data.cui     ? `<div class="party-line">CUI: ${data.cui}</div>` : ""}
+            ${data.cui    ? `<div class="party-line">CUI: ${data.cui}</div>` : ""}
+            ${data.regCom ? `<div class="party-line">Reg. Com.: ${data.regCom}</div>` : ""}
             ${data.address ? `<div class="party-line">${data.address}</div>` : ""}
             <div class="party-line">Email: ${data.email}</div>
           </div>

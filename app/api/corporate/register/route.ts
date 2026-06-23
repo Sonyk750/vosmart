@@ -23,7 +23,7 @@ export function createVerificationToken(corporateId: string): string {
 
 export async function POST(req: NextRequest) {
   try {
-    const { companyName, cui, address, phone, name, email, password, package: pkg } = await req.json();
+    const { companyName, cui, regCom, address, phone, name, email, password, package: pkg } = await req.json();
     if (!companyName || !name || !email || !password) {
       return NextResponse.json({ error: "Câmpurile obligatorii lipsesc" }, { status: 400 });
     }
@@ -48,6 +48,7 @@ export async function POST(req: NextRequest) {
           create: {
             companyName,
             cui,
+            regCom: regCom || null,
             address,
             phone,
             package: pkgKey,
