@@ -2,7 +2,11 @@
 
 ## Blog automat — VoSmart
 
-Scrie saptamanal (luni) cate un articol nou de blog despre cenzorat asociatii proprietari, administrare imobile, digitalizare blocuri sau legislatie asociatii din Romania.
+VoSmart este **firma de cenzorat cu AI** pentru asociatii de proprietari. NU se ocupa de administrare imobile — face EXCLUSIV cenzorat asociatii de proprietari.
+
+Tagline: **"Primul cenzorat cu AI"**
+
+Scrie saptamanal (luni) cate un articol nou de blog despre cenzorat asociatii proprietari, obligatii legale ale cenzorului, digitalizarea cenzoratului sau legislatie asociatii din Romania.
 
 ### Reguli obligatorii pentru fiecare articol:
 
@@ -13,26 +17,29 @@ Scrie saptamanal (luni) cate un articol nou de blog despre cenzorat asociatii pr
 title: "Titlul articolului"
 description: "Descriere SEO (max 160 caractere)"
 date: "YYYY-MM-DD"
-category: "Cenzorat" | "Administrare Imobile"
+category: "Cenzorat"
 readTime: "X min"
 keywords: ["cuvant1", "cuvant2", ...]
 ---
 ```
 3. **Lungime**: minim 600 cuvinte, structurat cu `##` si `###`
 4. **Ton**: profesional si de incredere, in limba romana
-5. **Cross-links obligatorii la finalul articolului**:
-   - Link spre **[SpokInvoice](https://www.spokinvoice.ro)** — facturare online pentru asociatii (primul an gratuit)
+5. **VoSmart = cenzorat EXCLUSIV** — nu mentiona "administrare imobile" ca serviciu VoSmart
+6. **Cross-links obligatorii la finalul articolului**:
+   - Link spre **[SpokInvoice](https://www.spokinvoice.ro)** — facturare online (primul an gratuit)
    - Link spre **[SpokApp](https://www.spokapp.ro)** — ecosistemul din care face parte VoSmart
-6. **Nu repeta subiecte** — verifica fisierele existente din `content/blog/` inainte de a scrie
+7. **Nu repeta subiecte** — verifica fisierele existente din `content/blog/` inainte de a scrie
 
 ### Subiecte recomandate (rotatie):
 - Obligatiile cenzorului conform Legii 196/2018
-- Rapoarte financiare pentru asociatii
-- Digitalizarea administrarii blocurilor
-- Fondul de rulment si fondul de reparatii
-- Portal online pentru proprietari
-- Diferenta cenzor individual vs firma cenzorat
-- Adunari generale asociatii proprietari
+- Rapoarte de cenzorat trimestrial si anual
+- Cum functioneaza cenzoratul cu AI
+- Firma de cenzorat vs cenzor individual
+- Verificarea listelor de intretinere de catre cenzor
+- Adunari generale si rolul cenzorului
+- Fondul de rulment — cum il verifica cenzorul
+- Greseli frecvente in cenzoratul asociatiilor
+- Ce documente verifica cenzorul
 
 ### Dupa scriere:
 ```
