@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { notifyAdminForClientApproval } from "@/lib/email";
-import crypto from "crypto";
+import bcrypt from "bcryptjs";
 
 export const runtime = "nodejs";
 
-function hashPassword(password: string): string {
-  return crypto.createHash("sha256").update(password + process.env.NEXTAUTH_SECRET).digest("hex");
+async function hashPassword(password: string): Promise<string> {
+  return bcrypt.hash(password, 12);
 }
 
 export async function POST(req: NextRequest) {
@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
     const existing = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
     if (existing) return NextResponse.json({ error: "Există deja un cont cu acest email" }, { status: 409 });
 
-    const hashed = hashPassword(password);
+    const hashed = await hashPassword(password);
     const user = await prisma.user.create({
       data: {
         name, email: email.toLowerCase(), password: hashed, status: "pending",

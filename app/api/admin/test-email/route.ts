@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
       port: config.port,
       secure: config.port === 465,
       auth: { user: config.user, pass: process.env.SMTP_PASS },
-      tls: { rejectUnauthorized: false },
+      tls: { rejectUnauthorized: true },
       connectionTimeout: 10000,
       greetingTimeout: 10000,
       socketTimeout: 15000,

@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import crypto from "crypto";
+import bcrypt from "bcryptjs";
 
-function hashPassword(p: string) {
-  return crypto.createHash("sha256").update(p + process.env.NEXTAUTH_SECRET).digest("hex");
+async function hashPassword(p: string): Promise<string> {
+  return bcrypt.hash(p, 12);
 }
 
 export async function POST(req: NextRequest) {
@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
   const maxAssoc = limits.maxAssoc;
 
   const newUser = await prisma.user.create({
-    data: { email: email.toLowerCase(), password: hashPassword(password), role: "corporate", status: "active", name: companyName },
+    data: { email: email.toLowerCase(), password: await hashPassword(password), role: "corporate", status: "active", name: companyName },
   });
 
   const corp = await prisma.corporateAccount.create({

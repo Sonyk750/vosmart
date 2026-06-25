@@ -114,7 +114,12 @@ export async function POST(req: NextRequest) {
   if (listaPlata) {
     try {
       const pdfPath = path.join(process.cwd(), "public", listaPlata.fileUrl.replace(/^\//, ""));
-      const pdfBuffer = await readFile(pdfPath);
+      const uploadsBase = path.join(process.cwd(), "public", "uploads");
+      const resolvedPath = path.resolve(pdfPath);
+      if (!resolvedPath.startsWith(uploadsBase)) {
+        return NextResponse.json({ error: "Cale invalida" }, { status: 400 });
+      }
+      const pdfBuffer = await readFile(resolvedPath);
       const pdfBase64 = pdfBuffer.toString("base64");
       pdfContentParts.push({
         type: "document",

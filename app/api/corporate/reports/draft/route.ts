@@ -10,7 +10,16 @@ export async function GET(req: NextRequest) {
   const documentId = searchParams.get("documentId");
   if (!documentId) return NextResponse.json({ draft: null });
 
-  const doc = await prisma.document.findUnique({ where: { id: documentId } });
+  // IDOR fix: verifica ca documentul apartine unei asociatii a contului corporate curent
+  const corporateAccount = await prisma.corporateAccount.findUnique({ where: { userId: user.id } });
+  if (!corporateAccount) return NextResponse.json({ error: "Neautorizat" }, { status: 401 });
+
+  const doc = await prisma.document.findFirst({
+    where: {
+      id: documentId,
+      association: { corporateId: corporateAccount.id },
+    },
+  });
   if (!doc) return NextResponse.json({ draft: null });
 
   const report = await prisma.report.findFirst({

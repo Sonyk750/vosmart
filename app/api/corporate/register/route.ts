@@ -8,10 +8,11 @@ import {
   sendTrialVerificationEmail,
   notifyAdminForTrialRegistration,
 } from "@/lib/email";
+import bcrypt from "bcryptjs";
 import crypto from "crypto";
 
-function hashPassword(p: string) {
-  return crypto.createHash("sha256").update(p + process.env.NEXTAUTH_SECRET).digest("hex");
+async function hashPassword(p: string): Promise<string> {
+  return bcrypt.hash(p, 12);
 }
 
 export function createVerificationToken(corporateId: string): string {
@@ -40,7 +41,7 @@ export async function POST(req: NextRequest) {
       data: {
         name,
         email: email.toLowerCase(),
-        password: hashPassword(password),
+        password: await hashPassword(password),
         role: "corporate",
         // Trial starts pending (needs email verification); paid starts active
         status: isTrial ? "pending" : "active",
