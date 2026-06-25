@@ -131,3 +131,5 @@ O asociație obișnuită poate fi complet digitalizată în 1-2 săptămâni.
 ---
 
 Vrei să transformi asociația ta cu **administrare inteligentă** și **cenzorat digital**? Descoperă întregul ecosistem pe **[spokapp.ro](https://spokapp.ro)** sau contactează **[VoSmart](https://www.vosmart.ro)** pentru o demonstrație gratuită.
+
+*Ai nevoie și de facturare pentru serviciile asociației? **[SpokInvoice](https://www.spokinvoice.ro)** face facturarea rapidă și trimite e-Factura automat în SPV ANAF — primul an gratuit.*

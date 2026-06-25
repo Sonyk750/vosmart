@@ -126,3 +126,7 @@ Art. 63 din Legea 196/2018 prevede că:
 ---
 
 Ești firmă de cenzorat sau cenzor individual și vrei să oferi un serviciu modern asociațiilor pe care le reprezinți? Încearcă **[VoSmart — cenzorat inteligent cu AI](https://www.vosmart.ro)** gratuit.
+
+---
+
+*Asociațiile de proprietari au nevoie și de facturare corectă? **[SpokInvoice](https://www.spokinvoice.ro)** este programul de facturare online cu integrare e-Factura ANAF — primul an gratuit. Parte din ecosistemul **[SpokApp](https://www.spokapp.ro)**.*

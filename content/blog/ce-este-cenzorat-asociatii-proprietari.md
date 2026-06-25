@@ -113,3 +113,7 @@ Raportul de cenzor este documentul prin care cenzorul confirmă sau infirmă cor
 ---
 
 Vrei să simplifici activitatea de cenzorat și să oferi asociațiilor tale un serviciu modern, digital și eficient? Descoperă **[VoSmart — aplicația AI pentru cenzorat inteligent](https://www.vosmart.ro)**.
+
+---
+
+*Ai nevoie și de un program de facturare pentru asociația ta? Încearcă **[SpokInvoice](https://www.spokinvoice.ro)** — facturare online cu e-Factura ANAF, primul an complet gratuit. Parte din ecosistemul **[SpokApp](https://www.spokapp.ro)**.*

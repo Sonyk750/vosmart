@@ -74,7 +74,7 @@ export default function BlogPage() {
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 text-sm text-slate-500 sm:flex-row">
           <span className="font-semibold text-emerald-400">VoSmart</span>
           <div className="flex gap-6">
-            <Link href="https://spokapp.ro/spokinvoice" className="hover:text-white transition">SpokInvoice</Link>
+            <Link href="https://www.spokinvoice.ro" className="hover:text-white transition">SpokInvoice</Link>
             <Link href="https://spokapp.ro/spokadmin" className="hover:text-white transition">SpokAdmin</Link>
             <Link href="https://spokapp.ro" className="hover:text-white transition">SpokApp</Link>
           </div>
