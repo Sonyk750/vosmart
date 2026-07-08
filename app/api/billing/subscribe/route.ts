@@ -22,15 +22,11 @@ export async function POST() {
   let priceRon: number;
   let pkgName: string;
 
-  if (user.association) {
-    kind = "association";
-    accountId = user.association.id;
-    subscriptionStatus = user.association.subscriptionStatus;
-    const pkg = ASSOCIATION_PACKAGES[user.association.package as AssociationPackage];
-    if (!pkg) return NextResponse.json({ error: "Eroare server" }, { status: 500 });
-    priceRon = pkg.priceRon;
-    pkgName = pkg.name;
-  } else {
+  // Conturile corporate au si o Association implicita (package "trial") creata la
+  // inregistrare, deci user.association e populat. Ramuram pe rol INAINTE de
+  // user.association ca sa nu tratam gresit un cont corporate ca asociatie
+  // (ASSOCIATION_PACKAGES["trial"] ar fi undefined -> 500).
+  if (user.role === "corporate") {
     const corporate = await prisma.corporateAccount.findUnique({ where: { userId: user.id } });
     if (!corporate) return NextResponse.json({ error: "Cont fără abonament" }, { status: 404 });
     kind = "corporate";
@@ -40,6 +36,16 @@ export async function POST() {
     if (!pkg) return NextResponse.json({ error: "Eroare server" }, { status: 500 });
     priceRon = pkg.priceRon;
     pkgName = pkg.name;
+  } else if (user.association) {
+    kind = "association";
+    accountId = user.association.id;
+    subscriptionStatus = user.association.subscriptionStatus;
+    const pkg = ASSOCIATION_PACKAGES[user.association.package as AssociationPackage];
+    if (!pkg) return NextResponse.json({ error: "Eroare server" }, { status: 500 });
+    priceRon = pkg.priceRon;
+    pkgName = pkg.name;
+  } else {
+    return NextResponse.json({ error: "Cont fără abonament" }, { status: 404 });
   }
 
   if (subscriptionStatus === "active") {

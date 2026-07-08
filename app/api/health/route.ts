@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
+import { timingSafeEqual } from "node:crypto";
 
 // Endpoint de diagnostic pentru variabilele de mediu in productie.
-// Protejat printr-un token ca sa nu expuna public configuratia.
-//   GET /api/health?token=<NEXTAUTH_SECRET sau HEALTH_CHECK_TOKEN>
+// Protejat printr-un token DEDICAT (HEALTH_CHECK_TOKEN) ca sa nu expuna public
+// configuratia. Nu cade niciodata pe NEXTAUTH_SECRET: daca tokenul dedicat nu e
+// setat, endpointul e efectiv dezactivat.
+//   GET /api/health?token=<HEALTH_CHECK_TOKEN>
 //   adauga &verify=1 pentru a testa si conexiunea SMTP live (login real).
 export const dynamic = "force-dynamic";
 
@@ -18,8 +21,17 @@ function stripeMode(k: string): string {
 
 export async function GET(req: NextRequest) {
   const token = req.nextUrl.searchParams.get("token");
-  const expected = process.env.HEALTH_CHECK_TOKEN || process.env.NEXTAUTH_SECRET;
-  if (!expected || token !== expected) {
+  const expected = process.env.HEALTH_CHECK_TOKEN;
+  // Fara token dedicat configurat endpointul e dezactivat — nu comparam
+  // niciodata cu NEXTAUTH_SECRET (secretul cu care semnam tokenele).
+  if (!expected) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+  // Comparatie in timp constant; timingSafeEqual cere buffere de lungime egala,
+  // asa ca respingem intai orice diferenta de lungime (inclusiv token lipsa).
+  const provided = Buffer.from(token ?? "", "utf8");
+  const secret = Buffer.from(expected, "utf8");
+  if (provided.length !== secret.length || !timingSafeEqual(provided, secret)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
