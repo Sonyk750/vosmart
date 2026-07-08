@@ -6,7 +6,7 @@ export async function POST(req: NextRequest) {
   const user = await getSession();
   if (!user || user.role !== "corporate") return NextResponse.json({ error: "Neautorizat" }, { status: 401 });
 
-  const { documentId, draft, associationId } = await req.json();
+  const { documentId, draft } = await req.json();
 
   // IDOR fix: verifica ca documentul apartine contului corporate curent
   const corporateAccount = await prisma.corporateAccount.findUnique({ where: { userId: user.id } });
@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
   const now = new Date();
   await prisma.report.create({
     data: {
-      associationId,
+      associationId: doc.associationId,
       title: `Raport cenzor — ${doc.title}`,
       month: now.toLocaleString("ro-RO", { month: "long" }),
       year: now.getFullYear(),

@@ -27,8 +27,13 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: "Neautorizat" }, { status: 401 });
 
   const { documentId } = await req.json();
-  const doc = await prisma.document.findUnique({
-    where: { id: documentId },
+  const doc = await prisma.document.findFirst({
+    where: {
+      id: documentId,
+      ...(user.role === "cenzor"
+        ? { association: { allocations: { some: { cenzorId: user.id } } } }
+        : {}),
+    },
     include: {
       association: {
         include: { user: { select: { name: true, email: true } } }

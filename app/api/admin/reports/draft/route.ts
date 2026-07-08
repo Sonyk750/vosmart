@@ -10,8 +10,13 @@ export async function GET(req: NextRequest) {
   const documentId = searchParams.get("documentId");
   if (!documentId) return NextResponse.json({ error: "documentId lipsă" }, { status: 400 });
 
-  const doc = await prisma.document.findUnique({
-    where: { id: documentId },
+  const doc = await prisma.document.findFirst({
+    where: {
+      id: documentId,
+      ...(user.role === "cenzor"
+        ? { association: { allocations: { some: { cenzorId: user.id } } } }
+        : {}),
+    },
     include: { association: true },
   });
   if (!doc) return NextResponse.json({ error: "Document negăsit" }, { status: 404 });

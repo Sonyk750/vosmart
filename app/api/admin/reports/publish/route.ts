@@ -6,9 +6,16 @@ export async function POST(req: NextRequest) {
   const user = await requireAdmin();
   if (!user) return NextResponse.json({ error: "Neautorizat" }, { status: 401 });
 
-  const { documentId, draft, associationId } = await req.json();
+  const { documentId, draft } = await req.json();
 
-  const doc = await prisma.document.findUnique({ where: { id: documentId } });
+  const doc = await prisma.document.findFirst({
+    where: {
+      id: documentId,
+      ...(user.role === "cenzor"
+        ? { association: { allocations: { some: { cenzorId: user.id } } } }
+        : {}),
+    },
+  });
   if (!doc) return NextResponse.json({ error: "Document negăsit" }, { status: 404 });
 
   const now = new Date();
@@ -17,7 +24,7 @@ export async function POST(req: NextRequest) {
 
   const report = await prisma.report.create({
     data: {
-      associationId,
+      associationId: doc.associationId,
       title: `Raport cenzor — ${doc.title}`,
       month,
       year,
