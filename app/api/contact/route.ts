@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { rateLimit, clientIp } from "@/lib/rate-limit"
 import nodemailer from "nodemailer"
 
 function esc(s: string) {
@@ -6,6 +7,9 @@ function esc(s: string) {
 }
 
 export async function POST(request: Request) {
+  const rl = rateLimit(`contact:${clientIp(request)}`, 5, 60_000)
+  if (!rl.ok) return NextResponse.json({ error: `Prea multe încercări. Reîncearcă în ${rl.retryAfter}s.` }, { status: 429 })
+
   const { nume, email, telefon, mesaj } = await request.json()
 
   if (!nume || !email || !mesaj) {

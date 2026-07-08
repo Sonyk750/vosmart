@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { rateLimit, clientIp } from "@/lib/rate-limit";
 import { stripe } from "@/lib/stripe";
 import { CORPORATE_PACKAGES, CorporatePackage, getOrCreateStripeCustomer, ronToBani } from "@/lib/billing";
 import {
@@ -24,6 +25,9 @@ export function createVerificationToken(corporateId: string): string {
 
 export async function POST(req: NextRequest) {
   try {
+    const rl = rateLimit(`corp-register:${clientIp(req)}`, 5, 60_000);
+    if (!rl.ok) return NextResponse.json({ error: `Prea multe încercări. Reîncearcă în ${rl.retryAfter}s.` }, { status: 429 });
+
     const { companyName, cui, regCom, address, phone, name, email, password, package: pkg } = await req.json();
     if (!companyName || !name || !email || !password) {
       return NextResponse.json({ error: "Câmpurile obligatorii lipsesc" }, { status: 400 });

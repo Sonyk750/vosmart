@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { rateLimit, clientIp } from "@/lib/rate-limit";
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
 
 export async function POST(req: NextRequest) {
   try {
+    const rl = rateLimit(`login:${clientIp(req)}`, 8, 60_000);
+    if (!rl.ok) return NextResponse.json({ error: `Prea multe încercări. Reîncearcă în ${rl.retryAfter}s.` }, { status: 429 });
+
     const { email, password } = await req.json();
     if (!email || !password) return NextResponse.json({ error: "Email și parola sunt obligatorii" }, { status: 400 });
 

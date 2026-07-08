@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { rateLimit, clientIp } from "@/lib/rate-limit";
 import { notifyAdminForClientApproval } from "@/lib/email";
 import bcrypt from "bcryptjs";
 
@@ -11,6 +12,9 @@ async function hashPassword(password: string): Promise<string> {
 
 export async function POST(req: NextRequest) {
   try {
+    const rl = rateLimit(`register:${clientIp(req)}`, 5, 60_000);
+    if (!rl.ok) return NextResponse.json({ error: `Prea multe încercări. Reîncearcă în ${rl.retryAfter}s.` }, { status: 429 });
+
     const { name, email, password, associationName, cui, address, phone, package: pkg } = await req.json();
 
     if (!name || !email || !password || !associationName) {
