@@ -147,3 +147,17 @@ model Report {
 
   association Association @relation(fields: [associationId], references: [id], onDelete: Cascade)
 }
+
+// Cache Q&A pentru asistentul de ajutor: întrebările standalone (fără context)
+// se rețin normalizate; la o întrebare identică se servește răspunsul din DB,
+// fără apel la Claude. `ver` = hash-ul manualului; la schimbare, se recalculează.
+model AsistentCache {
+  id           String   @id @default(cuid())
+  questionNorm String   @unique
+  question     String
+  answer       String
+  ver          String
+  hits         Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}

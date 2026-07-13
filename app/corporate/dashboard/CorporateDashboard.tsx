@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import CardPaymentForm from "@/app/components/CardPaymentForm";
+import ChatWidget from "@/app/components/ChatWidget";
 import { CORPORATE_PACKAGES, CorporatePackage } from "@/lib/billing";
 import JSZip from "jszip";
 
@@ -449,7 +450,6 @@ ${body}
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <a href="/help" className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-1.5 text-xs text-slate-300 transition hover:bg-white/[0.08]">Ajutor</a>
             <a href="/" className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-1.5 text-xs text-slate-300 transition hover:bg-white/[0.08]">← Site</a>
             <button onClick={handleLogout}
               className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-1.5 text-xs text-slate-300 transition hover:bg-white/[0.08]">
@@ -1325,6 +1325,8 @@ ${body}
             className="h-auto opacity-40" style={{ mixBlendMode: "screen", width: "50px" }} />
         </div>
       </footer>
+
+      <ChatWidget />
     </main>
   );
 }
