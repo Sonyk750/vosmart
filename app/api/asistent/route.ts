@@ -3,7 +3,8 @@ import { createHash } from "crypto";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import Anthropic from "@anthropic-ai/sdk";
-import { ASISTENT_MANUAL } from "@/lib/asistent-manual";
+import { ASISTENT_MANUAL, ASISTENT_MANUAL_ADMIN } from "@/lib/asistent-manual";
+import { rateLimit, clientIp } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 
@@ -52,14 +53,34 @@ async function isOnTopic(client: Anthropic, question: string): Promise<boolean> 
   }
 }
 
+// Limită anti-abuz pentru vizitatorii anonimi de pe site (fără cont): 15
+// mesaje / oră / IP, ca să protejăm costul. Utilizatorii autentificați (clienți
+// corporate din panou) nu sunt limitați.
+const ANON_LIMIT = 15;
+const ANON_WINDOW_MS = 60 * 60 * 1000;
+
 export async function POST(req: NextRequest) {
+  // Asistentul e disponibil și public (pe site vosmart.ro), și în panoul corporate.
+  // Anonimii sunt limitați pe IP; utilizatorii logați trec fără limită.
   const user = await getSession();
   if (!user) {
-    return new Response(JSON.stringify({ error: "Neautorizat" }), { status: 401 });
+    const rl = rateLimit(`asistent:${clientIp(req)}`, ANON_LIMIT, ANON_WINDOW_MS);
+    if (!rl.ok) {
+      return new Response(
+        JSON.stringify({ error: `Ai atins limita de întrebări. Încearcă din nou peste ~${Math.ceil(rl.retryAfter / 60)} min sau creează-ți un cont.` }),
+        { status: 429 },
+      );
+    }
   }
   if (!process.env.ANTHROPIC_API_KEY) {
     return new Response(JSON.stringify({ error: "Asistentul nu este configurat (lipsește ANTHROPIC_API_KEY)." }), { status: 500 });
   }
+
+  // Utilizatorii interni (admin/cenzor) primesc manualul extins cu panoul de
+  // administrare. Pentru ei NU folosim cache (răspunsurile interne nu trebuie
+  // să ajungă în cache-ul public) și sărim peste portar (întrebări interne).
+  const isStaff = !!user && (user.role === "admin" || user.role === "cenzor");
+  const systemManual = isStaff ? `${ASISTENT_MANUAL}\n\n${ASISTENT_MANUAL_ADMIN}` : ASISTENT_MANUAL;
 
   const MANUAL_VER = createHash("sha1").update(ASISTENT_MANUAL).digest("hex").slice(0, 12);
 
@@ -81,9 +102,10 @@ export async function POST(req: NextRequest) {
     }), { headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" } });
 
   const standalone = messages.length === 1;
+  const useCache = standalone && !isStaff;
   const qNorm = standalone ? normalize(messages[0].content) : "";
 
-  if (standalone && qNorm.length >= 3) {
+  if (useCache && qNorm.length >= 3) {
     const hit = await prisma.asistentCache.findUnique({ where: { questionNorm: qNorm } }).catch(() => null);
     if (hit && hit.ver === MANUAL_VER && hit.answer) {
       prisma.asistentCache.update({ where: { id: hit.id }, data: { hits: { increment: 1 } } }).catch(() => {});
@@ -94,7 +116,8 @@ export async function POST(req: NextRequest) {
   const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
   // Portar: la o întrebare nouă, verificăm ieftin dacă e despre aplicație.
-  if (standalone) {
+  // Staff-ul (admin/cenzor) e de încredere și întreabă despre operațiuni interne — sare peste portar.
+  if (standalone && !isStaff) {
     const onTopic = await isOnTopic(client, messages[0].content);
     if (!onTopic) return streamText(OFF_TOPIC_MSG);
   }
@@ -104,7 +127,7 @@ export async function POST(req: NextRequest) {
     max_tokens: 1500,
     thinking:   { type: "disabled" },
     system: [
-      { type: "text", text: ASISTENT_MANUAL, cache_control: { type: "ephemeral" } },
+      { type: "text", text: systemManual, cache_control: { type: "ephemeral" } },
     ],
     messages,
   });
@@ -126,7 +149,7 @@ export async function POST(req: NextRequest) {
       } finally {
         controller.close();
       }
-      if (ok && standalone && qNorm.length >= 3 && acc.trim()) {
+      if (ok && useCache && qNorm.length >= 3 && acc.trim()) {
         prisma.asistentCache.upsert({
           where:  { questionNorm: qNorm },
           create: { questionNorm: qNorm, question: messages[0].content, answer: acc, ver: MANUAL_VER },

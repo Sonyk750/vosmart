@@ -3,7 +3,6 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import CardPaymentForm from "@/app/components/CardPaymentForm";
-import ChatWidget from "@/app/components/ChatWidget";
 import { CORPORATE_PACKAGES, CorporatePackage } from "@/lib/billing";
 import JSZip from "jszip";
 
@@ -1325,8 +1324,6 @@ ${body}
             className="h-auto opacity-40" style={{ mixBlendMode: "screen", width: "50px" }} />
         </div>
       </footer>
-
-      <ChatWidget />
     </main>
   );
 }

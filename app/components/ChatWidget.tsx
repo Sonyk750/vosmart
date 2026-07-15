@@ -6,8 +6,8 @@ import Link from "next/link";
 interface Msg { role: "user" | "assistant"; content: string }
 
 const SALUT =
-  "Salut! 👋 Sunt asistentul VoSmart. Întreabă-mă orice despre aplicație — " +
-  "cum încarci un dosar, ce documente trebuie, unde vezi raportul de cenzor, cum schimbi abonamentul etc.";
+  "Salut! 👋 Sunt asistentul VoSmart — primul cenzorat cu AI. Întreabă-mă orice despre serviciu — " +
+  "ce facem, prețuri, cum îți faci cont, ce documente trebuie, cum obții raportul de cenzor etc.";
 
 // ─── Randare minimală: **bold**, [text](/ruta) → link clickabil ─────────────
 function renderInline(text: string, onNavigate: () => void): React.ReactNode[] {
