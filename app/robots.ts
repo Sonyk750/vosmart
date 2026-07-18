@@ -6,7 +6,14 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: "*",
         allow: "/",
-        disallow: ["/api/", "/admin/", "/dashboard/", "/corporate/dashboard/"],
+        disallow: [
+          "/api/",
+          "/admin/",
+          "/corporate/login/",
+          "/corporate/dashboard/",
+          "/corporate/checkout/",
+          "/corporate/verify/",
+        ],
       },
     ],
     sitemap: "https://www.vosmart.ro/sitemap.xml",

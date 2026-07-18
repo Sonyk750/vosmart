@@ -3,8 +3,8 @@ import Link from "next/link"
 import { getAllPosts } from "@/lib/blog"
 
 export const metadata: Metadata = {
-  title: "Blog VoSmart — Ghiduri despre cenzorat, administrare imobile și digitalizare",
-  description: "Articole practice despre cenzorat asociații proprietari, firme de cenzorat, administrare imobile digitală și aplicații AI pentru blocuri din România.",
+  title: "Blog despre cenzorat, legislație și digitalizare",
+  description: "Ghiduri despre cenzoratul asociațiilor de proprietari, verificări financiar-contabile, legislație, rapoarte și analiză asistată de AI.",
   alternates: { canonical: "https://www.vosmart.ro/blog" },
 }
 
@@ -42,7 +42,7 @@ export default function BlogPage() {
         <div className="mb-14 text-center">
           <p className="mb-3 text-sm font-medium uppercase tracking-wider text-emerald-400">Blog VoSmart</p>
           <h1 className="text-4xl font-bold sm:text-5xl mb-4">Resurse pentru cenzorat modern</h1>
-          <p className="text-slate-400 max-w-2xl mx-auto">Ghiduri practice despre cenzorat asociații proprietari, firme de cenzorat, administrare imobile digitală și aplicații AI.</p>
+          <p className="text-slate-400 max-w-2xl mx-auto">Ghiduri practice despre cenzoratul asociațiilor de proprietari, verificări financiar-contabile, legislație și analiză asistată de AI.</p>
         </div>
 
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">

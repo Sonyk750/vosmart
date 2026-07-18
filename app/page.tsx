@@ -88,6 +88,45 @@ const services = [
   },
 ];
 
+const faqJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: [
+    {
+      "@type": "Question",
+      name: "Ce este cenzoratul pentru asociații de proprietari?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Cenzoratul presupune verificarea documentelor financiar-contabile ale asociației, a listelor de întreținere, fondurilor și soldurilor.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "VoSmart oferă cenzorat pentru blocuri?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Da. VoSmart oferă servicii de cenzorat pentru blocuri, condominii și asociații de proprietari.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "Cum primesc rapoartele de cenzorat?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Rapoartele pot fi publicate în portalul online al asociației, de unde pot fi descărcate de client.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "AI-ul emite raportul final?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Platforma poate genera o analiză preliminară și un draft, iar raportul final este verificat și validat înainte de publicare.",
+      },
+    },
+  ],
+};
+
 export default function Home() {
   const [splashDone, setSplashDone] = useState(false);
   const [skipAnim, setSkipAnim] = useState(false);
@@ -106,6 +145,10 @@ export default function Home() {
 
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+      />
       {!splashDone && <SplashScreen onDone={handleSplashDone} />}
 
       <main

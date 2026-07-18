@@ -24,7 +24,7 @@ export const metadata: Metadata = {
     template: "%s | VoSmart",
   },
   description:
-    "VoSmart oferă servicii profesionale de cenzorat pentru asociații de proprietari și blocuri din București. Rapoarte lunare online, portal client 24/7 și verificări financiare conforme Legii 196/2018.",
+    "Servicii de cenzorat pentru asociații de proprietari din București, cu analiză asistată de AI, rapoarte online și verificări financiare clare.",
   keywords: [
     "firma de cenzorat",
     "cenzorat asociatii proprietari",
@@ -122,35 +122,6 @@ const jsonLd = {
       publisher: { "@id": "https://www.vosmart.ro/#organization" },
       inLanguage: "ro-RO",
     },
-    {
-      "@type": "FAQPage",
-      mainEntity: [
-        {
-          "@type": "Question",
-          name: "Ce este cenzoratul pentru asociații de proprietari?",
-          acceptedAnswer: {
-            "@type": "Answer",
-            text: "Cenzoratul presupune verificarea documentelor financiar-contabile ale asociației, a listelor de întreținere, fondurilor și soldurilor.",
-          },
-        },
-        {
-          "@type": "Question",
-          name: "VoSmart oferă cenzorat blocuri?",
-          acceptedAnswer: {
-            "@type": "Answer",
-            text: "Da. VoSmart oferă servicii de cenzorat pentru blocuri, condominii și asociații de proprietari.",
-          },
-        },
-        {
-          "@type": "Question",
-          name: "Cum primesc rapoartele de cenzorat?",
-          acceptedAnswer: {
-            "@type": "Answer",
-            text: "Rapoartele sunt publicate în portalul online al asociației, de unde pot fi descărcate oricând, 24/7.",
-          },
-        },
-      ],
-    },
   ],
 };
 
@@ -169,6 +140,7 @@ export default function RootLayout({
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
+        <script defer src="https://monitor.spokadmin.ro/t.js" data-site="vosmart" />
       </head>
       <body className="min-h-full flex flex-col bg-[#050814] text-white">
         {children}
