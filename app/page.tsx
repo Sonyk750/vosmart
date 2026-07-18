@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import SplashScreen from "./components/SplashScreen";
 import { downloadOferta } from "./components/OfertaPDF";
 
@@ -75,16 +76,19 @@ const services = [
     icon: "📄",
     title: "Cenzorat asociații",
     text: "Servicii profesionale de cenzorat pentru asociații de proprietari, cu verificarea documentelor financiar-contabile.",
+    href: "/cenzorat-asociatii",
   },
   {
     icon: "🏢",
     title: "Cenzorat blocuri",
     text: "Control financiar pentru blocuri, condominii și asociații care au nevoie de transparență și rapoarte clare.",
+    href: "/cenzorat-asociatii",
   },
   {
     icon: "📊",
     title: "Rapoarte lunare",
     text: "Rapoarte de cenzorat disponibile online pentru asociațiile înrolate în platforma VoSmart.",
+    href: "/cenzorat-asociatii#proces",
   },
 ];
 
@@ -481,11 +485,12 @@ export default function Home() {
             </div>
             <div className="grid gap-6 md:grid-cols-3">
               {services.map((item)=>(
-                <div key={item.title} className="group rounded-3xl border border-white/8 bg-white/[0.03] p-7 transition hover:-translate-y-1 hover:bg-white/[0.07] hover:border-violet-500/20">
+                <Link href={item.href} key={item.title} className="group rounded-3xl border border-white/8 bg-white/[0.03] p-7 transition hover:-translate-y-1 hover:bg-white/[0.07] hover:border-violet-500/20">
                   <div className="mb-5 text-4xl group-hover:scale-110 transition-transform duration-300">{item.icon}</div>
                   <h3 className="mb-3 text-xl font-semibold">{item.title}</h3>
                   <p className="leading-relaxed text-slate-400">{item.text}</p>
-                </div>
+                  <span className="mt-5 inline-flex text-sm font-semibold text-cyan-300 transition-colors group-hover:text-cyan-200">Descoperă serviciul →</span>
+                </Link>
               ))}
             </div>
           </div>

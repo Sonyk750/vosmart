@@ -17,6 +17,7 @@ const content = `# VoSmart
 ## Pagini principale
 
 - Site: https://www.vosmart.ro/
+- Servicii de cenzorat pentru asociații: https://www.vosmart.ro/cenzorat-asociatii
 - Platformă corporate: https://www.vosmart.ro/corporate
 - Ghiduri și articole: https://www.vosmart.ro/blog
 - Ajutor: https://www.vosmart.ro/help
