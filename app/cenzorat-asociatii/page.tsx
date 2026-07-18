@@ -136,6 +136,19 @@ export default function CenzoratAsociatiiPage() {
         </div>
       </section>
 
+      <section className="px-5 pb-8 sm:px-6">
+        <div className="mx-auto flex max-w-7xl flex-col gap-5 rounded-3xl border border-cyan-400/20 bg-cyan-400/[.06] p-7 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm font-semibold uppercase tracking-[.2em] text-cyan-300">Pentru profesioniști</p>
+            <h2 className="mt-2 text-2xl font-bold">Ești firmă de cenzorat sau cenzor independent?</h2>
+            <p className="mt-2 text-slate-400">Descoperă aplicația VoSmart pentru analiză asistată de AI, dosare digitale și rapoarte validate profesional.</p>
+          </div>
+          <Link href="/platforma-ai-cenzorat" className="shrink-0 rounded-xl border border-cyan-300/30 px-5 py-3 text-center font-semibold text-cyan-200 transition hover:bg-cyan-300/10">
+            Vezi platforma AI →
+          </Link>
+        </div>
+      </section>
+
       <section id="verificari" className="border-y border-white/8 bg-white/[.025] px-5 py-24 sm:px-6">
         <div className="mx-auto max-w-7xl">
           <p className="text-sm font-semibold uppercase tracking-[.22em] text-violet-300">Aria verificării</p>

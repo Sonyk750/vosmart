@@ -1,24 +1,30 @@
 const content = `# VoSmart
 
-> VoSmart este o firmă și o platformă digitală de cenzorat pentru asociații de proprietari din România.
+> VoSmart oferă servicii profesionale de cenzorat pentru asociații de proprietari și o platformă AI distinctă pentru firme de cenzorat și cenzori profesioniști.
 
-## Servicii și capabilități
+## Pentru asociații de proprietari
 
-- Cenzorat pentru asociații de proprietari și condominii
-- Verificarea documentelor financiar-contabile, a fondurilor, soldurilor și listelor de întreținere
+- Serviciu complet de cenzorat pentru asociații și condominii
+- Verificarea documentelor financiar-contabile, fondurilor, soldurilor și listelor de întreținere
 - Rapoarte de cenzorat disponibile online
-- Portal securizat pentru clienți și firme de cenzorat
-- Analiză preliminară asistată de AI, urmată de verificare și validare umană
+- Aria principală: București și Ilfov
+- Pagina serviciului: https://www.vosmart.ro/cenzorat-asociatii
 
-## Aria principală
+## Pentru firme de cenzorat și cenzori
 
-- București și Ilfov
+- Platformă web pentru organizarea dosarelor și documentelor clienților
+- Analiză preliminară asistată de AI
+- Schițe de raport care sunt verificate, ajustate și aprobate de profesionist
+- Portal pentru asociațiile gestionate și lucru în echipă
+- Pagina aplicației: https://www.vosmart.ro/platforma-ai-cenzorat
+- Cont, testare și abonamente: https://www.vosmart.ro/corporate
 
 ## Pagini principale
 
 - Site: https://www.vosmart.ro/
-- Servicii de cenzorat pentru asociații: https://www.vosmart.ro/cenzorat-asociatii
-- Platformă corporate: https://www.vosmart.ro/corporate
+- Servicii pentru asociații: https://www.vosmart.ro/cenzorat-asociatii
+- Aplicație AI pentru profesioniști: https://www.vosmart.ro/platforma-ai-cenzorat
+- Acces Corporate: https://www.vosmart.ro/corporate
 - Ghiduri și articole: https://www.vosmart.ro/blog
 - Ajutor: https://www.vosmart.ro/help
 
@@ -27,10 +33,11 @@ const content = `# VoSmart
 - E-mail: office@vosmart.ro
 - Telefon: +40 756 362 828
 
-## Clarificări
+## Clarificări importante
 
-- VoSmart oferă servicii de cenzorat; nu este firmă de administrare imobile.
-- AI-ul asistă analiza documentelor. Raportul final este verificat și validat înainte de publicare.
+- VoSmart oferă cenzorat; nu este firmă de administrare imobile.
+- Aplicația AI nu înlocuiește cenzorul și nu emite autonom concluzii profesionale.
+- Raportul final este verificat și validat de un profesionist înainte de publicare.
 `
 
 export function GET() {

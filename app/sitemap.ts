@@ -14,6 +14,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   return [
     { url: "https://www.vosmart.ro", lastModified: siteUpdatedAt, changeFrequency: "weekly", priority: 1 },
     { url: "https://www.vosmart.ro/cenzorat-asociatii", lastModified: siteUpdatedAt, changeFrequency: "monthly", priority: 0.9 },
+    { url: "https://www.vosmart.ro/platforma-ai-cenzorat", lastModified: siteUpdatedAt, changeFrequency: "monthly", priority: 0.9 },
     { url: "https://www.vosmart.ro/blog", lastModified: siteUpdatedAt, changeFrequency: "weekly", priority: 0.8 },
     { url: "https://www.vosmart.ro/corporate", lastModified: siteUpdatedAt, changeFrequency: "monthly", priority: 0.8 },
     { url: "https://www.vosmart.ro/help", lastModified: siteUpdatedAt, changeFrequency: "monthly", priority: 0.6 },

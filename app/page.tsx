@@ -188,7 +188,7 @@ export default function Home() {
               />
             </a>
             <nav className="hidden items-center gap-8 text-sm text-slate-300 md:flex">
-              <a href="#platforma" className="transition hover:text-violet-300">Platformă</a>
+              <a href="/platforma-ai-cenzorat" className="transition hover:text-violet-300">Platformă AI</a>
               <a href="#pachete" className="transition hover:text-violet-300">Pachete</a>
               <a href="#servicii" className="transition hover:text-violet-300">Servicii</a>
               <a href="/corporate/login" className="transition hover:text-emerald-200 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-emerald-300 font-medium">Corporate</a>
@@ -201,7 +201,7 @@ export default function Home() {
             <a href="#contact" className="inline-flex rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold md:hidden">Contact</a>
           </div>
           <nav className="flex justify-center gap-5 border-t border-white/5 px-4 py-3 text-xs text-slate-300 md:hidden">
-            <a href="#platforma" className="hover:text-white">Platformă</a>
+            <a href="/platforma-ai-cenzorat" className="hover:text-white">Platformă AI</a>
             <a href="#pachete" className="hover:text-white">Pachete</a>
             <a href="#servicii" className="hover:text-white">Servicii</a>
             <a href="/help" className="hover:text-cyan-300 text-cyan-400">Ajutor</a>
@@ -307,6 +307,9 @@ export default function Home() {
                 <span style={{background:"linear-gradient(90deg,#a78bfa,#67e8f9)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundClip:"text"}}>transparență totală</span>
               </h2>
               <p className="mt-4 text-slate-400">VoSmart nu este doar o firmă de cenzorat. Este o platformă modernă unde clienții pot accesa rapoarte lunare, documente, observații și recomandări.</p>
+              <a href="/platforma-ai-cenzorat" className="mt-6 inline-flex rounded-xl border border-cyan-400/30 bg-cyan-400/10 px-5 py-3 font-semibold text-cyan-200 transition hover:bg-cyan-400/15">
+                Vezi aplicația AI pentru firme și cenzori →
+              </a>
             </div>
             <div className="mt-12 grid gap-6 md:grid-cols-3">
               {[
