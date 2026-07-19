@@ -83,7 +83,7 @@ O **firma de cenzorat** ofera continuitate si expertiza specializata, spre deose
 Pentru o asociatie modern administrata, serviciile de cenzorat sunt mai eficiente atunci cand sunt integrate cu un ecosistem digital complet:
 
 - **[SpokAdmin](https://spokadmin.ro)** — platforma pentru administrare asociatii de proprietari, care gestioneaza listele de intretinere, contractele si comunicarea cu proprietarii.
-- **[SpokInvoice](https://www.spokinvoice.ro)** — solutie de facturare online si e-Factura ANAF, primul an gratuit, care simplifica gestionarea documentelor financiare.
+- **[SpokInvoice](https://www.spokinvoice.ro)** — solutie de facturare online si e-Factura ANAF, cont gratuit de testare (fără card), care simplifica gestionarea documentelor financiare.
 - **[SpokApp](https://spokapp.ro)** — ecosistemul de aplicatii inteligente din care fac parte toate aceste solutii.
 
 Cand cenzorul VoSmart are acces direct la datele din SpokAdmin, verificarile se desfasoara in timp real, fara schimb de dosare fizice sau intarzieri.

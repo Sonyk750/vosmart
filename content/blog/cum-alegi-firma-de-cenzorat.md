@@ -92,7 +92,7 @@ Prețul serviciilor de cenzorat variază în funcție de:
 
 Atenție: o firmă de cenzorat care oferă prețuri semnificativ sub piață probabil oferă și un cenzorat superficial. Costul unui cenzorat necorespunzător poate fi mult mai mare dacă apar probleme financiare nedescoperite.
 
-Facturile pentru serviciile de cenzorat contractate se pot emite și gestiona eficient prin [SpokInvoice](https://www.spokinvoice.ro), cu integrare completă în sistemul e-Factura ANAF, disponibil gratuit în primul an.
+Facturile pentru serviciile de cenzorat contractate se pot emite și gestiona eficient prin [SpokInvoice](https://www.spokinvoice.ro), cu integrare completă în sistemul e-Factura ANAF, cu cont gratuit de testare, fără card.
 
 ## Red Flags: Semne că o Firmă de Cenzorat Nu Este Potrivită
 
@@ -113,7 +113,7 @@ Mulți proprietari preferă un cenzor individual, de obicei un vecin pensionar c
 - **Răspundere instituțională**: o firmă poate fi acționată legal pentru erori și are asigurare de răspundere; un cenzor individual are resurse limitate
 - **Actualizare legislativă**: firmele urmăresc permanent modificările legislative; un cenzor individual poate rămâne în urmă
 
-Asociațiile conectate la [SpokAdmin](https://spokadmin.ro) pentru administrare și la [VoSmart](https://www.vosmart.ro) pentru cenzorat beneficiază de cel mai eficient flux de date între administrator și cenzor — fără duplicare de muncă și cu transparență totală pentru proprietari.
+Asociațiile conectate la [SpokAdmin](https://spokadmin.ro) pentru administrare și la [VoSmart](https://www.vosmart.ro) pentru cenzorat beneficiază de cel mai eficient flux de date între administrator și cenzor — fără duplicare de muncă și cu transparență totală pentru proprietari. Dacă asociația caută o firmă de administrare (serviciu separat de cenzorat), **[DecoImob](https://decoimob.ro)** oferă administrare imobile în București și Ilfov, iar VoSmart verifică independent activitatea acesteia.
 
 ## Procesul de Contractare a Serviciilor de Cenzorat
 

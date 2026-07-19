@@ -7,6 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "audit:seo": "node scripts/seo-audit.mjs",
+    "indexnow:submit": "node scripts/submit-indexnow.mjs",
     "postinstall": "prisma generate",
     "db:push": "prisma db push"
   },

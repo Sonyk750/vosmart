@@ -31,7 +31,7 @@ O anomalie financiară este orice abatere de la pattern-ul normal al cheltuielil
 
 ## Cum funcționează detectarea AI în VoSmart
 
-**[VoSmart](https://vosmart.ro)** — prima aplicație de **cenzorat cu AI** din România — folosește algoritmi de machine learning și analiză statistică avansată pentru a identifica anomaliile financiare automat.
+**[VoSmart](https://www.vosmart.ro)** — prima aplicație de **cenzorat cu AI** din România — folosește algoritmi de machine learning și analiză statistică avansată pentru a identifica anomaliile financiare automat.
 
 ### Pasul 1: Ingestia și structurarea datelor
 
@@ -127,8 +127,8 @@ Da. Aplicația este adaptată pentru asociații de orice dimensiune — de la bl
 
 ---
 
-Pentru o administrare corectă care facilitează munca cenzorului, **[SpokAdmin](https://spokapp.ro/spokadmin)** oferă administratorilor de bloc toate instrumentele necesare: liste de întreținere, evidența debitelor, contracte și rapoarte — toate disponibile digital.
+Pentru o administrare corectă care facilitează munca cenzorului, **[SpokAdmin](https://spokapp.ro/spokadmin)** oferă administratorilor de bloc toate instrumentele necesare: liste de întreținere, evidența debitelor, contracte și rapoarte — toate disponibile digital. Asociațiile care preferă să externalizeze administrarea către o firmă specializată pot apela la **[DecoImob](https://decoimob.ro)** — administrare imobile în București și Ilfov, activitate separată și independentă de cenzoratul asigurat de VoSmart.
 
-Firmele de cenzorat care emit facturi pentru serviciile lor găsesc în **[SpokInvoice](https://spokapp.ro/spokinvoice)** soluția completă de facturare online cu e-Factura ANAF — primul an gratuit.
+Firmele de cenzorat care emit facturi pentru serviciile lor găsesc în **[SpokInvoice](https://spokapp.ro/spokinvoice)** soluția completă de facturare online cu e-Factura ANAF — cont gratuit de testare, fără card.
 
 Explorează toate soluțiile integrate pe **[SpokApp](https://spokapp.ro)**.

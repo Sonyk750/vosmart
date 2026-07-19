@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
 import Link from "next/link"
 import { notFound } from "next/navigation"
-import { getAllPosts, getPost } from "@/lib/blog"
+import { getAllPosts, getPost, getRelatedPosts } from "@/lib/blog"
 
 export async function generateStaticParams() {
   return getAllPosts().map(p => ({ slug: p.slug }))
@@ -15,6 +15,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     title: post.title,
     description: post.description,
     keywords: post.keywords,
+    authors: [{ name: "VoSmart", url: "https://www.vosmart.ro" }],
     alternates: { canonical: `https://www.vosmart.ro/blog/${slug}` },
     openGraph: {
       title: post.title,
@@ -22,6 +23,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
       url: `https://www.vosmart.ro/blog/${slug}`,
       type: "article",
       publishedTime: post.date,
+      modifiedTime: post.dateModified || post.date,
     },
   }
 }
@@ -37,8 +39,53 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
   const post = await getPost(slug)
   if (!post) notFound()
 
+  const related = getRelatedPosts(slug, 3)
+  const url = `https://www.vosmart.ro/blog/${slug}`
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "BlogPosting",
+        "@id": `${url}#article`,
+        headline: post.title,
+        description: post.description,
+        image: "https://www.vosmart.ro/opengraph-image.png",
+        datePublished: post.date,
+        dateModified: post.dateModified || post.date,
+        inLanguage: "ro-RO",
+        articleSection: post.category,
+        keywords: post.keywords?.join(", "),
+        mainEntityOfPage: { "@type": "WebPage", "@id": url },
+        author: { "@id": "https://www.vosmart.ro/#organization" },
+        publisher: { "@id": "https://www.vosmart.ro/#organization" },
+        url,
+      },
+      {
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          { "@type": "ListItem", position: 1, name: "VoSmart", item: "https://www.vosmart.ro/" },
+          { "@type": "ListItem", position: 2, name: "Blog", item: "https://www.vosmart.ro/blog" },
+          { "@type": "ListItem", position: 3, name: post.title, item: url },
+        ],
+      },
+      ...(post.faqs.length
+        ? [{
+            "@type": "FAQPage",
+            "@id": `${url}#faq`,
+            mainEntity: post.faqs.map(f => ({
+              "@type": "Question",
+              name: f.question,
+              acceptedAnswer: { "@type": "Answer", text: f.answer },
+            })),
+          }]
+        : []),
+    ],
+  }
+
   return (
     <div className="min-h-screen text-white" style={{ background: "#030b0f" }}>
+      <script type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }} />
       <div className="fixed inset-0 pointer-events-none z-0"
         style={{ background: "radial-gradient(ellipse 80% 50% at 50% -10%, rgba(16,185,129,0.1), transparent 60%)" }} />
 
@@ -54,6 +101,13 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
       </header>
 
       <main className="relative z-10 mx-auto max-w-3xl px-4 pb-24 pt-32 sm:px-6">
+        <nav aria-label="Breadcrumb" className="mb-6 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+          <Link href="/" className="transition hover:text-slate-300">VoSmart</Link>
+          <span aria-hidden>/</span>
+          <Link href="/blog" className="transition hover:text-slate-300">Blog</Link>
+          <span aria-hidden>/</span>
+          <span className="text-slate-400 line-clamp-1">{post.title}</span>
+        </nav>
         <div className="mb-8">
           <div className="mb-4 flex items-center gap-3">
             <span className="rounded-full px-3 py-1 text-xs font-medium"
@@ -72,6 +126,24 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
         <div className="h-px w-full mb-10" style={{ background: "rgba(255,255,255,0.08)" }} />
 
         <div className="prose-blog" dangerouslySetInnerHTML={{ __html: post.content }} />
+
+        {related.length > 0 && (
+          <section aria-label="Articole similare" className="mt-16">
+            <h2 className="mb-5 text-lg font-semibold text-white">Articole similare</h2>
+            <div className="grid gap-4 sm:grid-cols-3">
+              {related.map(item => (
+                <Link key={item.slug} href={`/blog/${item.slug}`}
+                  className="group rounded-2xl border border-white/8 bg-white/[0.03] p-5 transition hover:-translate-y-1 hover:border-emerald-400/30 hover:bg-white/[0.06]">
+                  <span className="text-xs font-medium text-emerald-300">{item.category}</span>
+                  <h3 className="mt-2 text-sm font-semibold leading-snug text-white group-hover:text-emerald-300 transition line-clamp-3">
+                    {item.title}
+                  </h3>
+                  <span className="mt-3 inline-block text-xs text-slate-500">{item.readTime} citire</span>
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
 
         <div className="mt-16 rounded-2xl border border-emerald-400/20 p-6 text-center"
           style={{ background: "rgba(16,185,129,0.06)" }}>

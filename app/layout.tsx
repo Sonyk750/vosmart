@@ -86,6 +86,7 @@ export const metadata: Metadata = {
     icon: "/favicon.ico",
     apple: "/logo-vosmart.png",
   },
+  manifest: "/manifest.webmanifest",
 };
 
 const jsonLd = {
@@ -98,6 +99,14 @@ const jsonLd = {
       url: "https://www.vosmart.ro",
       telephone: "+40756362828",
       email: "office@vosmart.ro",
+      logo: {
+        "@type": "ImageObject",
+        url: "https://www.vosmart.ro/logo-vosmart.png",
+        width: 512,
+        height: 512,
+      },
+      image: "https://www.vosmart.ro/opengraph-image.png",
+      priceRange: "$$",
       address: {
         "@type": "PostalAddress",
         streetAddress: "Str. Constantin Dobrogeanu Gherea 89",
@@ -105,6 +114,18 @@ const jsonLd = {
         postalCode: "013711",
         addressCountry: "RO",
       },
+      areaServed: [
+        { "@type": "City", name: "București" },
+        { "@type": "AdministrativeArea", name: "Ilfov" },
+      ],
+      knowsAbout: [
+        "cenzorat asociații de proprietari",
+        "Legea 196/2018",
+        "control financiar-contabil",
+        "rapoarte de cenzor",
+        "fond de rulment",
+        "liste de întreținere",
+      ],
       openingHoursSpecification: {
         "@type": "OpeningHoursSpecification",
         dayOfWeek: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],

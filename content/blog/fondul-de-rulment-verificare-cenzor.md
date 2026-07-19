@@ -110,7 +110,7 @@ Nerespectarea regulilor privind fondul de rulment poate atrage sancțiuni semnif
 
 Tocmai de aceea, apelarea la servicii de cenzorat profesioniste reprezintă o garanție că aceste riscuri sunt identificate și gestionate preventiv, înainte să devină probleme costisitoare.
 
-Facturile pentru serviciile de cenzorat pot fi emise simplu și rapid prin [SpokInvoice](https://www.spokinvoice.ro), platforma de facturare online cu integrare e-Factura ANAF, disponibilă gratuit în primul an de utilizare.
+Facturile pentru serviciile de cenzorat pot fi emise simplu și rapid prin [SpokInvoice](https://www.spokinvoice.ro), platforma de facturare online cu integrare e-Factura ANAF, cu cont gratuit de testare, fără card.
 
 ## Intrebari frecvente
 

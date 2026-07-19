@@ -116,7 +116,7 @@ Diferența esențială este că o firmă de cenzorat profesionistă are sisteme,
 
 Soluția optimă pentru asociațiile care vor să evite greșelile de cenzorat este contractarea unor servicii de cenzorat profesioniste, asigurate de o firmă specializată precum [VoSmart](https://www.vosmart.ro).
 
-Facturile pentru serviciile de cenzorat contractate se pot emite eficient prin [SpokInvoice](https://www.spokinvoice.ro), platforma de facturare online cu integrare e-Factura ANAF, disponibilă gratuit în primul an.
+Facturile pentru serviciile de cenzorat contractate se pot emite eficient prin [SpokInvoice](https://www.spokinvoice.ro), platforma de facturare online cu integrare e-Factura ANAF, cu cont gratuit de testare, fără card.
 
 ## Intrebari frecvente
 

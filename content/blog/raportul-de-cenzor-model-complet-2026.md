@@ -100,7 +100,7 @@ Raportul se încheie cu concluzia generală (favorabilă / favorabilă cu rezerv
 
 ## Cum simplifică VoSmart întocmirea raportului de cenzor
 
-Întocmirea manuală a unui raport de cenzor complet poate dura ore sau chiar zile, mai ales în asociațiile mari cu sute de apartamente. **[VoSmart](https://vosmart.ro)** — prima aplicație de **cenzorat cu AI** din România — automatizează procesul:
+Întocmirea manuală a unui raport de cenzor complet poate dura ore sau chiar zile, mai ales în asociațiile mari cu sute de apartamente. **[VoSmart](https://www.vosmart.ro)** — prima aplicație de **cenzorat cu AI** din România — automatizează procesul:
 
 - **Verificare automată** a tuturor tranzacțiilor financiare
 - **Detectare instantă** a anomaliilor și inconsistențelor
@@ -133,6 +133,6 @@ Da. Legea permite angajarea unei **firme de cenzorat** care îndeplinește toate
 
 Dacă vrei să simplifici administrarea financiară a asociației tale, explorează **[SpokAdmin](https://spokapp.ro/spokadmin)** — aplicația inteligentă care ajută administratorii de bloc să țină evidențe clare și corecte, ușurând semnificativ munca cenzorului.
 
-Pentru facturarea serviciilor de cenzorat sau a altor servicii ale asociației, **[SpokInvoice](https://spokapp.ro/spokinvoice)** oferă facturare online cu integrare e-Factura ANAF — primul an gratuit.
+Pentru facturarea serviciilor de cenzorat sau a altor servicii ale asociației, **[SpokInvoice](https://spokapp.ro/spokinvoice)** oferă facturare online cu integrare e-Factura ANAF — cont gratuit de testare, fără card.
 
 Descoperă întregul ecosistem digital pentru asociații pe **[SpokApp](https://spokapp.ro)**.

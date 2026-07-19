@@ -110,7 +110,7 @@ Un cenzorat eficient presupune acces rapid la documentele asociatiei. Platformel
 - facturile incarcate in sistem;
 - situatia fondului de rulment si a celui de reparatii.
 
-**[SpokAdmin](https://spokadmin.ro)** este platforma de administrare care permite schimbul digital de documente intre administrator si cenzor, eliminand dosarele fizice si intarzierile. Impreuna cu **[SpokInvoice](https://www.spokinvoice.ro)** — pentru facturare online si e-Factura ANAF, disponibil gratuit in primul an — si cu **[SpokApp](https://spokapp.ro)** — ecosistemul de aplicatii inteligente —, aceste solutii formeaza un sistem integrat de management al asociatiei de proprietari.
+**[SpokAdmin](https://spokadmin.ro)** este platforma de administrare care permite schimbul digital de documente intre administrator si cenzor, eliminand dosarele fizice si intarzierile. Impreuna cu **[SpokInvoice](https://www.spokinvoice.ro)** — pentru facturare online si e-Factura ANAF, cu cont gratuit de testare, fără card — si cu **[SpokApp](https://spokapp.ro)** — ecosistemul de aplicatii inteligente —, aceste solutii formeaza un sistem integrat de management al asociatiei de proprietari.
 
 ---
 

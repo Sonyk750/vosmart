@@ -92,7 +92,7 @@ Dacă pe parcursul anului cenzorul a descoperit **nereguli grave** pe care comit
 
 ## Cum ajută VoSmart la pregătirea pentru adunarea generală
 
-Pregătirea pentru adunarea generală este una dintre cele mai consumatoare de timp etape din activitatea unui cenzor. **[VoSmart](https://vosmart.ro)** — aplicația de **cenzorat inteligent cu AI** — schimbă complet această ecuație:
+Pregătirea pentru adunarea generală este una dintre cele mai consumatoare de timp etape din activitatea unui cenzor. **[VoSmart](https://www.vosmart.ro)** — aplicația de **cenzorat inteligent cu AI** — schimbă complet această ecuație:
 
 ### Rapoarte generate automat
 
@@ -144,8 +144,8 @@ Da. Reprezentantul **firmei de cenzorat** participă la adunarea generală, prez
 
 ---
 
-O administrare transparentă, cu evidențe clare și corecte, este baza unui raport de cenzor solid prezentat în adunarea generală. **[SpokAdmin](https://spokapp.ro/spokadmin)** — aplicația inteligentă pentru firme de administrare și administratori de bloc — oferă toate instrumentele necesare pentru o evidență impecabilă.
+O administrare transparentă, cu evidențe clare și corecte, este baza unui raport de cenzor solid prezentat în adunarea generală. **[SpokAdmin](https://spokapp.ro/spokadmin)** — aplicația inteligentă pentru firme de administrare și administratori de bloc — oferă toate instrumentele necesare pentru o evidență impecabilă. Pentru asociațiile care caută o firmă de administrare (separată de cenzorat), **[DecoImob](https://decoimob.ro)** asigură administrarea imobilului în București și Ilfov, în timp ce VoSmart rămâne cenzorul independent.
 
-Firmele și persoanele care prestează servicii de cenzorat pot folosi **[SpokInvoice](https://spokapp.ro/spokinvoice)** pentru facturare online rapidă cu suport complet pentru e-Factura ANAF — primul an gratuit.
+Firmele și persoanele care prestează servicii de cenzorat pot folosi **[SpokInvoice](https://spokapp.ro/spokinvoice)** pentru facturare online rapidă cu suport complet pentru e-Factura ANAF — cont gratuit de testare, fără card.
 
 Toate soluțiile pentru o asociație modernă, transparentă și conformă legal — pe **[SpokApp](https://spokapp.ro)**.

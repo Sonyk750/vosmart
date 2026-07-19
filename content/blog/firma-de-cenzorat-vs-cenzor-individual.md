@@ -129,4 +129,4 @@ Ești firmă de cenzorat sau cenzor individual și vrei să oferi un serviciu mo
 
 ---
 
-*Asociațiile de proprietari au nevoie și de facturare corectă? **[SpokInvoice](https://www.spokinvoice.ro)** este programul de facturare online cu integrare e-Factura ANAF — primul an gratuit. Parte din ecosistemul **[SpokApp](https://www.spokapp.ro)**.*
+*Asociațiile de proprietari au nevoie și de facturare corectă? **[SpokInvoice](https://www.spokinvoice.ro)** este programul de facturare online cu integrare e-Factura ANAF — cont gratuit de testare, fără card. Parte din ecosistemul **[SpokApp](https://www.spokapp.ro)**.*

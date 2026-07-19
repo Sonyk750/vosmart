@@ -93,6 +93,8 @@ O soluție modernă completă pentru asociații de proprietari include:
 
 Când administratorul folosește SpokAdmin, datele sunt structurate și ușor de verificat de cenzor prin VoSmart. Cei doi lucrează pe aceeași platformă, eliminând erorile de comunicare.
 
+Dacă asociația vrea să externalizeze complet administrarea către o firmă specializată — activitate separată de cenzorat — **[DecoImob](https://decoimob.ro)** oferă administrare imobile în București și Ilfov, în timp ce VoSmart asigură cenzoratul independent al administratorului.
+
 ## Întrebări frecvente despre cenzorat asociații
 
 **Cât costă o firmă de cenzorat?**
@@ -116,4 +118,4 @@ Vrei să simplifici activitatea de cenzorat și să oferi asociațiilor tale un 
 
 ---
 
-*Ai nevoie și de un program de facturare pentru asociația ta? Încearcă **[SpokInvoice](https://www.spokinvoice.ro)** — facturare online cu e-Factura ANAF, primul an complet gratuit. Parte din ecosistemul **[SpokApp](https://www.spokapp.ro)**.*
+*Ai nevoie și de un program de facturare pentru asociația ta? Încearcă **[SpokInvoice](https://www.spokinvoice.ro)** — facturare online cu e-Factura ANAF, cont gratuit de testare, fără card. Parte din ecosistemul **[SpokApp](https://www.spokapp.ro)**.*
