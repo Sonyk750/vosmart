@@ -82,10 +82,6 @@ export const metadata: Metadata = {
     description: "Cenzorat profesional cu rapoarte online și portal client 24/7.",
     images: ["/opengraph-image.png"],
   },
-  icons: {
-    icon: "/favicon.ico",
-    apple: "/logo-vosmart.png",
-  },
   manifest: "/manifest.webmanifest",
 };
 
