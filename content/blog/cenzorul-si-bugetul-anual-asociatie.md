@@ -109,7 +109,7 @@ Citește și [greșelile frecvente în cenzoratul asociațiilor](/blog/greseli-f
 
 Această abordare elimină erorile de calcul manual și crește viteza de analiză, permițând cenzorului să se concentreze pe interpretarea datelor, nu pe culegerea lor.
 
-Facturile emise de asociație pot fi integrate cu platforme de facturare precum **[SpokInvoice](https://www.spokinvoice.ro)**, care simplifică procesul de verificare a documentelor justificative și asigură conformitatea cu cerințele ANAF.
+Facturile emise de asociație pot fi integrate cu platforme de facturare precum **SpokInvoice**, care simplifică procesul de verificare a documentelor justificative și asigură conformitatea cu cerințele ANAF.
 
 ---
 

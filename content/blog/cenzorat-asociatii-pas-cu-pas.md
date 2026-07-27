@@ -94,7 +94,7 @@ Serviciile de cenzorat moderne, precum [VoSmart](https://www.vosmart.ro), folose
 
 Dacă te interesează și modul în care este gestionată administrarea asociației la nivel digital, [SpokAdmin](https://spokadmin.ro) oferă o platformă completă pentru administratorii de bloc, care funcționează în paralel cu serviciile de cenzorat. Documentele încărcate de administrator sunt direct accesibile cenzorului, eliminând schimbul manual de fișiere.
 
-Pentru asociațiile care emit facturi sau gestionează plăți electronice, [SpokInvoice](https://www.spokinvoice.ro) oferă facturare online cu integrare e-Factura ANAF, cu cont gratuit de testare fără card. Toate aceste instrumente fac parte din ecosistemul [SpokApp](https://spokapp.ro), gândit special pentru asociațiile moderne din România.
+Pentru asociațiile care emit facturi sau gestionează plăți electronice, SpokInvoice oferă facturare online cu integrare e-Factura ANAF, cu cont gratuit de testare fără card. Toate aceste instrumente fac parte din ecosistemul [SpokApp](https://spokapp.ro), gândit special pentru asociațiile moderne din România.
 
 ## Cine Poate Presta Servicii de Cenzorat
 

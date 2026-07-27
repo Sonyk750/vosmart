@@ -99,7 +99,7 @@ Transparența financiară crește gradul de satisfacție al proprietarilor și r
 
 Platformele moderne de cenzorat bazate pe AI, precum cea oferită de **[VoSmart](https://www.vosmart.ro)**, reduc semnificativ timpul necesar verificărilor manuale. Algoritmii analizează automat listele de întreținere, compară facturile cu contractele și generează rapoarte structurate — ceea ce înseamnă mai puține ore facturate și mai multă valoare pentru asociație.
 
-Integrarea cu soluții de facturare precum **[SpokInvoice](https://www.spokinvoice.ro)** permite cenzorului să verifice facturile emise și plățile înregistrate direct în platformă, fără schimb de documente fizice.
+Integrarea cu soluții de facturare precum **SpokInvoice** permite cenzorului să verifice facturile emise și plățile înregistrate direct în platformă, fără schimb de documente fizice.
 
 Pentru asociațiile care doresc o digitalizare completă — de la administrare la cenzorat — ecosistemul **[SpokApp](https://spokapp.ro)** oferă soluții integrate care acoperă toate procesele.
 

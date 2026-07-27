@@ -133,6 +133,6 @@ Da. Legea permite angajarea unei **firme de cenzorat** care îndeplinește toate
 
 Dacă vrei să simplifici administrarea financiară a asociației tale, explorează **[SpokAdmin](https://spokapp.ro/spokadmin)** — aplicația inteligentă care ajută administratorii de bloc să țină evidențe clare și corecte, ușurând semnificativ munca cenzorului.
 
-Pentru facturarea serviciilor de cenzorat sau a altor servicii ale asociației, **[SpokInvoice](https://spokapp.ro/spokinvoice)** oferă facturare online cu integrare e-Factura ANAF — cont gratuit de testare, fără card.
+Pentru facturarea serviciilor de cenzorat sau a altor servicii ale asociației, **SpokInvoice** oferă facturare online cu integrare e-Factura ANAF — cont gratuit de testare, fără card.
 
-Descoperă întregul ecosistem digital pentru asociații pe **[SpokApp](https://spokapp.ro)**.
+Descoperă întregul ecosistem digital pentru asociații pe **SpokApp**.

@@ -92,7 +92,7 @@ Prețul serviciilor de cenzorat variază în funcție de:
 
 Atenție: o firmă de cenzorat care oferă prețuri semnificativ sub piață probabil oferă și un cenzorat superficial. Costul unui cenzorat necorespunzător poate fi mult mai mare dacă apar probleme financiare nedescoperite.
 
-Facturile pentru serviciile de cenzorat contractate se pot emite și gestiona eficient prin [SpokInvoice](https://www.spokinvoice.ro), cu integrare completă în sistemul e-Factura ANAF, cu cont gratuit de testare, fără card.
+Facturile pentru serviciile de cenzorat contractate se pot emite și gestiona eficient prin SpokInvoice, cu integrare completă în sistemul e-Factura ANAF, cu cont gratuit de testare, fără card.
 
 ## Red Flags: Semne că o Firmă de Cenzorat Nu Este Potrivită
 

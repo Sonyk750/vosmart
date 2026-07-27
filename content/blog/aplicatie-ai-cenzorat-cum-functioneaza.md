@@ -34,7 +34,7 @@ Spre deosebire de un cenzor uman care verifica manual sute de documente pe luna,
 Aplicatia se conecteaza la sistemele de administrare ale asociatiei — cum ar fi **[SpokAdmin](https://spokadmin.ro)** — si preia automat:
 - listele de intretinere lunare generate de administrator;
 - extrasele de cont bancar ale asociatiei;
-- facturile si documentele justificative importate din **[SpokInvoice](https://www.spokinvoice.ro)**;
+- facturile si documentele justificative importate din **SpokInvoice**;
 - registrele fondului de rulment si ale fondului de reparatii.
 
 ### Pasul 2: Validarea automata

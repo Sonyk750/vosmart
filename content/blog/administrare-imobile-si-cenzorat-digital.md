@@ -91,13 +91,13 @@ Acest flux elimină hârtia, reduce erorile și crește transparența la maximum
 
 ## Facturare electronică pentru asociații — e-Factura ANAF
 
-O altă componentă importantă a digitalizării este facturarea electronică. Furnizorii asociațiilor emit din ce în ce mai mult **e-Facturi ANAF** prin sistemul SPV. Firmele de administrare care folosesc **[SpokInvoice](https://spokapp.ro/spokinvoice)** pot:
+O altă componentă importantă a digitalizării este facturarea electronică. Furnizorii asociațiilor emit din ce în ce mai mult **e-Facturi ANAF** prin sistemul SPV. Firmele de administrare care folosesc **SpokInvoice** pot:
 
 - Descărca automat facturile electronice din SPV ANAF
 - Integra facturile în evidența asociației
 - Genera rapoarte pentru cenzor care includ toate facturile digitale
 
-**[SpokInvoice](https://spokapp.ro/spokinvoice)** este aplicația de facturare online care completează ecosistemul digital pentru asociații — alături de SpokAdmin și VoSmart.
+**SpokInvoice** este aplicația de facturare online care completează ecosistemul digital pentru asociații — alături de SpokAdmin și VoSmart.
 
 ## Legea 196/2018 și cerințele de transparență
 
@@ -112,7 +112,7 @@ Legea 196/2018 impune asociațiilor de proprietari să afișeze lunar listele de
 
 Costul digitalizării unei asociații de proprietari este semnificativ mai mic decât costul erorilor, conflictelor și amenzilor generate de gestionarea tradițională pe hârtie.
 
-**[SpokApp](https://spokapp.ro)** oferă pachete complete care includ SpokAdmin, SpokInvoice și VoSmart — prețuri adaptate pentru asociații de orice dimensiune.
+**SpokApp** oferă pachete complete care includ SpokAdmin, SpokInvoice și VoSmart — prețuri adaptate pentru asociații de orice dimensiune.
 
 ## Întrebări frecvente
 
@@ -130,8 +130,8 @@ O asociație obișnuită poate fi complet digitalizată în 1-2 săptămâni.
 
 ---
 
-Vrei să transformi asociația ta cu **administrare inteligentă** și **cenzorat digital**? Descoperă întregul ecosistem pe **[spokapp.ro](https://spokapp.ro)** sau contactează **[VoSmart](https://www.vosmart.ro)** pentru o demonstrație gratuită.
+Vrei să transformi asociația ta cu **administrare inteligentă** și **cenzorat digital**? Descoperă întregul ecosistem pe **spokapp.ro** sau contactează **[VoSmart](https://www.vosmart.ro)** pentru o demonstrație gratuită.
 
 Administrarea propriu-zisă a imobilului este un serviciu separat de cenzorat. Pentru administrare profesională în București și Ilfov, vezi **[DecoImob](https://decoimob.ro)** — firmă independentă de administrare imobile. VoSmart rămâne exclusiv firma de cenzorat care verifică independent activitatea administratorului.
 
-*Ai nevoie și de facturare pentru serviciile asociației? **[SpokInvoice](https://www.spokinvoice.ro)** face facturarea rapidă și trimite e-Factura automat în SPV ANAF — cont gratuit de testare, fără card.*
+*Ai nevoie și de facturare pentru serviciile asociației? **SpokInvoice** face facturarea rapidă și trimite e-Factura automat în SPV ANAF — cont gratuit de testare, fără card.*

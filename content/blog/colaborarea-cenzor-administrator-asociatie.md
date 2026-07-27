@@ -148,7 +148,7 @@ Toate aceste soluții fac parte din ecosistemul **[SpokApp](https://spokapp.ro)*
 
 - **VoSmart** — cenzorat cu AI
 - **SpokAdmin** — administrare asociații
-- **[SpokInvoice](https://www.spokinvoice.ro)** — facturare și e-Factura ANAF
+- **SpokInvoice** — facturare și e-Factura ANAF
 
 Facturarea electronică prin SpokInvoice permite și cenzorului să verifice facturile emise direct în format digital, cu validare ANAF inclusă.
 

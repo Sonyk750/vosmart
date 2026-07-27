@@ -146,7 +146,7 @@ Când cenzorul constată că anumite documente lipsesc sau sunt incomplete, proc
 3. Dacă remedierea nu se face în termen, notificarea comitetului executiv
 4. Dacă nici acesta nu acționează, sesizarea adunării generale
 
-Facturile pentru serviciile de cenzorat, indiferent de pachetul ales, pot fi emise electronic prin [SpokInvoice](https://www.spokinvoice.ro), cu integrare directă în sistemul e-Factura ANAF.
+Facturile pentru serviciile de cenzorat, indiferent de pachetul ales, pot fi emise electronic prin SpokInvoice, cu integrare directă în sistemul e-Factura ANAF.
 
 ## Intrebari frecvente
 

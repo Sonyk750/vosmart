@@ -81,7 +81,7 @@ Cenzorul analizeaza evolutia cheltuielilor fata de lunile anterioare si fata de 
 
 O **aplicatie AI de cenzorat** — cum este cea integrata in serviciile [VoSmart](https://www.vosmart.ro) — automatizeaza o mare parte din aceste verificari:
 
-1. **Importa automat datele** din sistemul de administrare, cum ar fi [SpokAdmin](https://spokadmin.ro), si din platforma de facturare [SpokInvoice](https://www.spokinvoice.ro);
+1. **Importa automat datele** din sistemul de administrare, cum ar fi [SpokAdmin](https://spokadmin.ro), si din platforma de facturare SpokInvoice;
 2. **Valideaza matematic** totalurile si subtotalurile in cateva secunde, fara risc de eroare umana;
 3. **Compara cheltuielile** cu media istorica a asociatiei si semnaleaza abaterile semnificative;
 4. **Genereaza un raport** cu toate punctele care necesita atentia cenzorului uman, ordonate dupa severitate.
@@ -117,7 +117,7 @@ O **firma de cenzorat** profesionista, care utilizeaza si instrumente AI, identi
 
 [VoSmart](https://www.vosmart.ro) combina expertiza juridica si economica a cenzorilor umani cu puterea de procesare a inteligentei artificiale. Rezultatul este un **cenzorat blocuri** mai rapid, mai precis si mai transparent pentru toti proprietarii.
 
-Prin integrarea cu [SpokAdmin](https://spokadmin.ro) si [SpokInvoice](https://www.spokinvoice.ro), cenzorul VoSmart are acces direct la documentele asociatiei in timp real, eliminand schimbul de dosare fizice si reducand timpul de verificare de la zile la ore. Toate solutiile fac parte din ecosistemul [SpokApp](https://spokapp.ro), proiectat pentru asociatiile de proprietari moderne.
+Prin integrarea cu SpokAdmin si SpokInvoice, cenzorul VoSmart are acces direct la documentele asociatiei in timp real, eliminand schimbul de dosare fizice si reducand timpul de verificare de la zile la ore. Toate solutiile fac parte din ecosistemul [SpokApp](https://spokapp.ro), proiectat pentru asociatiile de proprietari moderne.
 
 ---
 

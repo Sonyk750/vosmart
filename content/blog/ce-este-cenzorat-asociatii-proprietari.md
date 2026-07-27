@@ -89,7 +89,7 @@ O soluție modernă completă pentru asociații de proprietari include:
 
 - **[SpokAdmin](https://spokapp.ro/spokadmin)** — aplicație inteligentă de administrare pentru administrator: liste întreținere, incasări, rapoarte, notificări proprietari
 - **VoSmart** — aplicație AI cenzorat pentru verificarea independentă a conturilor
-- **[SpokApp](https://spokapp.ro)** — platforma care integrează toate serviciile pentru asociații moderne
+- **SpokApp** — platforma care integrează toate serviciile pentru asociații moderne
 
 Când administratorul folosește SpokAdmin, datele sunt structurate și ușor de verificat de cenzor prin VoSmart. Cei doi lucrează pe aceeași platformă, eliminând erorile de comunicare.
 
@@ -118,4 +118,4 @@ Vrei să simplifici activitatea de cenzorat și să oferi asociațiilor tale un 
 
 ---
 
-*Ai nevoie și de un program de facturare pentru asociația ta? Încearcă **[SpokInvoice](https://www.spokinvoice.ro)** — facturare online cu e-Factura ANAF, cont gratuit de testare, fără card. Parte din ecosistemul **[SpokApp](https://www.spokapp.ro)**.*
+*Ai nevoie și de un program de facturare pentru asociația ta? Încearcă **SpokInvoice** — facturare online cu e-Factura ANAF, cont gratuit de testare, fără card. Parte din ecosistemul **SpokApp**.*

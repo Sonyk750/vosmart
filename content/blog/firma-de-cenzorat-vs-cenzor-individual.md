@@ -96,7 +96,7 @@ VoSmart face parte dintr-un ecosistem digital complet pentru asociații de propr
 
 - **[SpokAdmin](https://spokapp.ro/spokadmin)** — aplicație inteligentă de administrare: liste întreținere, incasări, fond rulment, rapoarte pentru administrator
 - **[VoSmart](https://www.vosmart.ro)** — aplicație AI cenzorat: verificare conturi, rapoarte cenzor, portal proprietari
-- **[SpokApp](https://spokapp.ro)** — platforma care integrează administrare și cenzorat
+- **SpokApp** — platforma care integrează administrare și cenzorat
 
 Când administratorul folosește **SpokAdmin** și cenzorul folosește **VoSmart**, asociația beneficiază de **cenzorat inteligent** complet digital — fără hârtii, fără deplasări inutile, cu transparență totală pentru proprietari.
 
@@ -129,4 +129,4 @@ Ești firmă de cenzorat sau cenzor individual și vrei să oferi un serviciu mo
 
 ---
 
-*Asociațiile de proprietari au nevoie și de facturare corectă? **[SpokInvoice](https://www.spokinvoice.ro)** este programul de facturare online cu integrare e-Factura ANAF — cont gratuit de testare, fără card. Parte din ecosistemul **[SpokApp](https://www.spokapp.ro)**.*
+*Asociațiile de proprietari au nevoie și de facturare corectă? **SpokInvoice** este programul de facturare online cu integrare e-Factura ANAF — cont gratuit de testare, fără card. Parte din ecosistemul **SpokApp**.*

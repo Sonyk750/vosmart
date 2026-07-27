@@ -129,7 +129,7 @@ Raportul este prezentat comitetului executiv și, la cerere, proprietarilor inte
 
 Această abordare reduce timpul de verificare cu până la 60% față de metodele tradiționale și elimină riscul erorilor umane în procesele repetitive.
 
-Dacă asociația folosește și un sistem de facturare digital, integrarea cu **[SpokInvoice](https://www.spokinvoice.ro)** permite importul direct al facturilor în platforma de cenzorat, eliminând complet introducerea manuală a datelor.
+Dacă asociația folosește și un sistem de facturare digital, integrarea cu **SpokInvoice** permite importul direct al facturilor în platforma de cenzorat, eliminând complet introducerea manuală a datelor.
 
 ---
 

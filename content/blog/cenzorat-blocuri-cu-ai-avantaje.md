@@ -101,7 +101,7 @@ Un avantaj major al **cenzoratului digital** este posibilitatea de integrare cu 
 
 [SpokAdmin](https://spokadmin.ro) oferă administratorilor de bloc o platformă digitală completă pentru gestiunea asociației — de la încasarea cotelor de întreținere la gestionarea contractelor cu furnizorii. Integrată cu serviciile de cenzorat ale VoSmart, documentele ajung direct în sistemul de verificare în momentul în care sunt încărcate de administrator.
 
-Pentru facturare electronică și conformitate e-Factura ANAF — un aspect tot mai important pentru asociațiile care prestează servicii sau gestionează contracte — [SpokInvoice](https://www.spokinvoice.ro) oferă instrumente complete, cu cont gratuit de testare, fără card. Toate aceste platforme fac parte din ecosistemul [SpokApp](https://spokapp.ro), gândit pentru digitalizarea completă a asociațiilor de proprietari din România.
+Pentru facturare electronică și conformitate e-Factura ANAF — un aspect tot mai important pentru asociațiile care prestează servicii sau gestionează contracte — SpokInvoice oferă instrumente complete, cu cont gratuit de testare, fără card. Toate aceste platforme fac parte din ecosistemul [SpokApp](https://spokapp.ro), gândit pentru digitalizarea completă a asociațiilor de proprietari din România.
 
 ## De Ce AI Nu Va Înlocui Complet Cenzorul Uman
 
