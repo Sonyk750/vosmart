@@ -13,7 +13,7 @@ Cenzoratul asociațiilor de proprietari înseamnă, în esență, o verificare s
 
 **Definiție directă**: Cenzorul asociației de proprietari verifică toate documentele financiar-contabile, contractele cu furnizorii, hotărârile adunărilor generale, listele de întreținere și evidența fondurilor, pentru a confirma legalitatea și corectitudinea gestionării patrimoniului comun.
 
-O firmă de cenzorat blocuri profesionistă, cum este [VoSmart](https://www.vosmart.ro), organizează verificarea documentelor după un protocol structurat, care acoperă toate categoriile prevăzute de lege. Această abordare sistematică garantează că niciun document important nu este omis.
+O firmă de cenzorat blocuri profesionistă, cum este [VoSmart](https://www.vosmart.ro), organizează verificarea documentelor după un protocol structurat, care acoperă toate categoriile prevăzute de lege — practic, un [audit financiar-contabil](/audit-financiar-contabil) intern al asociației. Această abordare sistematică garantează că niciun document important nu este omis.
 
 ## Categoria 1: Documente Financiar-Contabile
 

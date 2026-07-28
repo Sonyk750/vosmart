@@ -15,7 +15,7 @@ Ambele variante sunt permise de **Legea 196/2018**, dar fiecare vine cu avantaje
 
 ## Ce este firma de cenzorat
 
-O **firmă de cenzorat** este o persoană juridică (SRL, SA) care prestează servicii de control financiar pentru asociații de proprietari, pe baza unui contract de prestări servicii.
+O **firmă de cenzorat** este o persoană juridică (SRL, SA) care prestează servicii de control financiar pentru asociații de proprietari, pe baza unui contract de prestări servicii. Ce înseamnă concret un astfel de contract — obligații, livrabile și mod de lucru — este detaliat pe pagina serviciului de [firmă de cenzorat](/firma-de-cenzorat).
 
 ### Avantajele firmei de cenzorat
 

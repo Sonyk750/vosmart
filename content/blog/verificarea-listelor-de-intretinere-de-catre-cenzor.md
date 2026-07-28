@@ -17,7 +17,7 @@ keywords: ["verificare liste intretinere", "cenzorat asociatii", "servicii cenzo
 
 ## De ce este esentiala verificarea listei de intretinere?
 
-Lista de intretinere afecteaza direct fiecare proprietar din bloc. O eroare de calcul sau de repartizare poate insemna:
+Lista de intretinere afecteaza direct fiecare proprietar din bloc si este piesa centrala a oricarui [cenzorat de blocuri](/cenzorat-blocuri). O eroare de calcul sau de repartizare poate insemna:
 - supraplata de catre unii proprietari si subplata de catre altii;
 - acumularea unor debite fictive sau a unor restante nejustificate;
 - conflicte intre proprietari si administrator sau consiliul de administratie;

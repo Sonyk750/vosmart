@@ -13,7 +13,7 @@ Fondul de rulment este una dintre cele mai importante resurse financiare ale une
 
 **Definiție directă**: Fondul de rulment al asociației de proprietari este o rezervă financiară colectivă, administrată de comitetul executiv și verificată periodic de cenzor sau firma de cenzorat, utilizată pentru plata anticipată a cheltuielilor curente de întreținere.
 
-Suma constituită ca fond de rulment se stabilește prin hotărârea adunării generale și trebuie să acopere cel puțin cheltuielile pe o lună. Verificarea corectă a acestui fond este una dintre obligațiile centrale ale serviciilor de cenzorat al asociațiilor de proprietari.
+Suma constituită ca fond de rulment se stabilește prin hotărârea adunării generale și trebuie să acopere cel puțin cheltuielile pe o lună. Verificarea corectă a acestui fond este una dintre obligațiile centrale ale serviciilor de cenzorat al asociațiilor de proprietari și intră în aria oricărui [audit financiar-contabil](/audit-financiar-contabil) serios.
 
 ## Obligațiile Cenzorului privind Fondul de Rulment
 

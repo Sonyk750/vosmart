@@ -12,7 +12,7 @@ keywords: ["cenzorat asociatii", "servicii cenzorat", "cenzorat trimestrial", "r
 
 **Cenzoratul trimestrial** reprezintă verificarea periodică, efectuată o dată la trei luni, a documentelor financiar-contabile ale asociației de proprietari. Această activitate este prevăzută explicit de **Legea nr. 196/2018** și constituie unul dintre pilonii principali ai supravegherii interne în asociațiile de proprietari din România.
 
-Spre deosebire de raportul anual — care oferă o imagine de ansamblu asupra întregului an — **raportul trimestrial de cenzorat** identifică problemele în timp real, permițând corectarea lor înainte să se transforme în pierderi semnificative sau în litigii.
+Spre deosebire de raportul anual — care oferă o imagine de ansamblu asupra întregului an — **raportul trimestrial de cenzorat** identifică problemele în timp real, permițând corectarea lor înainte să se transforme în pierderi semnificative sau în litigii. Din acest motiv, un [audit financiar-contabil](/audit-financiar-contabil) trimestrial prinde diferențele cât încă pot fi remediate.
 
 **Definiție clară**: Cenzoratul trimestrial este procesul prin care cenzorul sau firma de cenzorat verifică documentele financiare ale asociației pe o perioadă de trei luni calendaristice și prezintă concluziile într-un raport scris, pus la dispoziția comitetului executiv și a proprietarilor.
 

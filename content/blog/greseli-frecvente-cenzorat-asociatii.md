@@ -11,7 +11,7 @@ keywords: ["cenzorat asociatii proprietari", "servicii cenzorat", "firma de cenz
 
 Cenzoratul asociațiilor de proprietari este o activitate complexă, reglementată prin Legea 196/2018, care impune cenzorului sau firmei de cenzorat o cunoaștere aprofundată a legislației, a contabilității asociațiilor și a practicilor administrative specifice. Totuși, în practică, greșelile sunt frecvente — atât din cauza lipsei de pregătire a cenzorilor individuali, cât și din cauza volumului mare de muncă sau a lipsei unor instrumente digitale adecvate.
 
-**Concluzie directă**: Cele mai frecvente greșeli în cenzoratul asociațiilor de proprietari apar din cauza verificărilor incomplete, a necunoașterii legislației actualizate și a absenței unui sistem sistematic de control financiar.
+**Concluzie directă**: Cele mai frecvente greșeli în cenzoratul asociațiilor de proprietari apar din cauza verificărilor incomplete, a necunoașterii legislației actualizate și a absenței unui sistem sistematic de control financiar. Un [audit financiar-contabil](/audit-financiar-contabil) făcut după o procedură fixă elimină majoritatea situațiilor descrise mai jos.
 
 Această analiză prezintă cele 7 greșeli cel mai des întâlnite în practica cenzorilor și a firmelor de cenzorat blocuri din România, împreună cu soluțiile concrete pentru evitarea lor.
 

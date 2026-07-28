@@ -106,7 +106,7 @@ Evită firmele de cenzorat care:
 
 ## Avantajul Firmei de Cenzorat față de Cenzorul Individual
 
-Mulți proprietari preferă un cenzor individual, de obicei un vecin pensionar cu experiență contabilă, din considerente de cost și familiaritate. Realitatea arată însă că o firmă de cenzorat profesionistă oferă avantaje pe care un cenzor individual nu le poate replica:
+Mulți proprietari preferă un cenzor individual, de obicei un vecin pensionar cu experiență contabilă, din considerente de cost și familiaritate. Realitatea arată însă că o [firmă de cenzorat](/firma-de-cenzorat) profesionistă oferă avantaje pe care un cenzor individual nu le poate replica:
 
 - **Continuitate**: dacă cenzorul individual se îmbolnăvește sau pleacă în concediu, cenzoratul se oprește; o firmă asigură continuitate prin echipă
 - **Resurse și instrumente**: o firmă investește în softuri, baze de date legislative și proceduri; un cenzor individual lucrează manual

@@ -16,7 +16,7 @@ Dar ce înseamnă concret acest lucru pentru o asociație de proprietari? Și de
 
 ## Ce Este Cenzoratul Blocurilor și De Ce Contează Metoda
 
-Indiferent de metoda folosită, **cenzoratul asociațiilor** are același scop: verificarea legalității și corectitudinii tuturor operațiunilor financiare ale asociației, conform Legii 196/2018. Metoda — tradițională sau bazată pe AI — determină viteza, precizia și costul acestei verificări.
+Indiferent de metoda folosită, [cenzoratul blocurilor](/cenzorat-blocuri) are același scop: verificarea legalității și corectitudinii tuturor operațiunilor financiare ale asociației, conform Legii 196/2018. Metoda — tradițională sau bazată pe AI — determină viteza, precizia și costul acestei verificări.
 
 Volumul de documente dintr-o asociație medie de 50–100 de apartamente este considerabil:
 

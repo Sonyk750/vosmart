@@ -93,7 +93,7 @@ In cazul in care cenzorul individual nu isi indeplineste obligatiile, asociatia 
 
 ## Avantajele firmelor de cenzorat in respectarea obligatiilor legale
 
-O firma de cenzorat profesionista — cum este [VoSmart](https://www.vosmart.ro) — garanteaza:
+O firma de cenzorat profesionista — cum este [VoSmart](https://www.vosmart.ro), care presteaza [cenzorat blocuri](/cenzorat-blocuri) pentru asociatii cu una sau mai multe scari — garanteaza:
 - **acoperire completa** a tuturor obligatiilor legale, fara riscul de omisiuni;
 - **rapoarte standardizate**, redactate conform cerintelor Legii 196/2018;
 - **continuitate** in caz de boala, concediu sau alte situatii neprevazute ale unui cenzor individual;

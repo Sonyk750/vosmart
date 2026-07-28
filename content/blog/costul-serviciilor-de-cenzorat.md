@@ -66,6 +66,8 @@ Citește mai mult despre [documentele verificate de cenzor](/blog/documente-veri
 
 ## Firma de Cenzorat vs. Cenzor Individual — Comparație de Costuri
 
+Înainte de a compara sumele, merită înțeles ce intră în preț la fiecare variantă — livrabilele unui contract cu o [firmă de cenzorat](/firma-de-cenzorat) sunt stabilite în scris, spre deosebire de o înțelegere informală cu un vecin.
+
 | Criteriu | Cenzor individual | Firmă de cenzorat |
 |---|---|---|
 | Preț | Mai mic pe termen scurt | Mai stabil și predictibil |

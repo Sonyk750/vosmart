@@ -11,7 +11,7 @@ keywords: ["servicii cenzorat", "cenzorat asociatii", "firma de cenzorat", "cenz
 
 Serviciile de cenzorat reprezinta ansamblul activitatilor de control financiar-contabil si de legalitate desfasurate in cadrul asociatiilor de proprietari, conform Legii nr. 196/2018. Spre deosebire de administrarea imobilului — care include colectarea cotelor, gestionarea contractelor cu furnizorii sau intretinerea spatiilor comune —, cenzoratul este o functie de **supraveghere si verificare independenta**.
 
-Orice asociatie de proprietari din Romania are obligatia legala sa desemneze fie un cenzor individual, fie o **firma de cenzorat** autorizata. [VoSmart](https://www.vosmart.ro) este prima firma care ofera aceste servicii cu ajutorul inteligentei artificiale, accelerand si standardizand procesul de control.
+Orice asociatie de proprietari din Romania are obligatia legala sa desemneze fie un cenzor individual, fie o [firma de cenzorat](/firma-de-cenzorat) autorizata. [VoSmart](https://www.vosmart.ro) este prima firma care ofera aceste servicii cu ajutorul inteligentei artificiale, accelerand si standardizand procesul de control.
 
 ---
 
