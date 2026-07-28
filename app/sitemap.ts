@@ -2,7 +2,7 @@ import type { MetadataRoute } from "next"
 import { getAllPosts } from "@/lib/blog"
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const siteUpdatedAt = new Date("2026-07-18")
+  const siteUpdatedAt = new Date("2026-07-28")
   const posts = getAllPosts()
   const blogUrls = posts.map(post => ({
     url: `https://www.vosmart.ro/blog/${post.slug}`,
@@ -13,7 +13,10 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
   return [
     { url: "https://www.vosmart.ro", lastModified: siteUpdatedAt, changeFrequency: "weekly", priority: 1 },
+    { url: "https://www.vosmart.ro/firma-de-cenzorat", lastModified: siteUpdatedAt, changeFrequency: "monthly", priority: 0.9 },
     { url: "https://www.vosmart.ro/cenzorat-asociatii", lastModified: siteUpdatedAt, changeFrequency: "monthly", priority: 0.9 },
+    { url: "https://www.vosmart.ro/cenzorat-blocuri", lastModified: siteUpdatedAt, changeFrequency: "monthly", priority: 0.9 },
+    { url: "https://www.vosmart.ro/audit-financiar-contabil", lastModified: siteUpdatedAt, changeFrequency: "monthly", priority: 0.9 },
     { url: "https://www.vosmart.ro/platforma-ai-cenzorat", lastModified: siteUpdatedAt, changeFrequency: "monthly", priority: 0.9 },
     { url: "https://www.vosmart.ro/blog", lastModified: siteUpdatedAt, changeFrequency: "weekly", priority: 0.8 },
     { url: "https://www.vosmart.ro/corporate", lastModified: siteUpdatedAt, changeFrequency: "monthly", priority: 0.8 },

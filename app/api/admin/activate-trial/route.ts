@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
   }
 
   if (action === "get_link") {
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://vosmart.ro";
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://www.vosmart.ro";
     const token = createVerificationToken(user.corporateAccount.id);
     const link = `${appUrl}/api/corporate/verify?token=${encodeURIComponent(token)}`;
     return NextResponse.json({ success: true, link, status: user.status });

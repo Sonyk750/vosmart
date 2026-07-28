@@ -4,7 +4,7 @@ import Link from "next/link"
 const canonical = "https://www.vosmart.ro/platforma-ai-cenzorat"
 
 export const metadata: Metadata = {
-  title: "Platformă AI pentru firme de cenzorat și cenzori | VoSmart",
+  title: "Platformă AI pentru firme de cenzorat și cenzori",
   description:
     "VoSmart ajută firmele de cenzorat și cenzorii profesioniști să organizeze documentele, să analizeze datele cu AI și să pregătească rapoarte verificate uman.",
   alternates: { canonical },

@@ -27,7 +27,7 @@ function verifyToken(token: string): { corporateId: string; valid: boolean } {
 
 export async function GET(req: NextRequest) {
   const token = req.nextUrl.searchParams.get("token");
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://vosmart.ro";
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://www.vosmart.ro";
 
   if (!token) {
     return NextResponse.redirect(`${appUrl}/corporate/verify?status=invalid`);

@@ -557,7 +557,7 @@ export async function notifyApplicantCorporateActivated(data: { name: string; em
             Puteți accesa portalul corporate și puteți adăuga asociațiile dvs. cliente pentru a începe să emiteți rapoarte.
           </p>
           <div style="text-align:center;margin:32px 0">
-            <a href="https://vosmart.ro/corporate/login" style="display:inline-block;background:linear-gradient(135deg,#7c3aed,#6d28d9);color:#fff;text-decoration:none;padding:14px 32px;border-radius:10px;font-weight:600;font-size:15px">
+            <a href="https://www.vosmart.ro/corporate/login" style="display:inline-block;background:linear-gradient(135deg,#7c3aed,#6d28d9);color:#fff;text-decoration:none;padding:14px 32px;border-radius:10px;font-weight:600;font-size:15px">
               Accesează Portalul Corporate →
             </a>
           </div>

@@ -81,7 +81,7 @@ export async function POST(req: NextRequest) {
 
     if (isTrial) {
       const token = createVerificationToken(user.corporateAccount!.id);
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://vosmart.ro";
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://www.vosmart.ro";
       const verificationLink = `${appUrl}/api/corporate/verify?token=${encodeURIComponent(token)}`;
 
       const [verificationResult, adminResult] = await Promise.allSettled([
@@ -118,7 +118,7 @@ export async function POST(req: NextRequest) {
     // Paid plan: create a Stripe Checkout Session (hosted payment page) whose
     // URL we both redirect to AND email to the applicant as a "Finalizează
     // plata" button (valabil 24h).
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://vosmart.ro";
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://www.vosmart.ro";
     let checkoutUrl: string | null = null;
     if (!isCustomQuote) {
       try {

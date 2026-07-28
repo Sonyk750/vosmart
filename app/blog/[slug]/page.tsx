@@ -12,7 +12,9 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const post = await getPost(slug)
   if (!post) return {}
   return {
-    title: post.title,
+    // `absolute` evită sufixul „| VoSmart": titlurile de articol depășesc deja
+    // ~60 caractere, iar brandul ar fi oricum trunchiat în SERP.
+    title: { absolute: post.title },
     description: post.description,
     keywords: post.keywords,
     authors: [{ name: "VoSmart", url: "https://www.vosmart.ro" }],
@@ -150,7 +152,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
           <h3 className="text-xl font-bold mb-2">Încearcă VoSmart gratuit</h3>
           <p className="text-slate-400 text-sm mb-4">Cenzorat inteligent cu AI — rapoarte automate, detecție anomalii, portal proprietari.</p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Link href="https://www.vosmart.ro/corporate"
+            <Link href="/corporate"
               className="inline-flex rounded-xl px-6 py-3 text-sm font-semibold transition"
               style={{ background: "rgba(52,211,153,0.9)", color: "#000" }}>
               Începe gratuit →

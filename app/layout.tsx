@@ -27,8 +27,11 @@ export const metadata: Metadata = {
     "Servicii de cenzorat pentru asociații de proprietari din București, cu analiză asistată de AI, rapoarte online și verificări financiare clare.",
   keywords: [
     "firma de cenzorat",
+    "cenzorat asociatii",
     "cenzorat asociatii proprietari",
     "cenzorat blocuri",
+    "audit financiar contabil",
+    "audit financiar contabil asociatie proprietari",
     "cenzor asociatie proprietari",
     "servicii cenzorat bucuresti",
     "cenzorat asociatii de proprietari",
@@ -55,9 +58,6 @@ export const metadata: Metadata = {
       "max-image-preview": "large",
       "max-snippet": -1,
     },
-  },
-  alternates: {
-    canonical: "https://www.vosmart.ro",
   },
   openGraph: {
     type: "website",
@@ -116,6 +116,8 @@ const jsonLd = {
       ],
       knowsAbout: [
         "cenzorat asociații de proprietari",
+        "cenzorat blocuri",
+        "audit financiar-contabil",
         "Legea 196/2018",
         "control financiar-contabil",
         "rapoarte de cenzor",

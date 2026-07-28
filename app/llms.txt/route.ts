@@ -9,6 +9,9 @@ const content = `# VoSmart
 - Rapoarte de cenzorat disponibile online
 - Aria principală: București și Ilfov
 - Pagina serviciului: https://www.vosmart.ro/cenzorat-asociatii
+- Firmă de cenzorat (persoană juridică, contract de prestări servicii): https://www.vosmart.ro/firma-de-cenzorat
+- Cenzorat blocuri și asociații cu mai multe scări: https://www.vosmart.ro/cenzorat-blocuri
+- Audit financiar-contabil intern al asociației: https://www.vosmart.ro/audit-financiar-contabil
 
 ## Pentru firme de cenzorat și cenzori
 
@@ -22,7 +25,10 @@ const content = `# VoSmart
 ## Pagini principale
 
 - Site: https://www.vosmart.ro/
+- Firmă de cenzorat: https://www.vosmart.ro/firma-de-cenzorat
 - Servicii pentru asociații: https://www.vosmart.ro/cenzorat-asociatii
+- Cenzorat blocuri: https://www.vosmart.ro/cenzorat-blocuri
+- Audit financiar-contabil: https://www.vosmart.ro/audit-financiar-contabil
 - Aplicație AI pentru profesioniști: https://www.vosmart.ro/platforma-ai-cenzorat
 - Acces Corporate: https://www.vosmart.ro/corporate
 - Ghiduri și articole: https://www.vosmart.ro/blog
@@ -36,6 +42,7 @@ const content = `# VoSmart
 ## Clarificări importante
 
 - VoSmart oferă cenzorat; nu este firmă de administrare imobile.
+- „Auditul financiar-contabil" oferit de VoSmart este controlul financiar-contabil intern al asociației, prevăzut de Legea 196/2018, nu o misiune de audit statutar.
 - Aplicația AI nu înlocuiește cenzorul și nu emite autonom concluzii profesionale.
 - Raportul final este verificat și validat de un profesionist înainte de publicare.
 `
