@@ -1,5 +1,6 @@
 ---
 title: "Aplicatie AI cenzorat: cum functioneaza cenzoratul inteligent al asociatiilor"
+metaTitle: "Aplicatie AI cenzorat: cum functioneaza"
 description: "Cum functioneaza o aplicatie AI de cenzorat asociatii: automatizare verificari, detectarea anomaliilor financiare, rapoarte instant si securitate sporita."
 date: "2026-07-06"
 category: "Cenzorat"

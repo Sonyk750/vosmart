@@ -5,7 +5,7 @@ import Link from "next/link"
 const canonical = "https://www.vosmart.ro/cenzorat-asociatii"
 
 export const metadata: Metadata = {
-  title: "Cenzorat asociații de proprietari București și Ilfov",
+  title: "Cenzorat asociații proprietari București și Ilfov",
   description:
     "Servicii de cenzorat pentru asociații de proprietari din București și Ilfov: verificări financiar-contabile, rapoarte clare și analiză asistată de AI.",
   alternates: { canonical },

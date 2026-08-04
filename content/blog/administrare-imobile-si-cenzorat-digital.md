@@ -1,5 +1,6 @@
 ---
 title: "Administrare imobile și cenzorat digital: cum funcționează împreună în 2026"
+metaTitle: "Administrare imobile și cenzorat digital în 2026"
 description: "Ghid despre cum administrarea digitală a imobilelor și cenzorat inteligent cu AI transformă asociațiile de proprietari din România în 2026."
 date: "2026-06-15"
 category: "Cenzorat"

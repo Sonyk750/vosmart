@@ -1,5 +1,6 @@
 ---
 title: "Cât Costă Serviciile de Cenzorat? Ghid Complet de Prețuri 2026"
+metaTitle: "Cât costă serviciile de cenzorat? Prețuri 2026"
 description: "Cât costă serviciile de cenzorat pentru asociații de proprietari în 2026? Factori de preț, comparații și cum alegi cel mai bun raport calitate-preț."
 date: "2026-07-27"
 dateModified: "2026-07-27"

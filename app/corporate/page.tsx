@@ -2,6 +2,7 @@
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Image from "next/image";
+import Link from "next/link";
 import { useCuiAutofill } from "@/app/hooks/useCuiAutofill";
 
 const PACKAGES = [
@@ -48,11 +49,22 @@ const PACKAGES = [
   },
 ];
 
-function PackageFromQuery({ onPackage }: { onPackage: (pkg: string) => void }) {
+const isKnownPackage = (pkg: string) => PACKAGES.some(p => p.key === pkg) || pkg === "trial";
+
+// Pachetul vine din fragment (`#pachet-business`), nu din query string: fragmentul
+// nu creeaza URL-uri separate, deci nu genereaza copii duplicate ale paginii in index.
+// `?package=` ramane suportat doar pentru linkurile vechi deja trimise pe email.
+function PackageFromUrl({ onPackage }: { onPackage: (pkg: string) => void }) {
   const searchParams = useSearchParams();
   useEffect(() => {
-    const pkg = searchParams.get("package");
-    if (pkg && (PACKAGES.some(p => p.key === pkg) || pkg === "trial")) onPackage(pkg);
+    const apply = () => {
+      const fromHash = window.location.hash.replace(/^#pachet-/, "");
+      const pkg = window.location.hash.startsWith("#pachet-") ? fromHash : searchParams.get("package");
+      if (pkg && isKnownPackage(pkg)) onPackage(pkg);
+    };
+    apply();
+    window.addEventListener("hashchange", apply);
+    return () => window.removeEventListener("hashchange", apply);
   }, [searchParams, onPackage]);
   return null;
 }
@@ -149,7 +161,7 @@ export default function CorporatePage() {
   return (
     <main className="min-h-screen bg-[#050814] text-white">
       <Suspense fallback={null}>
-        <PackageFromQuery onPackage={setSelectedPackage} />
+        <PackageFromUrl onPackage={setSelectedPackage} />
       </Suspense>
       <div className="pointer-events-none fixed inset-0 -z-10">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,rgba(124,58,237,0.32),transparent_40%)]" />
@@ -304,7 +316,7 @@ export default function CorporatePage() {
                   <p className="text-xs text-slate-500 mb-3">Vrei un plan complet fără limitări trial?</p>
                   <div className="flex flex-wrap gap-2 justify-center">
                     {PACKAGES.map(p => (
-                      <a key={p.key} href={`/corporate?package=${p.key}`}
+                      <a key={p.key} href={`/corporate#pachet-${p.key}`}
                         className="text-xs rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-slate-300 hover:bg-white/10 transition">
                         {p.name} — {p.price} lei
                       </a>
@@ -439,6 +451,88 @@ export default function CorporatePage() {
               </div>
             </>
           )}
+        </div>
+      </section>
+
+      {/* Prezentare — conținut indexabil, în afara formularului */}
+      <section className="px-5 pb-16 sm:px-6">
+        <div className="mx-auto max-w-4xl space-y-10 text-slate-300">
+          <div>
+            <h2 className="text-2xl font-bold text-white mb-3">Ce este VoSmart Corporate</h2>
+            <p className="leading-relaxed">
+              VoSmart Corporate este platforma dedicată firmelor de cenzorat și cenzorilor care lucrează cu
+              mai multe asociații de proprietari în paralel. În locul dosarelor pe hârtie și al fișierelor
+              împrăștiate pe email, fiecare asociație primește un dosar digital propriu: documentele
+              financiar-contabile sunt încărcate într-un singur loc, analizate automat și transformate în
+              rapoarte pe care cenzorul le verifică și le semnează. Contul rămâne al firmei de cenzorat —
+              VoSmart nu se substituie cenzorului, ci îi scurtează munca repetitivă de verificare.
+            </p>
+          </div>
+
+          <div>
+            <h2 className="text-2xl font-bold text-white mb-3">Cum funcționează, pas cu pas</h2>
+            <ol className="space-y-3 leading-relaxed list-decimal pl-5 marker:text-violet-400">
+              <li>
+                <strong className="text-white">Creezi dosarul asociației.</strong> Datele firmei se
+                completează automat din CUI, iar fiecare asociație client primește un spațiu separat, cu
+                istoric propriu pe ani și trimestre.
+              </li>
+              <li>
+                <strong className="text-white">Încarci documentele.</strong> Liste de întreținere, extrase
+                de cont, registre de casă, facturi, chitanțe și balanțe — până la 30 de documente per dosar,
+                în funcție de pachet.
+              </li>
+              <li>
+                <strong className="text-white">AI-ul analizează și semnalează.</strong> Sistemul verifică
+                soldurile, corelează încasările cu plățile și marchează diferențele și documentele lipsă.
+                Vezi în detaliu{" "}
+                <Link href="/blog/cum-detecteaza-ai-anomaliile-financiare-asociatie" className="text-cyan-300 hover:underline">
+                  cum detectează AI anomaliile financiare
+                </Link>{" "}
+                dintr-o asociație.
+              </li>
+              <li>
+                <strong className="text-white">Cenzorul validează și emite raportul.</strong> Nicio concluzie
+                nu pleacă spre asociație fără verificare umană. Rezultatul este un{" "}
+                <Link href="/blog/raportul-de-cenzor-model-complet-2026" className="text-cyan-300 hover:underline">
+                  raport de cenzor conform Legii 196/2018
+                </Link>.
+              </li>
+              <li>
+                <strong className="text-white">Asociația primește acces în portal.</strong> Comitetul
+                executiv și proprietarii pot consulta rapoartele online, fără să mai ceară documente pe email.
+              </li>
+            </ol>
+          </div>
+
+          <div>
+            <h2 className="text-2xl font-bold text-white mb-3">Pentru cine este platforma</h2>
+            <p className="leading-relaxed">
+              Platforma este gândită pentru firmele de cenzorat care administrează portofolii de la câteva
+              asociații până la zeci de dosare lunar, dar și pentru cenzorii persoane fizice care vor să
+              treacă la un flux digital. Diferența dintre cele două forme de organizare — continuitate,
+              răspundere contractuală și capacitate de lucru — este explicată în articolul despre{" "}
+              <Link href="/blog/firma-de-cenzorat-vs-cenzor-individual" className="text-cyan-300 hover:underline">
+                firmă de cenzorat vs cenzor individual
+              </Link>. Dacă reprezinți o asociație care caută un cenzor, nu o firmă care oferă servicii, pagina
+              potrivită este{" "}
+              <Link href="/cenzorat-asociatii" className="text-cyan-300 hover:underline">
+                cenzorat asociații de proprietari
+              </Link>.
+            </p>
+          </div>
+
+          <div>
+            <h2 className="text-2xl font-bold text-white mb-3">Cum alegi pachetul</h2>
+            <p className="leading-relaxed">
+              Pachetele se diferențiază prin numărul de dosare procesate lunar, nu prin funcționalitățile de
+              analiză: verificarea asistată de AI și generarea rapoartelor sunt incluse la toate nivelurile.
+              Starter acoperă până la 10 dosare pe lună, Business 25, Professional 50, iar Enterprise
+              portofoliile mai mari, cu manager de cont și acces API. Trialul gratuit permite testarea
+              fluxului complet pe un dosar real, fără card și fără angajament. Dacă volumul crește, pachetul
+              se poate schimba oricând.
+            </p>
+          </div>
         </div>
       </section>
 

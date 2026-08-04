@@ -1,5 +1,6 @@
 ---
 title: "Procesul-Verbal al Cenzorului: Conținut, Model și Cerințe Legale"
+metaTitle: "Procesul-verbal al cenzorului: model și cerințe"
 description: "Ce trebuie să conțină procesul-verbal al cenzorului asociației de proprietari? Structură completă, cerințe legale și cele mai frecvente greșeli."
 date: "2026-07-20"
 dateModified: "2026-07-20"
@@ -7,8 +8,6 @@ category: "Cenzorat"
 readTime: "7 min"
 keywords: ["proces verbal cenzor", "servicii cenzorat", "firma de cenzorat", "raport cenzor asociatie", "cenzorat asociatii", "model proces verbal cenzor"]
 ---
-
-# Procesul-Verbal al Cenzorului: Conținut, Model și Cerințe Legale
 
 Procesul-verbal al cenzorului este documentul oficial prin care se consemnează rezultatele verificărilor efectuate de cenzor sau de **firma de cenzorat** a asociației de proprietari. Deși Legea 196/2018 prevede obligația întocmirii rapoartelor de cenzorat, multe asociații nu știu exact ce trebuie să conțină aceste documente și care sunt consecințele unui proces-verbal incomplet sau necorespunzător.
 

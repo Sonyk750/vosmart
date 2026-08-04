@@ -1,5 +1,6 @@
 ---
 title: "Fondul de Rulment al Asociației: Ce Verifică Cenzorul și Cum Funcționează Controlul"
+metaTitle: "Fondul de rulment: ce verifică cenzorul asociației"
 description: "Cum verifică cenzorul fondul de rulment al asociației de proprietari, ce documente analizează și ce obligații impune Legea 196/2018 în 2026."
 date: "2026-07-13"
 category: "Cenzorat"

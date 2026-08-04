@@ -5,7 +5,7 @@ import Link from "next/link"
 const canonical = "https://www.vosmart.ro/cenzorat-blocuri"
 
 export const metadata: Metadata = {
-  title: "Cenzorat blocuri — control financiar pentru asociațiile de bloc",
+  title: "Cenzorat blocuri — control financiar asociații",
   description:
     "Cenzorat blocuri pentru asociațiile de proprietari: verificarea listelor de întreținere, a fondurilor și a cheltuielilor pe scări, cu raport de cenzor online.",
   keywords: [

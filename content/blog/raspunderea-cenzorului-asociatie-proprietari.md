@@ -1,5 +1,6 @@
 ---
 title: "Răspunderea Juridică a Cenzorului în Asociația de Proprietari"
+metaTitle: "Răspunderea juridică a cenzorului în asociație"
 description: "Ce răspundere are cenzorul asociației de proprietari conform legii? Obligații, sancțiuni și cum o firmă de cenzorat reduce riscurile juridice."
 date: "2026-07-20"
 dateModified: "2026-07-20"
@@ -7,8 +8,6 @@ category: "Cenzorat"
 readTime: "7 min"
 keywords: ["raspunderea cenzorului", "firma de cenzorat", "cenzorat asociatii", "obligatii cenzor lege 196", "servicii cenzorat", "cenzor asociatie proprietari"]
 ---
-
-# Răspunderea Juridică a Cenzorului în Asociația de Proprietari
 
 Cenzorul asociației de proprietari nu este un simplu observator — este o funcție cu responsabilitate juridică concretă, reglementată explicit de Legea nr. 196/2018. Înțelegerea răspunderii cenzorului este esențială atât pentru cei care ocupă această funcție, cât și pentru proprietarii care vor să știe dacă interesele lor financiare sunt protejate.
 

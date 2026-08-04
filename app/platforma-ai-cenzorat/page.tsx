@@ -104,7 +104,7 @@ export default function PlatformaAiCenzoratPage() {
             VoSmart organizează documentele, asistă verificarea financiar-contabilă și pregătește schița raportului. Cenzorul analizează, corectează și aprobă rezultatul final.
           </p>
           <div className="mt-9 flex flex-col gap-3 sm:flex-row">
-            <Link href="/corporate?package=trial" className="rounded-full bg-cyan-300 px-6 py-3 text-center font-bold text-slate-950 transition hover:bg-cyan-200">Testează platforma</Link>
+            <Link href="/corporate#pachet-trial" className="rounded-full bg-cyan-300 px-6 py-3 text-center font-bold text-slate-950 transition hover:bg-cyan-200">Testează platforma</Link>
             <Link href="#cum-functioneaza" className="rounded-full border border-white/15 px-6 py-3 text-center font-semibold text-white transition hover:border-violet-300/60">Vezi fluxul de lucru</Link>
           </div>
           <p className="mt-5 text-sm text-slate-400">AI-ul asistă profesionistul. Nu emite autonom concluzii și nu înlocuiește cenzorul.</p>
@@ -168,7 +168,7 @@ export default function PlatformaAiCenzoratPage() {
             <p className="text-sm font-bold uppercase tracking-[.2em] text-cyan-300">Ești firmă de cenzorat?</p>
             <h2 className="mt-4 text-3xl font-black">Digitalizează-ți activitatea cu VoSmart AI.</h2>
             <p className="mt-4 leading-7 text-slate-300">Testează fluxul pentru o asociație și vezi cum se integrează în modul tău de lucru.</p>
-            <Link href="/corporate?package=trial" className="mt-7 inline-flex rounded-full bg-cyan-300 px-6 py-3 font-bold text-slate-950">Pornește testarea</Link>
+            <Link href="/corporate#pachet-trial" className="mt-7 inline-flex rounded-full bg-cyan-300 px-6 py-3 font-bold text-slate-950">Pornește testarea</Link>
           </article>
           <article className="rounded-[2rem] border border-violet-300/20 bg-violet-400/[.07] p-8 sm:p-10">
             <p className="text-sm font-bold uppercase tracking-[.2em] text-violet-300">Reprezinți o asociație?</p>

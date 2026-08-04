@@ -1,5 +1,6 @@
 ---
 title: "Cum detectează AI anomaliile financiare într-o asociație de proprietari"
+metaTitle: "Cum detectează AI anomaliile financiare din asociație"
 description: "Descoperă cum inteligența artificială identifică fraude, erori și nereguli financiare în asociațiile de proprietari prin aplicația VoSmart."
 date: "2026-06-29"
 category: "Cenzorat"

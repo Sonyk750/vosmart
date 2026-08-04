@@ -1,5 +1,6 @@
 ---
 title: "Cenzorat Trimestrial în Asociații: Ce Se Verifică la Fiecare 3 Luni"
+metaTitle: "Cenzorat trimestrial: ce se verifică la 3 luni"
 description: "Ghid complet despre cenzorat trimestrial în asociații de proprietari: ce documente se verifică, ce conține raportul și cum îți protejează asociația."
 date: "2026-07-27"
 dateModified: "2026-07-27"

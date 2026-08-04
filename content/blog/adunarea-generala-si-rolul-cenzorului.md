@@ -1,5 +1,6 @@
 ---
 title: "Adunarea generală a asociației de proprietari și rolul cenzorului în 2026"
+metaTitle: "Adunarea generală și rolul cenzorului în asociație"
 description: "Ghid complet despre adunarea generală a asociației de proprietari: convocare, ordine de zi, cvorum și raportul obligatoriu al cenzorului conform Legii 196/2018."
 date: "2026-06-29"
 category: "Cenzorat"

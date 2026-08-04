@@ -1,5 +1,6 @@
 ---
 title: "Cum Verifică Cenzorul Bugetul Anual al Asociației de Proprietari"
+metaTitle: "Cum verifică cenzorul bugetul anual al asociației"
 description: "Rolul cenzorului în verificarea bugetului anual al asociației de proprietari: ce analizează, ce raportează și cum protejează interesele locatarilor."
 date: "2026-07-27"
 dateModified: "2026-07-27"

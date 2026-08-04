@@ -9,6 +9,11 @@ const postsDir = path.join(process.cwd(), "content/blog")
 export interface PostMeta {
   slug: string
   title: string
+  /**
+   * Titlul din `<title>`, cand titlul editorial depaseste ~60 de caractere si ar fi
+   * trunchiat in SERP. H1-ul din pagina ramane `title`, complet.
+   */
+  metaTitle?: string
   description: string
   date: string
   dateModified?: string

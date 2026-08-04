@@ -1,5 +1,6 @@
 ---
 title: "7 Greșeli Frecvente în Cenzoratul Asociațiilor de Proprietari și Cum Le Eviți"
+metaTitle: "7 greșeli frecvente în cenzoratul asociațiilor"
 description: "Cele mai comune greșeli în cenzoratul asociațiilor de proprietari din România, consecințele lor legale și cum le previi cu servicii profesioniste de cenzorat."
 date: "2026-07-13"
 category: "Cenzorat"

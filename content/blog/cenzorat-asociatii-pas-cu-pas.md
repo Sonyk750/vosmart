@@ -1,5 +1,6 @@
 ---
 title: "Cenzorat Asociații Pas cu Pas: Ghidul Complet al Procesului de Audit"
+metaTitle: "Cenzorat asociații pas cu pas: ghid complet"
 description: "Cum funcționează cenzoratul asociațiilor de proprietari pas cu pas — verificări lunare, trimestriale și anuale, documente și obligații legale."
 date: "2026-07-20"
 dateModified: "2026-07-20"
@@ -7,8 +8,6 @@ category: "Cenzorat"
 readTime: "8 min"
 keywords: ["cenzorat asociatii", "servicii cenzorat", "firma de cenzorat", "audit asociatie proprietari", "cenzorat pas cu pas", "obligatii cenzor"]
 ---
-
-# Cenzorat Asociații Pas cu Pas: Ghidul Complet al Procesului de Audit
 
 Cenzoratul asociațiilor de proprietari este un proces structurat, reglementat de Legea nr. 196/2018, prin care se verifică legalitatea și corectitudinea tuturor operațiunilor financiar-contabile ale asociației. Înțelegerea pașilor concreți ai acestui proces ajută atât proprietarii, cât și administratorii să știe la ce să se aștepte atunci când apelează la **servicii de cenzorat** profesionale.
 

@@ -354,7 +354,7 @@ export default function HomeClient() {
             </div>
 
             {/* Trial card */}
-            <a href="/corporate?package=trial"
+            <a href="/corporate#pachet-trial"
               className="block mb-6 rounded-[2rem] border border-amber-500/25 bg-amber-500/5 p-6 md:p-8 transition hover:-translate-y-1 hover:border-amber-500/40 hover:bg-amber-500/10 hover:shadow-[0_0_50px_rgba(245,158,11,0.15)]">
               <div className="flex flex-col md:flex-row md:items-center gap-6">
                 <div className="flex-1">
@@ -414,7 +414,7 @@ export default function HomeClient() {
                       </li>
                     ))}
                   </ul>
-                  <a href={`/corporate?package=${pkg.key}`}
+                  <a href={`/corporate#pachet-${pkg.key}`}
                     className={`inline-flex w-full justify-center rounded-xl px-6 py-3.5 font-semibold transition
                       ${pkg.color==="emerald"
                         ? "bg-emerald-600 hover:bg-emerald-500 shadow-[0_0_20px_rgba(52,211,153,0.3)]"

@@ -5,9 +5,9 @@ import Link from "next/link"
 const canonical = "https://www.vosmart.ro/audit-financiar-contabil"
 
 export const metadata: Metadata = {
-  title: "Audit financiar-contabil pentru asociații de proprietari",
+  title: "Audit financiar-contabil asociații de proprietari",
   description:
-    "Audit financiar-contabil intern al asociației de proprietari: verificarea gestiunii, a fondurilor, a soldurilor și a documentelor justificative, cu raport de cenzor.",
+    "Audit financiar-contabil intern al asociației de proprietari: verificarea gestiunii, a fondurilor, a soldurilor și a documentelor, cu raport de cenzor.",
   keywords: [
     "audit financiar contabil",
     "audit financiar contabil asociatie de proprietari",

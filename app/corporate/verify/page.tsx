@@ -27,7 +27,7 @@ function VerifyContent() {
       title: "Link expirat",
       text: "Linkul de activare a expirat (valabil 48 de ore). Vă rugăm să vă înregistrați din nou sau să contactați echipa VoSmart.",
       color: "amber",
-      action: { href: "/corporate?package=trial", label: "Înregistrare nouă →" },
+      action: { href: "/corporate#pachet-trial", label: "Înregistrare nouă →" },
     },
     invalid: {
       icon: "❌",

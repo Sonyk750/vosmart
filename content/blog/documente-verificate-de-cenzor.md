@@ -1,5 +1,6 @@
 ---
 title: "Ce Documente Verifică Cenzorul într-o Asociație de Proprietari: Lista Completă 2026"
+metaTitle: "Ce documente verifică cenzorul: lista completă 2026"
 description: "Lista completă a documentelor pe care cenzorul sau firma de cenzorat le verifică într-o asociație de proprietari, conform Legii 196/2018, actualizată 2026."
 date: "2026-07-13"
 category: "Cenzorat"

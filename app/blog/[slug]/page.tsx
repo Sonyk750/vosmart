@@ -12,9 +12,9 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const post = await getPost(slug)
   if (!post) return {}
   return {
-    // `absolute` evită sufixul „| VoSmart": titlurile de articol depășesc deja
-    // ~60 caractere, iar brandul ar fi oricum trunchiat în SERP.
-    title: { absolute: post.title },
+    // `absolute` evită sufixul „| VoSmart", care ar împinge titlul peste limita de
+    // afișare din SERP. `metaTitle` scurtează titlurile editoriale lungi.
+    title: { absolute: post.metaTitle || post.title },
     description: post.description,
     keywords: post.keywords,
     authors: [{ name: "VoSmart", url: "https://www.vosmart.ro" }],

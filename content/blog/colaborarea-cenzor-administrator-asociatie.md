@@ -1,5 +1,6 @@
 ---
 title: "Cum Colaborează Cenzorul cu Administratorul Asociației de Proprietari"
+metaTitle: "Cenzorul și administratorul asociației: cum colaborează"
 description: "Relația dintre cenzor și administrator în asociația de proprietari: roluri distincte, obligații legale, conflicte de interese și bune practici de colaborare."
 date: "2026-07-27"
 dateModified: "2026-07-27"

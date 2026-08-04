@@ -8,7 +8,7 @@ export const metadata: Metadata = {
     absolute: "Firmă de Cenzorat Asociații de Proprietari | VoSmart",
   },
   description:
-    "Firmă de cenzorat pentru asociații de proprietari și blocuri: audit financiar-contabil, verificarea listelor de întreținere și rapoarte de cenzor online, conform Legii 196/2018.",
+    "Firmă de cenzorat pentru asociații de proprietari și blocuri: audit financiar-contabil, verificarea listelor de întreținere și rapoarte de cenzor online.",
   alternates: { canonical },
   openGraph: {
     type: "website",

@@ -7,7 +7,7 @@ const canonical = "https://www.vosmart.ro/firma-de-cenzorat"
 export const metadata: Metadata = {
   title: "Firmă de cenzorat pentru asociații de proprietari",
   description:
-    "Firmă de cenzorat autorizată pentru asociații de proprietari: verificare financiar-contabilă, rapoarte de cenzor conforme Legii 196/2018 și analiză asistată de AI.",
+    "Firmă de cenzorat pentru asociații de proprietari: verificare financiar-contabilă și rapoarte de cenzor conforme Legii 196/2018, cu analiză asistată de AI.",
   keywords: [
     "firma de cenzorat",
     "firma cenzorat bucuresti",

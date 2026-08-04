@@ -335,14 +335,13 @@ export default function HelpPage() {
                   </span>
                 </div>
 
-                {/* Expandable content */}
-                {isOpen && (
-                  <div className="px-5 pb-5 pt-1 border-t border-white/5">
-                    <div className="text-sm leading-relaxed pl-12">
-                      {renderContent(step.content)}
-                    </div>
+                {/* Conținutul e mereu în DOM și doar ascuns vizual: randarea condiționată
+                    lăsa 7 din 8 pași în afara HTML-ului, iar pagina apărea goală crawlerelor. */}
+                <div className={isOpen ? "px-5 pb-5 pt-1 border-t border-white/5" : "hidden"} hidden={!isOpen}>
+                  <div className="text-sm leading-relaxed pl-12">
+                    {renderContent(step.content)}
                   </div>
-                )}
+                </div>
               </div>
             );
           })}
