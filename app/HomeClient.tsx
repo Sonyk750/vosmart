@@ -248,6 +248,22 @@ export default function HomeClient() {
                   <span key={b} className="rounded-full border border-white/10 bg-white/[0.04] px-4 py-1.5 text-sm text-slate-300">{b}</span>
                 ))}
               </div>
+
+              {/* Preț per apartament — primul lucru pe care îl caută o asociație */}
+              <a href="#pachete" className="mt-8 block rounded-2xl border border-cyan-500/25 bg-gradient-to-r from-cyan-500/10 to-violet-500/10 p-5 transition hover:border-cyan-400/40 hover:from-cyan-500/15 hover:to-violet-500/15">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300">Preț pentru asociații de proprietari</p>
+                <div className="mt-3 flex flex-wrap items-end gap-x-8 gap-y-3">
+                  <div>
+                    <p className="text-3xl font-bold text-white">4,5 <span className="text-base font-semibold text-slate-400">lei / ap / lună</span></p>
+                    <p className="mt-1 text-sm text-cyan-300">VoSmart Smart</p>
+                  </div>
+                  <div>
+                    <p className="text-3xl font-bold text-white">5,7 <span className="text-base font-semibold text-slate-400">lei / ap / lună</span></p>
+                    <p className="mt-1 text-sm text-violet-300">VoSmart Premium</p>
+                  </div>
+                </div>
+                <p className="mt-3 text-sm text-slate-400">Preț fix per apartament, fără taxe ascunse. Vezi detaliile pachetelor →</p>
+              </a>
               <div className="mt-8 flex flex-col gap-4 sm:flex-row">
                 <a href="#contact" className="group relative overflow-hidden rounded-xl bg-violet-600 px-7 py-4 text-center font-semibold shadow-[0_0_35px_rgba(124,58,237,0.5)] transition hover:shadow-[0_0_50px_rgba(124,58,237,0.7)]">
                   <span className="relative z-10">Solicită ofertă →</span>
@@ -339,7 +355,76 @@ export default function HomeClient() {
           </div>
         </section>
 
-        {/* CORPORATE - înainte de pachete, carduri mai mari */}
+        {/* PACHETE */}
+        <section id="pachete" className="px-5 py-24 sm:px-6">
+          <div className="mx-auto max-w-7xl">
+            <div className="mx-auto mb-16 max-w-3xl text-center">
+              <p className="mb-3 text-sm font-semibold uppercase tracking-[0.25em] text-cyan-400">Servicii de cenzorat la alt nivel</p>
+              <h2 className="text-3xl font-bold md:text-5xl">Alege modul de verificare potrivit</h2>
+              <p className="mt-5 text-slate-400">VoSmart combină tehnologia digitală cu validarea specialistului, pentru rapoarte rapide, clare și disponibile online.</p>
+            </div>
+            <div className="grid gap-8 lg:grid-cols-2">
+              {/* Smart */}
+              <div className="rounded-[2rem] border border-cyan-500/20 bg-gradient-to-br from-cyan-500/8 to-transparent p-8 shadow-[0_0_60px_rgba(6,182,212,0.10)] transition hover:shadow-[0_0_80px_rgba(6,182,212,0.18)]">
+                <div className="mb-6 inline-flex rounded-full border border-cyan-500/30 bg-cyan-500/10 px-4 py-2 text-sm text-cyan-300">VoSmart Smart</div>
+                <h3 className="text-3xl font-bold">Verificare asistată digital</h3>
+                <p className="mt-4 text-slate-300">Documentele sunt încărcate online, analizate digital, iar raportul preliminar este verificat și validat înainte de publicarea finală.</p>
+                <div className="mt-8 grid gap-4 sm:grid-cols-2">
+                  <div className="rounded-2xl border border-cyan-500/30 bg-cyan-500/10 p-5">
+                    <p className="text-sm text-cyan-300">Preț per apartament</p>
+                    <p className="mt-2 text-3xl font-bold">4,5 <span className="text-lg font-semibold text-slate-300">lei</span></p>
+                    <p className="mt-2 text-sm text-slate-400">/ apartament / lună</p>
+                  </div>
+                  <div className="rounded-2xl border border-white/10 bg-black/20 p-5">
+                    <p className="text-sm text-cyan-300">Timp estimativ</p>
+                    <p className="mt-2 text-3xl font-bold">30 – 60 min</p>
+                    <p className="mt-2 text-sm text-slate-400">de la încărcarea documentelor</p>
+                  </div>
+                </div>
+                <ul className="mt-8 space-y-4 text-slate-300">
+                  {["Upload documente online","Analiză asistată digital","Generare draft raport","Verificare finală de specialist","Publicare raport în portal","Potrivit pentru verificări lunare"].map((item)=>(
+                    <li key={item} className="flex gap-3"><span className="text-cyan-300 mt-0.5">✓</span><span>{item}</span></li>
+                  ))}
+                </ul>
+                <button onClick={() => downloadOferta('smart')} className="mt-8 inline-flex w-full justify-center items-center gap-2 rounded-xl bg-cyan-500 px-6 py-3.5 font-semibold text-black transition hover:bg-cyan-400 shadow-[0_0_25px_rgba(6,182,212,0.35)] cursor-pointer">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                  Descarcă oferta Smart PDF
+                </button>
+              </div>
+              {/* Premium */}
+              <div className="relative rounded-[2rem] border border-violet-500/30 bg-gradient-to-br from-violet-500/10 to-transparent p-8 shadow-[0_0_80px_rgba(124,58,237,0.18)] transition hover:shadow-[0_0_100px_rgba(124,58,237,0.28)]">
+                <div className="pointer-events-none absolute -top-px left-1/4 h-[1px] w-1/2" style={{background:"linear-gradient(90deg,transparent,rgba(124,58,237,0.8),transparent)"}}/>
+                <div className="absolute right-6 top-6 rounded-full bg-gradient-to-r from-violet-600 to-violet-500 px-4 py-2 text-xs font-semibold shadow-[0_0_20px_rgba(124,58,237,0.5)]">Recomandat</div>
+                <div className="mb-6 inline-flex rounded-full border border-violet-500/30 bg-violet-500/10 px-4 py-2 text-sm text-violet-300">VoSmart Premium</div>
+                <h3 className="text-3xl font-bold">Cenzorat profesional complet</h3>
+                <p className="mt-4 text-slate-300">Include verificare aprofundată, observații personalizate, raport oficial și asistență dedicată pentru asociația de proprietari.</p>
+                <div className="mt-8 grid gap-4 sm:grid-cols-2">
+                  <div className="rounded-2xl border border-violet-500/30 bg-violet-500/10 p-5">
+                    <p className="text-sm text-violet-300">Preț per apartament</p>
+                    <p className="mt-2 text-3xl font-bold">5,7 <span className="text-lg font-semibold text-slate-300">lei</span></p>
+                    <p className="mt-2 text-sm text-slate-400">/ apartament / lună</p>
+                  </div>
+                  <div className="rounded-2xl border border-white/10 bg-black/20 p-5">
+                    <p className="text-sm text-violet-300">Nivel verificare</p>
+                    <p className="mt-2 text-3xl font-bold">Expert</p>
+                    <p className="mt-2 text-sm text-slate-400">pentru rapoarte lunare, anuale sau AG</p>
+                  </div>
+                </div>
+                <ul className="mt-8 space-y-4 text-slate-300">
+                  {["Tot ce include pachetul Smart","Verificare aprofundată de cenzor uman","Observații și recomandări personalizate","Rapoarte lunare, anuale sau AG","Prioritate la procesare","Asistență dedicată pentru asociație"].map((item)=>(
+                    <li key={item} className="flex gap-3"><span className="text-violet-300 mt-0.5">✓</span><span>{item}</span></li>
+                  ))}
+                </ul>
+                <button onClick={() => downloadOferta('premium')} className="mt-8 inline-flex w-full justify-center items-center gap-2 rounded-xl bg-violet-600 px-6 py-3.5 font-semibold transition hover:bg-violet-500 shadow-[0_0_30px_rgba(124,58,237,0.45)] cursor-pointer">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                  Descarcă oferta Premium PDF
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* CORPORATE - după pachetele pentru asociații, carduri mai mari */}
         <section id="corporate" className="px-5 py-24 sm:px-6">
           <div className="mx-auto max-w-7xl">
             <div className="mx-auto mb-14 max-w-3xl text-center">
@@ -431,61 +516,6 @@ export default function HomeClient() {
                 Accesează portalul corporate →
               </a>
               <p className="mt-3 text-xs text-slate-500">Acces disponibil după activarea contului. <a href="#contact" className="text-emerald-400 hover:text-emerald-300">Contactează-ne</a> pentru înregistrare.</p>
-            </div>
-          </div>
-        </section>
-
-        {/* PACHETE */}
-        <section id="pachete" className="px-5 py-24 sm:px-6">
-          <div className="mx-auto max-w-7xl">
-            <div className="mx-auto mb-16 max-w-3xl text-center">
-              <p className="mb-3 text-sm font-semibold uppercase tracking-[0.25em] text-cyan-400">Servicii de cenzorat la alt nivel</p>
-              <h2 className="text-3xl font-bold md:text-5xl">Alege modul de verificare potrivit</h2>
-              <p className="mt-5 text-slate-400">VoSmart combină tehnologia digitală cu validarea specialistului, pentru rapoarte rapide, clare și disponibile online.</p>
-            </div>
-            <div className="grid gap-8 lg:grid-cols-2">
-              {/* Smart */}
-              <div className="rounded-[2rem] border border-cyan-500/20 bg-gradient-to-br from-cyan-500/8 to-transparent p-8 shadow-[0_0_60px_rgba(6,182,212,0.10)] transition hover:shadow-[0_0_80px_rgba(6,182,212,0.18)]">
-                <div className="mb-6 inline-flex rounded-full border border-cyan-500/30 bg-cyan-500/10 px-4 py-2 text-sm text-cyan-300">VoSmart Smart</div>
-                <h3 className="text-3xl font-bold">Verificare asistată digital</h3>
-                <p className="mt-4 text-slate-300">Documentele sunt încărcate online, analizate digital, iar raportul preliminar este verificat și validat înainte de publicarea finală.</p>
-                <div className="mt-8 rounded-2xl border border-white/10 bg-black/20 p-5">
-                  <p className="text-sm text-cyan-300">Timp estimativ</p>
-                  <p className="mt-2 text-3xl font-bold">30 – 60 min</p>
-                  <p className="mt-2 text-sm text-slate-400">de la încărcarea documentelor</p>
-                </div>
-                <ul className="mt-8 space-y-4 text-slate-300">
-                  {["Upload documente online","Analiză asistată digital","Generare draft raport","Verificare finală de specialist","Publicare raport în portal","Potrivit pentru verificări lunare"].map((item)=>(
-                    <li key={item} className="flex gap-3"><span className="text-cyan-300 mt-0.5">✓</span><span>{item}</span></li>
-                  ))}
-                </ul>
-                <button onClick={() => downloadOferta('smart')} className="mt-8 inline-flex w-full justify-center items-center gap-2 rounded-xl bg-cyan-500 px-6 py-3.5 font-semibold text-black transition hover:bg-cyan-400 shadow-[0_0_25px_rgba(6,182,212,0.35)] cursor-pointer">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                  Descarcă oferta Smart PDF
-                </button>
-              </div>
-              {/* Premium */}
-              <div className="relative rounded-[2rem] border border-violet-500/30 bg-gradient-to-br from-violet-500/10 to-transparent p-8 shadow-[0_0_80px_rgba(124,58,237,0.18)] transition hover:shadow-[0_0_100px_rgba(124,58,237,0.28)]">
-                <div className="pointer-events-none absolute -top-px left-1/4 h-[1px] w-1/2" style={{background:"linear-gradient(90deg,transparent,rgba(124,58,237,0.8),transparent)"}}/>
-                <div className="absolute right-6 top-6 rounded-full bg-gradient-to-r from-violet-600 to-violet-500 px-4 py-2 text-xs font-semibold shadow-[0_0_20px_rgba(124,58,237,0.5)]">Recomandat</div>
-                <div className="mb-6 inline-flex rounded-full border border-violet-500/30 bg-violet-500/10 px-4 py-2 text-sm text-violet-300">VoSmart Premium</div>
-                <h3 className="text-3xl font-bold">Cenzorat profesional complet</h3>
-                <p className="mt-4 text-slate-300">Include verificare aprofundată, observații personalizate, raport oficial și asistență dedicată pentru asociația de proprietari.</p>
-                <div className="mt-8 rounded-2xl border border-white/10 bg-black/20 p-5">
-                  <p className="text-sm text-violet-300">Nivel verificare</p>
-                  <p className="mt-2 text-3xl font-bold">Expert</p>
-                  <p className="mt-2 text-sm text-slate-400">pentru rapoarte lunare, anuale sau adunări generale</p>
-                </div>
-                <ul className="mt-8 space-y-4 text-slate-300">
-                  {["Tot ce include pachetul Smart","Verificare aprofundată de cenzor uman","Observații și recomandări personalizate","Rapoarte lunare, anuale sau AG","Prioritate la procesare","Asistență dedicată pentru asociație"].map((item)=>(
-                    <li key={item} className="flex gap-3"><span className="text-violet-300 mt-0.5">✓</span><span>{item}</span></li>
-                  ))}
-                </ul>
-                <button onClick={() => downloadOferta('premium')} className="mt-8 inline-flex w-full justify-center items-center gap-2 rounded-xl bg-violet-600 px-6 py-3.5 font-semibold transition hover:bg-violet-500 shadow-[0_0_30px_rgba(124,58,237,0.45)] cursor-pointer">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                  Descarcă oferta Premium PDF
-                </button>
-              </div>
             </div>
           </div>
         </section>

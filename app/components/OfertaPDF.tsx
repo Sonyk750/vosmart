@@ -13,6 +13,12 @@ Font.register({
 
 type Plan = 'smart' | 'premium';
 
+// Pragurile din tabelul de estimare. Costurile se calculează din `price`, ca să nu
+// mai poată rămâne în urmă față de prețul afișat la o schimbare de tarif.
+const AP_TIERS = [50, 100, 150, 200, 300];
+const estimare = (price: number) =>
+  AP_TIERS.map(ap => ({ ap, luna: ap * price, an: ap * price * 12 }));
+
 const PLANS = {
   smart: {
     name: 'VoSmart Smart',
@@ -21,8 +27,8 @@ const PLANS = {
     colorLight: '#ECFEFF',
     colorMid: '#A5F3FC',
     badge: 'PACHET SMART',
-    price: 3.3,
-    priceDisplay: '3,3 RON',
+    price: 4.5,
+    priceDisplay: '4,5 RON',
     timeline: '30 – 60 min',
     timelineSub: 'de la încărcarea documentelor',
     features: [
@@ -37,13 +43,7 @@ const PLANS = {
     ],
     highlight:
       'Soluția ideală pentru asociații care doresc digitalizare rapidă, rapoarte lunare de calitate și costuri minime.',
-    tableRows: [
-      { ap: 50, luna: 165, an: 1980 },
-      { ap: 100, luna: 330, an: 3960 },
-      { ap: 150, luna: 495, an: 5940 },
-      { ap: 200, luna: 660, an: 7920 },
-      { ap: 300, luna: 990, an: 11880 },
-    ],
+    tableRows: estimare(4.5),
   },
   premium: {
     name: 'VoSmart Premium',
@@ -52,8 +52,8 @@ const PLANS = {
     colorLight: '#F5F3FF',
     colorMid: '#C4B5FD',
     badge: 'PACHET PREMIUM - RECOMANDAT',
-    price: 4.7,
-    priceDisplay: '4,7 RON',
+    price: 5.7,
+    priceDisplay: '5,7 RON',
     timeline: 'Expert',
     timelineSub: 'pentru rapoarte lunare, anuale sau adunări generale',
     features: [
@@ -68,13 +68,7 @@ const PLANS = {
     ],
     highlight:
       'Ales de asociațiile cu nevoi complexe sau care doresc un cenzor dedicat și implicare activă.',
-    tableRows: [
-      { ap: 50, luna: 235, an: 2820 },
-      { ap: 100, luna: 470, an: 5640 },
-      { ap: 150, luna: 705, an: 8460 },
-      { ap: 200, luna: 940, an: 11280 },
-      { ap: 300, luna: 1410, an: 16920 },
-    ],
+    tableRows: estimare(5.7),
   },
 };
 
