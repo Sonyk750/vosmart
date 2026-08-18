@@ -1,5 +1,7 @@
 import type { Metadata } from "next"
 import Link from "next/link"
+import { Ecosistem } from "@/app/components/Ecosistem";
+import { OG_IMAGE_ENTRY } from "@/lib/seo"
 
 const canonical = "https://www.vosmart.ro/platforma-ai-cenzorat"
 
@@ -15,6 +17,7 @@ export const metadata: Metadata = {
     url: canonical,
     type: "website",
     locale: "ro_RO",
+    images: [OG_IMAGE_ENTRY],
   },
 }
 
@@ -56,7 +59,7 @@ export default function PlatformaAiCenzoratPage() {
         "@type": "BusinessAudience",
         audienceType: "Firme de cenzorat și cenzori profesioniști",
       },
-      provider: { "@type": "Organization", name: "VoSmart", url: "https://www.vosmart.ro" },
+      provider: { "@id": "https://www.vosmart.ro/#organization" },
     },
     {
       "@context": "https://schema.org",
@@ -192,6 +195,18 @@ export default function PlatformaAiCenzoratPage() {
           </div>
         </div>
       </section>
+      <footer className="border-t border-white/10 px-5 py-10 text-sm text-slate-400 sm:px-6">
+        <Ecosistem className="mx-auto mb-6 max-w-7xl" />
+        <div className="mx-auto flex max-w-7xl flex-col justify-between gap-5 sm:flex-row">
+          <p>© 2026 VoSmart · Platformă AI pentru firme de cenzorat.</p>
+          <div className="flex flex-wrap gap-5">
+            <Link href="/" className="transition hover:text-white">Acasă</Link>
+            <Link href="/cenzorat-asociatii" className="transition hover:text-white">Cenzorat asociații</Link>
+            <Link href="/blog" className="transition hover:text-white">Blog</Link>
+            <Link href="/corporate" className="transition hover:text-white">Corporate</Link>
+          </div>
+        </div>
+      </footer>
     </main>
   )
 }

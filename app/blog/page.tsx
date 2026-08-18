@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import { OG_IMAGE_ENTRY } from "@/lib/seo"
 import Link from "next/link"
 import { Ecosistem } from "@/app/components/Ecosistem";
 import { getAllPosts } from "@/lib/blog"
@@ -7,6 +8,13 @@ export const metadata: Metadata = {
   title: "Blog despre cenzorat, legislație și digitalizare",
   description: "Ghiduri despre cenzoratul asociațiilor de proprietari, verificări financiar-contabile, legislație, rapoarte și analiză asistată de AI.",
   alternates: { canonical: "https://www.vosmart.ro/blog" },
+  openGraph: {
+    title: "Blog despre cenzorat, legislație și digitalizare | VoSmart",
+    description: "Ghiduri despre cenzoratul asociațiilor de proprietari, verificări financiar-contabile, legislație, rapoarte și analiză asistată de AI.",
+    url: "https://www.vosmart.ro/blog",
+    type: "website",
+    images: [OG_IMAGE_ENTRY],
+  },
 }
 
 const categoryBg: Record<string, string> = {

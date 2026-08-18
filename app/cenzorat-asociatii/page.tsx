@@ -17,7 +17,7 @@ export const metadata: Metadata = {
     title: "Cenzorat pentru asociații de proprietari | VoSmart",
     description:
       "Verificări financiar-contabile, raportare online și analiză asistată de AI, cu validare umană.",
-    images: [{ url: "/opengraph-image.png", width: 1200, height: 630, alt: "VoSmart — cenzorat asociații de proprietari" }],
+    images: [{ url: "/opengraph-image", width: 1200, height: 630, alt: "VoSmart — cenzorat asociații de proprietari" }],
   },
 }
 

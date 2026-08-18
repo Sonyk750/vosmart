@@ -4,7 +4,15 @@ import Image from "next/image";
 import Link from "next/link";
 import { Ecosistem } from "@/app/components/Ecosistem";
 import SplashScreen from "@/app/components/SplashScreen";
-import { downloadOferta } from "@/app/components/OfertaPDF";
+
+/**
+ * @react-pdf/renderer e o dependenta grea si intra in first-load JS al paginii
+ * principale doar pentru butonul de descarcare a ofertei. O incarcam la click.
+ */
+async function downloadOferta(plan: "smart" | "premium") {
+  const { downloadOferta: genereaza } = await import("@/app/components/OfertaPDF");
+  return genereaza(plan);
+}
 
 function ContactForm() {
   const [form, setForm] = useState({ nume: "", email: "", telefon: "", mesaj: "" })

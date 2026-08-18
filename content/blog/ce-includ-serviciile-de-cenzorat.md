@@ -3,6 +3,7 @@ title: "Ce includ serviciile de cenzorat pentru asociatiile de proprietari"
 metaTitle: "Ce includ serviciile de cenzorat asociatii"
 description: "Descopera ce cuprind serviciile de cenzorat: verificare documente, rapoarte, control financiar si consultanta legala pentru asociatii de proprietari."
 date: "2026-07-06"
+dateModified: "2026-07-06"
 category: "Cenzorat"
 readTime: "7 min"
 keywords: ["servicii cenzorat", "cenzorat asociatii", "firma de cenzorat", "cenzorat blocuri", "cenzor asociatie proprietari"]

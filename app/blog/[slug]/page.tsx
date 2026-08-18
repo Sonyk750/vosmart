@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import { OG_IMAGE_ENTRY } from "@/lib/seo"
 import Link from "next/link"
 import { Ecosistem } from "@/app/components/Ecosistem";
 import { notFound } from "next/navigation"
@@ -27,6 +28,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
       type: "article",
       publishedTime: post.date,
       modifiedTime: post.dateModified || post.date,
+      images: [OG_IMAGE_ENTRY],
     },
   }
 }
@@ -52,7 +54,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
         "@id": `${url}#article`,
         headline: post.title,
         description: post.description,
-        image: "https://www.vosmart.ro/opengraph-image.png",
+        image: "https://www.vosmart.ro/opengraph-image",
         datePublished: post.date,
         dateModified: post.dateModified || post.date,
         inLanguage: "ro-RO",

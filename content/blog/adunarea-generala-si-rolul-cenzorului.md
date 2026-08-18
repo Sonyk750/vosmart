@@ -3,6 +3,7 @@ title: "Adunarea generală a asociației de proprietari și rolul cenzorului în
 metaTitle: "Adunarea generală și rolul cenzorului în asociație"
 description: "Ghid complet despre adunarea generală a asociației de proprietari: convocare, ordine de zi, cvorum și raportul obligatoriu al cenzorului conform Legii 196/2018."
 date: "2026-06-29"
+dateModified: "2026-06-29"
 category: "Cenzorat"
 readTime: "8 min"
 keywords: ["adunarea generala asociatie proprietari", "raport cenzor adunare generala", "cenzorat asociatii", "firma de cenzorat", "Legea 196/2018", "cenzorat blocuri", "cenzorat inteligent"]

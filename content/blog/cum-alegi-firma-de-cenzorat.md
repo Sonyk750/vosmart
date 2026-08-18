@@ -3,6 +3,7 @@ title: "Cum Alegi Firma de Cenzorat Potrivită pentru Asociația Ta de Proprieta
 metaTitle: "Cum alegi firma de cenzorat pentru asociația ta"
 description: "Cum alegi firma de cenzorat pentru asociația ta: criterii de verificare, întrebări de pus înainte de contract și semnale care arată o ofertă slabă."
 date: "2026-07-13"
+dateModified: "2026-07-13"
 category: "Cenzorat"
 readTime: "7 min"
 keywords: ["firma de cenzorat", "servicii cenzorat asociatii", "cenzorat asociatii proprietari", "cenzorat blocuri", "aplicatie AI cenzorat", "cum alegi cenzor", "cenzorat profesionist"]

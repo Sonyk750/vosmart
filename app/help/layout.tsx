@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import { OG_IMAGE_ENTRY } from "@/lib/seo"
 
 export const metadata: Metadata = {
   title: "Ajutor platformă și servicii de cenzorat",
@@ -10,6 +11,7 @@ export const metadata: Metadata = {
     description:
       "Răspunsuri și ghiduri despre platforma VoSmart, analiza asistată de AI și serviciile de cenzorat.",
     url: "/help",
+    images: [OG_IMAGE_ENTRY],
   },
 }
 

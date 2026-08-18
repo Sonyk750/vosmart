@@ -3,6 +3,7 @@ title: "Raportul de cenzor model complet 2026: ce trebuie să conțină și cum 
 metaTitle: "Raport de cenzor model complet 2026: ce conține"
 description: "Ghid complet despre raportul de cenzor pentru asociații de proprietari în 2026: structura legală, conținut obligatoriu și model conform Legii 196/2018."
 date: "2026-06-29"
+dateModified: "2026-06-29"
 category: "Cenzorat"
 readTime: "8 min"
 keywords: ["raport cenzor", "raport cenzorat", "firma de cenzorat", "cenzorat asociatii", "Legea 196/2018", "cenzorat blocuri", "aplicatie AI cenzorat"]

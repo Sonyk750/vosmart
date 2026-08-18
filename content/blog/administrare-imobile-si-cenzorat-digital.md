@@ -3,6 +3,7 @@ title: "Administrare imobile și cenzorat digital: cum funcționează împreună
 metaTitle: "Administrare imobile și cenzorat digital în 2026"
 description: "Ghid despre cum administrarea digitală a imobilelor și cenzorat inteligent cu AI transformă asociațiile de proprietari din România în 2026."
 date: "2026-06-15"
+dateModified: "2026-06-15"
 category: "Cenzorat"
 readTime: "9 min"
 keywords: ["administrare imobile digital", "cenzorat inteligent", "aplicatie AI cenzorat", "firma de administrare", "cenzorat blocuri", "cenzorat asociatii", "SpokAdmin", "VoSmart"]

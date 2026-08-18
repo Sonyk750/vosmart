@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import Image from "next/image"
 import Link from "next/link"
+import { Ecosistem } from "@/app/components/Ecosistem";
 
 const canonical = "https://www.vosmart.ro/cenzorat-blocuri"
 
@@ -24,7 +25,7 @@ export const metadata: Metadata = {
     title: "Cenzorat blocuri pentru asociații de proprietari | VoSmart",
     description:
       "Verificăm întreținerea, fondurile și cheltuielile pe scări, inclusiv pentru asociațiile cu mai multe blocuri.",
-    images: [{ url: "/opengraph-image.png", width: 1200, height: 630, alt: "VoSmart — cenzorat blocuri" }],
+    images: [{ url: "/opengraph-image", width: 1200, height: 630, alt: "VoSmart — cenzorat blocuri" }],
   },
 }
 
@@ -258,6 +259,7 @@ export default function CenzoratBlocuriPage() {
       </section>
 
       <footer className="border-t border-white/10 px-5 py-10 text-sm text-slate-400 sm:px-6">
+        <Ecosistem className="mx-auto mb-6 max-w-7xl" />
         <div className="mx-auto flex max-w-7xl flex-col justify-between gap-5 sm:flex-row">
           <p>© 2026 VoSmart · Cenzorat blocuri și asociații de proprietari.</p>
           <div className="flex flex-wrap gap-5">

@@ -10,6 +10,10 @@ const aiCrawlers = [
   "ClaudeBot",
   "Google-Extended",
   "PerplexityBot",
+  "Applebot-Extended",
+  "Meta-ExternalAgent",
+  "Bytespider",
+  "cohere-ai",
 ]
 
 const disallow = [

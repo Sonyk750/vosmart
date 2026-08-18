@@ -70,7 +70,7 @@ export const metadata: Metadata = {
       "Servicii profesionale de cenzorat asociații de proprietari cu rapoarte online, portal client 24/7 și verificări conforme legii.",
     images: [
       {
-        url: "/opengraph-image.png",
+        url: "/opengraph-image",
         width: 1200,
         height: 630,
         alt: "VoSmart — Cenzorat Asociații Proprietari",
@@ -81,7 +81,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "VoSmart — Firmă de Cenzorat Asociații Proprietari",
     description: "Cenzorat profesional cu rapoarte online și portal client 24/7.",
-    images: ["/opengraph-image.png"],
+    images: ["/opengraph-image"],
   },
   manifest: "/manifest.webmanifest",
 };
@@ -102,7 +102,7 @@ const jsonLd = {
         width: 512,
         height: 512,
       },
-      image: "https://www.vosmart.ro/opengraph-image.png",
+      image: "https://www.vosmart.ro/opengraph-image",
       priceRange: "$$",
       address: {
         "@type": "PostalAddress",

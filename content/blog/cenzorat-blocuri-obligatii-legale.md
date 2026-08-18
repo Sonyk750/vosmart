@@ -3,6 +3,7 @@ title: "Cenzorat blocuri: obligatiile legale pe care trebuie sa le stii in 2026"
 metaTitle: "Cenzorat blocuri: obligațiile legale în 2026"
 description: "Toate obligatiile legale privind cenzoratul blocurilor conform Legii 196/2018: ce verifica cenzorul, termene, sanctiuni si avantajele unei firme de cenzorat."
 date: "2026-07-06"
+dateModified: "2026-07-06"
 category: "Cenzorat"
 readTime: "8 min"
 keywords: ["cenzorat blocuri", "cenzorat asociatii", "obligatii cenzor", "Legea 196 2018", "servicii cenzorat", "firma de cenzorat"]

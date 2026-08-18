@@ -1,4 +1,6 @@
-const content = `# VoSmart
+import { getAllPosts } from "@/lib/blog"
+
+const HEADER = `# VoSmart
 
 > VoSmart oferă servicii profesionale de cenzorat pentru asociații de proprietari și o platformă AI distinctă pentru firme de cenzorat și cenzori profesioniști.
 
@@ -34,6 +36,10 @@ const content = `# VoSmart
 - Ghiduri și articole: https://www.vosmart.ro/blog
 - Ajutor: https://www.vosmart.ro/help
 
+## Ghiduri și articole
+`
+
+const FOOTER = `
 ## Contact
 
 - E-mail: office@vosmart.ro
@@ -57,8 +63,20 @@ Cenzoratul (VoSmart) este independent de administrare: cenzorul verifică admini
 - Raportul final este verificat și validat de un profesionist înainte de publicare.
 `
 
+// Continutul se schimba doar la deploy, deci se poate prerenda: fara invocare
+// de functie la fiecare cerere.
+export const dynamic = "force-static"
+
 export function GET() {
-  return new Response(content, {
+  // Articolele sunt cel mai citabil continut al site-ului: un model care citeste
+  // llms.txt trebuie sa le vada, nu doar linkul catre /blog.
+  const articole = getAllPosts()
+    .map(post => `- [${post.title}](https://www.vosmart.ro/blog/${post.slug}) — ${post.description}`)
+    .join("\n")
+
+  return new Response(`${HEADER}
+${articole}
+${FOOTER}`, {
     headers: {
       "Content-Type": "text/plain; charset=utf-8",
       "Cache-Control": "public, max-age=3600, s-maxage=86400",

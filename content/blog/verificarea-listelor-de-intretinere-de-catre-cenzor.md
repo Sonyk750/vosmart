@@ -3,6 +3,7 @@ title: "Verificarea listelor de intretinere de catre cenzor: ghid complet 2026"
 metaTitle: "Verificarea listelor de întreținere de către cenzor"
 description: "Ghid complet: ce verifica cenzorul in lista de intretinere, cum detecteaza erorile, termene legale si rolul AI in cenzoratul asociatiilor de proprietari."
 date: "2026-07-06"
+dateModified: "2026-07-06"
 category: "Cenzorat"
 readTime: "8 min"
 keywords: ["verificare liste intretinere", "cenzorat asociatii", "servicii cenzorat", "cenzor asociatie proprietari", "cenzorat blocuri", "firma de cenzorat"]

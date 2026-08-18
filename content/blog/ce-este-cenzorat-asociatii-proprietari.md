@@ -3,6 +3,7 @@ title: "Ce este cenzorat asociații proprietari și cum funcționează în 2026"
 metaTitle: "Ce este cenzorat asociații proprietari"
 description: "Ghid complet despre cenzorat asociații proprietari: rolul cenzorului, obligații legale, diferența față de firma de cenzorat și soluții digitale moderne."
 date: "2026-06-21"
+dateModified: "2026-06-21"
 category: "Cenzorat"
 readTime: "8 min"
 keywords: ["cenzorat asociatii proprietari", "firma de cenzorat", "cenzor bloc", "cenzorat blocuri", "Legea 196/2018", "aplicatie AI cenzorat", "cenzorat inteligent"]

@@ -3,6 +3,7 @@ title: "Firmă de cenzorat vs cenzor individual: ce alegi pentru asociația ta"
 metaTitle: "Firmă de cenzorat vs cenzor individual: ce alegi"
 description: "Compara firma de cenzorat cu cenzorul individual din bloc: avantaje, dezavantaje, costuri și cum te ajută VoSmart să alegi corect."
 date: "2026-06-18"
+dateModified: "2026-06-18"
 category: "Cenzorat"
 readTime: "7 min"
 keywords: ["firma de cenzorat", "cenzorat asociatii", "cenzor individual bloc", "cenzorat blocuri", "cenzorat inteligent", "aplicatie AI cenzorat", "Legea 196/2018"]

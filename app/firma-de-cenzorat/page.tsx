@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import Image from "next/image"
 import Link from "next/link"
+import { Ecosistem } from "@/app/components/Ecosistem";
 
 const canonical = "https://www.vosmart.ro/firma-de-cenzorat"
 
@@ -24,7 +25,7 @@ export const metadata: Metadata = {
     title: "Firmă de cenzorat pentru asociații de proprietari | VoSmart",
     description:
       "Cenzorat asigurat de o firmă, nu de o singură persoană: continuitate, responsabilitate contractuală și rapoarte online.",
-    images: [{ url: "/opengraph-image.png", width: 1200, height: 630, alt: "VoSmart — firmă de cenzorat" }],
+    images: [{ url: "/opengraph-image", width: 1200, height: 630, alt: "VoSmart — firmă de cenzorat" }],
   },
 }
 
@@ -302,6 +303,7 @@ export default function FirmaDeCenzoratPage() {
       </section>
 
       <footer className="border-t border-white/10 px-5 py-10 text-sm text-slate-400 sm:px-6">
+        <Ecosistem className="mx-auto mb-6 max-w-7xl" />
         <div className="mx-auto flex max-w-7xl flex-col justify-between gap-5 sm:flex-row">
           <p>© 2026 VoSmart · Firmă de cenzorat pentru asociații de proprietari.</p>
           <div className="flex flex-wrap gap-5">
