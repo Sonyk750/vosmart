@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, Suspense } from "react";
+import { Ecosistem } from "@/app/components/Ecosistem";
 import { useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
@@ -538,6 +539,7 @@ export default function CorporatePage() {
 
       {/* Footer */}
       <footer className="border-t border-white/5 py-8 text-center">
+        <Ecosistem className="mx-auto mb-6 max-w-4xl px-5 text-left" />
         <Image src="/logo-vosmart.png" alt="VoSmart" width={80} height={35}
           className="h-auto mx-auto mb-3" style={{ mixBlendMode:"screen", width:"70px" }} />
         <p className="text-xs text-slate-600">© 2026 VoSmart. Platformă proprietară. Toate drepturile rezervate.</p>

@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import Image from "next/image";
+import { Ecosistem } from "@/app/components/Ecosistem";
 
 const steps = [
   {
@@ -370,6 +371,7 @@ export default function HelpPage() {
 
       {/* Footer */}
       <footer className="border-t border-white/5 py-8 text-center">
+        <Ecosistem className="mx-auto mb-6 max-w-6xl" />
         <div className="flex items-center justify-center gap-2 text-slate-600 text-xs">
           <span>© 2026 VoSmart — Platformă de audit asociații</span>
         </div>

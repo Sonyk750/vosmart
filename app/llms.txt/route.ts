@@ -39,6 +39,16 @@ const content = `# VoSmart
 - E-mail: office@vosmart.ro
 - Telefon: +40 756 362 828
 
+## Ecosistem
+
+VoSmart face parte din ecosistemul SpokApp, alături de:
+- SpokApp — ecosistemul complet de aplicații: https://www.spokapp.ro
+- SpokInvoice — facturare online și e-Factura ANAF: https://www.spokinvoice.ro
+- SpokAdmin — software de administrare asociații de proprietari: https://spokadmin.ro
+- DecoImob — firmă de administrare imobile din București și Ilfov: https://decoimob.ro
+
+Cenzoratul (VoSmart) este independent de administrare: cenzorul verifică administratorul, deci cele două nu se prestează de aceeași firmă pentru aceeași asociație.
+
 ## Clarificări importante
 
 - VoSmart oferă cenzorat; nu este firmă de administrare imobile.

@@ -127,7 +127,7 @@ Pe parcursul anului pot apărea situații care impun **rectificarea bugetului** 
 
 ## Ecosistemul Digital pentru Asociații de Proprietari
 
-Asociațiile care doresc transparență completă pot beneficia de soluțiile integrate din ecosistemul **[SpokApp](https://spokapp.ro)**, care conectează cenzorat, administrare și comunicare cu proprietarii într-o singură platformă.
+Asociațiile care doresc transparență completă pot beneficia de soluțiile integrate din ecosistemul **[SpokApp](https://www.spokapp.ro)**, care conectează cenzorat, administrare și comunicare cu proprietarii într-o singură platformă.
 
 ---
 

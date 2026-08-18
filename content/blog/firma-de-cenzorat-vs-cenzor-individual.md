@@ -95,7 +95,7 @@ Locuiește în bloc, deci poate fi contactat rapid în caz de urgență.
 
 VoSmart face parte dintr-un ecosistem digital complet pentru asociații de proprietari:
 
-- **[SpokAdmin](https://spokapp.ro/spokadmin)** — aplicație inteligentă de administrare: liste întreținere, incasări, fond rulment, rapoarte pentru administrator
+- **[SpokAdmin](https://www.spokapp.ro/spokadmin)** — aplicație inteligentă de administrare: liste întreținere, incasări, fond rulment, rapoarte pentru administrator
 - **[VoSmart](https://www.vosmart.ro)** — aplicație AI cenzorat: verificare conturi, rapoarte cenzor, portal proprietari
 - **SpokApp** — platforma care integrează administrare și cenzorat
 

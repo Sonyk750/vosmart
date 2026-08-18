@@ -88,7 +88,7 @@ Relația dintre cenzor și administrator este esențială pentru buna funcționa
 
 O soluție modernă completă pentru asociații de proprietari include:
 
-- **[SpokAdmin](https://spokapp.ro/spokadmin)** — aplicație inteligentă de administrare pentru administrator: liste întreținere, incasări, rapoarte, notificări proprietari
+- **[SpokAdmin](https://www.spokapp.ro/spokadmin)** — aplicație inteligentă de administrare pentru administrator: liste întreținere, incasări, rapoarte, notificări proprietari
 - **VoSmart** — aplicație AI cenzorat pentru verificarea independentă a conturilor
 - **SpokApp** — platforma care integrează toate serviciile pentru asociații moderne
 

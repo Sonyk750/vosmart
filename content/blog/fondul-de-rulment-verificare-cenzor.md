@@ -83,7 +83,7 @@ Fondul de rulment nu poate fi utilizat pentru lucrări de reparații — acesta 
 - Compara evoluția fondului de rulment pe mai mulți ani, identificând tendințe anormale
 - Genera rapoarte de verificare structurate, gata de prezentat comitetului executiv sau adunării generale
 
-Această abordare digitală, disponibilă prin ecosistemul [SpokApp](https://spokapp.ro), transformă cenzoratul dintr-un proces manual, susceptibil la erori, într-un control sistematic, continuu și transparent.
+Această abordare digitală, disponibilă prin ecosistemul [SpokApp](https://www.spokapp.ro), transformă cenzoratul dintr-un proces manual, susceptibil la erori, într-un control sistematic, continuu și transparent.
 
 Asociațiile care folosesc [SpokAdmin](https://spokadmin.ro) pentru administrare beneficiază de integrare directă cu VoSmart, facilitând schimbul de date între administrator și cenzor fără duplicarea muncii.
 

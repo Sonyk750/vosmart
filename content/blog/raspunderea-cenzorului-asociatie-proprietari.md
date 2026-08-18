@@ -88,7 +88,7 @@ Această separare clară de responsabilități este esențială: administratorul
 
 Pentru gestionarea digitală a tuturor documentelor asociației — inclusiv a celor necesare cenzorului — [SpokAdmin](https://spokadmin.ro) oferă o platformă dedicată administratorilor de bloc, cu arhivă electronică și acces controlat, structurată pentru a facilita și procesul de cenzorat.
 
-Asociațiile care gestionează facturare — prestări servicii, chirii, utilități — pot folosi SpokInvoice pentru facturare electronică conformă cu cerințele ANAF, cu cont gratuit de testare, fără card. Ambele servicii sunt parte din ecosistemul [SpokApp](https://spokapp.ro), gândit pentru digitalizarea completă a asociațiilor de proprietari.
+Asociațiile care gestionează facturare — prestări servicii, chirii, utilități — pot folosi SpokInvoice pentru facturare electronică conformă cu cerințele ANAF, cu cont gratuit de testare, fără card. Ambele servicii sunt parte din ecosistemul [SpokApp](https://www.spokapp.ro), gândit pentru digitalizarea completă a asociațiilor de proprietari.
 
 ## Ce Pot Face Proprietarii Dacă Cenzorul Nu Își Îndeplinește Obligațiile
 

@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { Ecosistem } from "@/app/components/Ecosistem";
 import SplashScreen from "@/app/components/SplashScreen";
 import { downloadOferta } from "@/app/components/OfertaPDF";
 
@@ -632,6 +633,7 @@ export default function HomeClient() {
 
         {/* FOOTER */}
         <footer className="border-t border-white/5 px-5 py-16 sm:px-6">
+          <Ecosistem className="mx-auto mb-6 max-w-7xl" />
           <div className="mx-auto max-w-7xl">
             <div className="grid gap-10 lg:grid-cols-4">
               <div>

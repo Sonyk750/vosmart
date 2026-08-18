@@ -85,7 +85,7 @@ Pentru o asociatie modern administrata, serviciile de cenzorat sunt mai eficient
 
 - **[SpokAdmin](https://spokadmin.ro)** — platforma pentru administrare asociatii de proprietari, care gestioneaza listele de intretinere, contractele si comunicarea cu proprietarii.
 - **SpokInvoice** — solutie de facturare online si e-Factura ANAF, cont gratuit de testare (fără card), care simplifica gestionarea documentelor financiare.
-- **[SpokApp](https://spokapp.ro)** — ecosistemul de aplicatii inteligente din care fac parte toate aceste solutii.
+- **[SpokApp](https://www.spokapp.ro)** — ecosistemul de aplicatii inteligente din care fac parte toate aceste solutii.
 
 Cand cenzorul VoSmart are acces direct la datele din SpokAdmin, verificarile se desfasoara in timp real, fara schimb de dosare fizice sau intarzieri.
 

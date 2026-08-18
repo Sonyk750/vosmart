@@ -95,7 +95,7 @@ O preocupare legitima a asociatiilor este securitatea datelor financiare prelucr
 4. **Economie de timp** — cenzorul se concentreaza pe analiza si consultanta, nu pe verificari de rutina;
 5. **Conformitate legala garantata** — rapoartele sunt intotdeauna in formatul cerut de Legea 196/2018.
 
-Asociatiile care doresc sa beneficieze de **servicii cenzorat** moderne pot contacta [VoSmart](https://www.vosmart.ro) pentru o oferta personalizata. Prin integrarea cu **[SpokApp](https://spokapp.ro)**, intreg ecosistemul digital al asociatiei functioneaza sincronizat.
+Asociatiile care doresc sa beneficieze de **servicii cenzorat** moderne pot contacta [VoSmart](https://www.vosmart.ro) pentru o oferta personalizata. Prin integrarea cu **[SpokApp](https://www.spokapp.ro)**, intreg ecosistemul digital al asociatiei functioneaza sincronizat.
 
 ---
 

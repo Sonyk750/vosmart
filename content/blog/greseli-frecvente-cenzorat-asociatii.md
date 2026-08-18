@@ -98,7 +98,7 @@ Ignorarea acestui aspect lasă asociația expusă unor pierderi financiare semni
 - Arhivarea digitală a documentelor verificate
 - Notificări în timp real privind abaterile identificate
 
-[VoSmart](https://www.vosmart.ro), prima aplicație AI cenzorat din România, transformă toate aceste procese în fluxuri digitale eficiente, disponibile în ecosistemul [SpokApp](https://spokapp.ro). Serviciile de cenzorat devin astfel mai rapide, mai precise și mai ușor de documentat.
+[VoSmart](https://www.vosmart.ro), prima aplicație AI cenzorat din România, transformă toate aceste procese în fluxuri digitale eficiente, disponibile în ecosistemul [SpokApp](https://www.spokapp.ro). Serviciile de cenzorat devin astfel mai rapide, mai precise și mai ușor de documentat.
 
 ## Cenzor Individual vs. Firmă de Cenzorat — Cine Evită Mai Bine Greșelile?
 

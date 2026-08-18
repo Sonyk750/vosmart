@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import Link from "next/link"
+import { Ecosistem } from "@/app/components/Ecosistem";
 import { getAllPosts } from "@/lib/blog"
 
 export const metadata: Metadata = {
@@ -71,12 +72,13 @@ export default function BlogPage() {
       </main>
 
       <footer className="relative z-10 border-t border-white/5 px-4 py-8">
+        <Ecosistem className="mx-auto mb-6 max-w-6xl" />
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 text-sm text-slate-500 sm:flex-row">
           <span className="font-semibold text-emerald-400">VoSmart</span>
           <div className="flex gap-6">
             <Link href="https://www.spokinvoice.ro" className="hover:text-white transition">SpokInvoice</Link>
-            <Link href="https://spokapp.ro/spokadmin" className="hover:text-white transition">SpokAdmin</Link>
-            <Link href="https://spokapp.ro" className="hover:text-white transition">SpokApp</Link>
+            <Link href="https://www.spokapp.ro/spokadmin" className="hover:text-white transition">SpokAdmin</Link>
+            <Link href="https://www.spokapp.ro" className="hover:text-white transition">SpokApp</Link>
           </div>
           <span>© 2026 VoSmart</span>
         </div>

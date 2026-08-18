@@ -103,7 +103,7 @@ Procesele-verbale ale cenzorului trebuie arhivate și puse la dispoziția propri
 
 Platforme digitale precum [SpokAdmin](https://spokadmin.ro) permit arhivarea electronică a tuturor documentelor asociației — inclusiv a PV-urilor de cenzorat — cu acces controlat pentru proprietari și posibilitate de căutare rapidă după dată sau tip de document.
 
-Pentru facturarea serviciilor asociației și conformitatea cu cerințele ANAF în privința e-Facturii, SpokInvoice oferă soluții de facturare electronică integrate, cu cont gratuit de testare fără card. Toate aceste instrumente sunt disponibile în ecosistemul [SpokApp](https://spokapp.ro), gândit pentru digitalizarea completă a asociațiilor de proprietari din România.
+Pentru facturarea serviciilor asociației și conformitatea cu cerințele ANAF în privința e-Facturii, SpokInvoice oferă soluții de facturare electronică integrate, cu cont gratuit de testare fără card. Toate aceste instrumente sunt disponibile în ecosistemul [SpokApp](https://www.spokapp.ro), gândit pentru digitalizarea completă a asociațiilor de proprietari din România.
 
 ## Intrebari frecvente
 

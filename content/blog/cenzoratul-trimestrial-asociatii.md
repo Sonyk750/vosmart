@@ -161,7 +161,7 @@ Dacă asociația folosește și un sistem de facturare digital, integrarea cu **
 
 Firmele de administrare care utilizează **[SpokAdmin](https://spokadmin.ro)** beneficiază de o gestiune digitală a documentelor, ceea ce facilitează semnificativ activitatea cenzorului. Când administratorul și cenzorul lucrează pe platforme compatibile, schimbul de documente se face în secunde, nu în zile.
 
-Toate aceste soluții fac parte din ecosistemul **[SpokApp](https://spokapp.ro)**, proiectat pentru digitalizarea completă a asociațiilor de proprietari din România.
+Toate aceste soluții fac parte din ecosistemul **[SpokApp](https://www.spokapp.ro)**, proiectat pentru digitalizarea completă a asociațiilor de proprietari din România.
 
 ---
 

@@ -104,7 +104,7 @@ Platformele moderne de cenzorat bazate pe AI, precum cea oferită de **[VoSmart]
 
 Integrarea cu soluții de facturare precum **SpokInvoice** permite cenzorului să verifice facturile emise și plățile înregistrate direct în platformă, fără schimb de documente fizice.
 
-Pentru asociațiile care doresc o digitalizare completă — de la administrare la cenzorat — ecosistemul **[SpokApp](https://spokapp.ro)** oferă soluții integrate care acoperă toate procesele.
+Pentru asociațiile care doresc o digitalizare completă — de la administrare la cenzorat — ecosistemul **[SpokApp](https://www.spokapp.ro)** oferă soluții integrate care acoperă toate procesele.
 
 ---
 

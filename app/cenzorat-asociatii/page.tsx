@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import Image from "next/image"
 import Link from "next/link"
+import { Ecosistem } from "@/app/components/Ecosistem";
 
 const canonical = "https://www.vosmart.ro/cenzorat-asociatii"
 
@@ -225,6 +226,7 @@ export default function CenzoratAsociatiiPage() {
       </section>
 
       <footer className="border-t border-white/10 px-5 py-10 text-sm text-slate-400 sm:px-6">
+        <Ecosistem className="mx-auto mb-6 max-w-7xl" />
         <div className="mx-auto flex max-w-7xl flex-col justify-between gap-5 sm:flex-row">
           <p>© 2026 VoSmart · Cenzorat modern pentru asociații de proprietari.</p>
           <div className="flex flex-wrap gap-5">

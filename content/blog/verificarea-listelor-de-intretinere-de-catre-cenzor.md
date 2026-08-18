@@ -118,7 +118,7 @@ O **firma de cenzorat** profesionista, care utilizeaza si instrumente AI, identi
 
 [VoSmart](https://www.vosmart.ro) combina expertiza juridica si economica a cenzorilor umani cu puterea de procesare a inteligentei artificiale. Rezultatul este un **cenzorat blocuri** mai rapid, mai precis si mai transparent pentru toti proprietarii.
 
-Prin integrarea cu SpokAdmin si SpokInvoice, cenzorul VoSmart are acces direct la documentele asociatiei in timp real, eliminand schimbul de dosare fizice si reducand timpul de verificare de la zile la ore. Toate solutiile fac parte din ecosistemul [SpokApp](https://spokapp.ro), proiectat pentru asociatiile de proprietari moderne.
+Prin integrarea cu SpokAdmin si SpokInvoice, cenzorul VoSmart are acces direct la documentele asociatiei in timp real, eliminand schimbul de dosare fizice si reducand timpul de verificare de la zile la ore. Toate solutiile fac parte din ecosistemul [SpokApp](https://www.spokapp.ro), proiectat pentru asociatiile de proprietari moderne.
 
 ---
 

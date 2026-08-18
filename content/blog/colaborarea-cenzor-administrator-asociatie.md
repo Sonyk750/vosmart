@@ -145,7 +145,7 @@ Administratorii care folosesc **[SpokAdmin](https://spokadmin.ro)** pentru gesti
 
 ## Ecosistemul Digital pentru Asociații
 
-Toate aceste soluții fac parte din ecosistemul **[SpokApp](https://spokapp.ro)**, care conectează:
+Toate aceste soluții fac parte din ecosistemul **[SpokApp](https://www.spokapp.ro)**, care conectează:
 
 - **VoSmart** — cenzorat cu AI
 - **SpokAdmin** — administrare asociații

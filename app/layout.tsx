@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import ChatWidget from "@/app/components/ChatWidget";
+import { ECOSYSTEM_OTHERS } from "@/app/components/Ecosistem";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -132,6 +133,14 @@ const jsonLd = {
       },
       description:
         "Firmă de cenzorat pentru asociații de proprietari din București. Rapoarte lunare online, portal client și verificări financiare conforme Legii 196/2018.",
+      parentOrganization: {
+        "@type": "Organization",
+        "@id": "https://www.spokapp.ro/#organization",
+        name: "SpokApp",
+        url: "https://www.spokapp.ro",
+      },
+      // Sincronizat cu app/components/Ecosistem.tsx — aceleasi site-uri, aceleasi URL-uri canonice.
+      sameAs: ECOSYSTEM_OTHERS.map(s => s.url),
     },
     {
       "@type": "WebSite",

@@ -18,7 +18,7 @@ Asociațiile de proprietari din România gestionează milioane de lei în fiecar
 
 Administratorul de bloc sau **firma de administrare** are responsabilități clare: colectează cotele de întreținere, plătește furnizorii, întocmește listele lunare, gestionează fondul de rulment și de reparații.
 
-O **aplicație inteligentă de administrare** precum **[SpokAdmin](https://spokapp.ro/spokadmin)** automatizează toate aceste procese:
+O **aplicație inteligentă de administrare** precum **[SpokAdmin](https://www.spokapp.ro/spokadmin)** automatizează toate aceste procese:
 
 ### Ce face SpokAdmin pentru firma de administrare
 

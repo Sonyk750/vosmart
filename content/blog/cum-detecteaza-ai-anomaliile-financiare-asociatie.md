@@ -128,7 +128,7 @@ Da. Aplicația este adaptată pentru asociații de orice dimensiune — de la bl
 
 ---
 
-Pentru o administrare corectă care facilitează munca cenzorului, **[SpokAdmin](https://spokapp.ro/spokadmin)** oferă administratorilor de bloc toate instrumentele necesare: liste de întreținere, evidența debitelor, contracte și rapoarte — toate disponibile digital. Asociațiile care preferă să externalizeze administrarea către o firmă specializată pot apela la **[DecoImob](https://decoimob.ro)** — administrare imobile în București și Ilfov, activitate separată și independentă de cenzoratul asigurat de VoSmart.
+Pentru o administrare corectă care facilitează munca cenzorului, **[SpokAdmin](https://www.spokapp.ro/spokadmin)** oferă administratorilor de bloc toate instrumentele necesare: liste de întreținere, evidența debitelor, contracte și rapoarte — toate disponibile digital. Asociațiile care preferă să externalizeze administrarea către o firmă specializată pot apela la **[DecoImob](https://decoimob.ro)** — administrare imobile în București și Ilfov, activitate separată și independentă de cenzoratul asigurat de VoSmart.
 
 Firmele de cenzorat care emit facturi pentru serviciile lor găsesc în **SpokInvoice** soluția completă de facturare online cu e-Factura ANAF — cont gratuit de testare, fără card.
 

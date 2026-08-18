@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import Link from "next/link"
+import { Ecosistem } from "@/app/components/Ecosistem";
 import { notFound } from "next/navigation"
 import { getAllPosts, getPost, getRelatedPosts } from "@/lib/blog"
 
@@ -157,7 +158,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
               style={{ background: "rgba(52,211,153,0.9)", color: "#000" }}>
               Începe gratuit →
             </Link>
-            <Link href="https://spokapp.ro"
+            <Link href="https://www.spokapp.ro"
               className="inline-flex rounded-xl border border-white/10 px-6 py-3 text-sm font-semibold transition hover:border-white/20"
               style={{ background: "rgba(255,255,255,0.04)" }}>
               Descoperă SpokApp
@@ -167,12 +168,13 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
       </main>
 
       <footer className="relative z-10 border-t border-white/5 px-4 py-8">
+        <Ecosistem className="mx-auto mb-6 max-w-4xl" />
         <div className="mx-auto flex max-w-4xl flex-col items-center justify-between gap-4 text-sm text-slate-500 sm:flex-row">
           <span className="font-semibold" style={{ color: "#6ee7b7" }}>VoSmart</span>
           <div className="flex gap-6">
             <Link href="/blog" className="hover:text-white transition">Blog</Link>
-            <Link href="https://spokapp.ro/spokadmin" className="hover:text-white transition">SpokAdmin</Link>
-            <Link href="https://spokapp.ro/spokinvoice" className="hover:text-white transition">SpokInvoice</Link>
+            <Link href="https://www.spokapp.ro/spokadmin" className="hover:text-white transition">SpokAdmin</Link>
+            <Link href="https://www.spokapp.ro/spokinvoice" className="hover:text-white transition">SpokInvoice</Link>
             <Link href="/#contact" className="hover:text-white transition">Contact</Link>
           </div>
           <span>© 2026 VoSmart</span>

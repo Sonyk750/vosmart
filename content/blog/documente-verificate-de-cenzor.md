@@ -137,7 +137,7 @@ Cenzorul verifică anual inventarul bunurilor care aparțin asociației (pompe, 
 - Generează rapoarte de cenzorat structurate, pe baza constatărilor
 - Alertează cenzorul când un document obligatoriu lipsește sau a expirat
 
-Această organizare este posibilă prin integrarea cu ecosistemul [SpokApp](https://spokapp.ro), care conectează toate aplicațiile inteligente pentru asociații de proprietari.
+Această organizare este posibilă prin integrarea cu ecosistemul [SpokApp](https://www.spokapp.ro), care conectează toate aplicațiile inteligente pentru asociații de proprietari.
 
 ## Ce Se Întâmplă cu Documentele Lipsă sau Incomplete
 

@@ -145,7 +145,7 @@ Da. Reprezentantul **firmei de cenzorat** participă la adunarea generală, prez
 
 ---
 
-O administrare transparentă, cu evidențe clare și corecte, este baza unui raport de cenzor solid prezentat în adunarea generală. **[SpokAdmin](https://spokapp.ro/spokadmin)** — aplicația inteligentă pentru firme de administrare și administratori de bloc — oferă toate instrumentele necesare pentru o evidență impecabilă. Pentru asociațiile care caută o firmă de administrare (separată de cenzorat), **[DecoImob](https://decoimob.ro)** asigură administrarea imobilului în București și Ilfov, în timp ce VoSmart rămâne cenzorul independent.
+O administrare transparentă, cu evidențe clare și corecte, este baza unui raport de cenzor solid prezentat în adunarea generală. **[SpokAdmin](https://www.spokapp.ro/spokadmin)** — aplicația inteligentă pentru firme de administrare și administratori de bloc — oferă toate instrumentele necesare pentru o evidență impecabilă. Pentru asociațiile care caută o firmă de administrare (separată de cenzorat), **[DecoImob](https://decoimob.ro)** asigură administrarea imobilului în București și Ilfov, în timp ce VoSmart rămâne cenzorul independent.
 
 Firmele și persoanele care prestează servicii de cenzorat pot folosi **SpokInvoice** pentru facturare online rapidă cu suport complet pentru e-Factura ANAF — cont gratuit de testare, fără card.
 
