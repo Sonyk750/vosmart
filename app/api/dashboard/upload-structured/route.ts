@@ -178,14 +178,25 @@ export async function POST(req: NextRequest) {
       data: { filesUploadedCount: { increment: 1 } },
     });
 
+    // Cand stocarea nu e configurata, `salveazaFisier` intoarce `null` si merge
+    // mai departe — analiza se face oricum, din ce e in memorie. Problema e ca
+    // pana acum tacea: dosarul iesea cu raport, dar fara niciun fisier de
+    // deschis, iar cenzorul afla abia cand dadea sa se uite in lista de plata.
+    // Acum se vede in jurnal, la client si la cenzor deopotriva.
+    const pastrate = randuriFisiere.length;
     await prisma.evenimentFlux.create({
       data: {
         documentId: dosar.id,
         etapa: "intrare",
         stare: "gata",
-        mesaj: `${files.length} ${files.length === 1 ? "document primit" : "documente primite"} · ${(totalOcteti / 1024 / 1024).toFixed(1)} MB`,
+        mesaj: pastrate === files.length
+          ? `${files.length} ${files.length === 1 ? "document primit" : "documente primite"} · ${(totalOcteti / 1024 / 1024).toFixed(1)} MB`
+          : `${files.length} documente primite, dar ${files.length - pastrate} nu au putut fi păstrate — verificarea se face, însă documentele nu vor putea fi redeschise.`,
       },
     });
+    if (pastrate < files.length) {
+      console.error(`[dosar] stocare indisponibilă: ${files.length - pastrate} din ${files.length} fișiere nu s-au salvat (BLOB_READ_WRITE_TOKEN?)`);
+    }
 
     // Raspunsul pleaca acum; analiza continua dupa el. Fisierele sunt deja in
     // memorie, deci nu le mai coboram inca o data din stocare.

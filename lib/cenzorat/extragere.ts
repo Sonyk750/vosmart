@@ -11,10 +11,21 @@ import { eticheta, tipDeBaza } from "./documente";
  * insemna scor gresit sau constatari pierdute.
  *
  * Acum modelul are o singura sarcina: sa CITEASCA si sa intoarca cifre, intr-o
- * forma fixa. Forma e impusa de API prin `strict: true` pe schema uneltei, deci
- * raspunsul nu poate veni „aproape bine". Ce se face cu cifrele — constatari,
- * scor, raport — se intampla in cod, in `reguli.ts`, unde se poate citi si
- * verifica.
+ * forma fixa. Ce se face cu cifrele — constatari, scor, raport — se intampla in
+ * cod, in `reguli.ts`, unde se poate citi si verifica.
+ *
+ * De ce NU folosim `strict: true` pe schema uneltei, desi ar parea locul lui:
+ * API-ul compileaza schemele stricte intr-o gramatica si are un plafon de 16
+ * parametri cu uniuni SI 16 optionali. Aici sunt vreo cincizeci de campuri care
+ * pot lipsi, fiindca „nu scrie in documente" e un raspuns valid pentru fiecare;
+ * cererea se intoarce cu 400 inainte sa plece vreun document. Singura cale de a
+ * incapea sub plafon ar fi sa cerem modelului o valoare pentru fiecare camp —
+ * exact lucrul de care ne ferim.
+ *
+ * Deci verificarea formei se face aici, in `curataExtras`, si e mai stricta
+ * decat ar fi fost cea din API: nu doar ca respinge ce nu e numar, dar
+ * intelege si „18.450,00 lei" sau „(500,00)" — forme pe care o schema le-ar fi
+ * refuzat, obligand modelul sa ghiceasca a doua oara.
  *
  * Regula de aur din prompt: ce nu scrie in documente ramane `null`. Un model
  * care „completeaza" un sold lipsa cu o valoare plauzibila e mai periculos decat
@@ -41,14 +52,11 @@ export type FisierDeCitit = {
 };
 
 /**
- * „Poate lipsi" se scrie cu `anyOf`, nu cu `type: ["number", "null"]`.
- *
- * Subsetul de JSON Schema acceptat de modul strict enumera `anyOf` explicit;
- * tablourile de tipuri nu apar in el. Diferenta conteaza: daca schema e
- * respinsa, cererea cade cu 400, iar dosarul se opreste la citire.
+ * Schema ramane in cerere ca indrumar pentru model — doar ca nu mai e compilata
+ * de API, deci poate fi cat de mare are nevoie treaba.
  */
 const optional = (tip: string, descriere?: string) => ({
-  anyOf: [{ type: tip }, { type: "null" }],
+  type: [tip, "null"],
   ...(descriere ? { description: descriere } : {}),
 });
 
@@ -56,7 +64,6 @@ const nr = optional("number");
 const txt = optional("string");
 const bool = optional("boolean");
 
-/** Schema stricta: fiecare camp e obligatoriu, dar are voie sa fie `null`. */
 function obiect(proprietati: Record<string, unknown>) {
   return {
     type: "object",
@@ -117,7 +124,8 @@ const SCHEMA_EXTRAS = obiect({
         furnizor: { type: "string" }, numar: txt, data: txt, suma: nr,
         achitata: bool,
         modalitatePlata: {
-          anyOf: [{ type: "string", enum: ["banca", "numerar"] }, { type: "null" }],
+          type: ["string", "null"],
+          enum: ["banca", "numerar", null],
           description: "Cum a fost achitată factura, doar dacă reiese explicit din document.",
         },
       }),
@@ -128,9 +136,18 @@ const SCHEMA_EXTRAS = obiect({
   salarii: obiect({ exista: bool, total: nr }),
   documenteProblematice: {
     type: "array",
+    description: "DOAR documente care nu au putut fi citite. Nepotrivirile între documente citite corect merg în neconcordante.",
     items: obiect({
       tip: { type: "string", description: "Cheia tipului de document, așa cum a fost primită." },
       problema: { type: "string", description: "Pe scurt, de ce nu s-a putut citi." },
+    }),
+  },
+  neconcordante: {
+    type: "array",
+    description: "Nepotriviri între documente care s-au citit corect (o sumă care apare diferit în două locuri, un total care nu se închide, o listă afișată parțial).",
+    items: obiect({
+      despre: { type: "string", description: "Ce anume nu se potrivește, în câteva cuvinte." },
+      detaliu: { type: "string", description: "Cifrele care nu se potrivesc și unde apar fiecare." },
     }),
   },
 });
@@ -143,8 +160,8 @@ Reguli, în ordinea importanței:
 
 1. Ce nu scrie în documente rămâne null. Nu deduce, nu calcula ce n-ai văzut, nu completa cu o valoare plauzibilă. Un câmp null este un răspuns corect și util; o cifră inventată ajunge într-un raport semnat de cenzor și îl compromite.
 2. Sumele se întorc ca numere, în lei, cu punct zecimal (1234.56), fără separator de mii și fără simbol de monedă. Sumele scrise între paranteze sau cu semnul minus sunt negative.
-3. Dacă același indicator apare în două documente cu valori diferite, întoarce valoarea din documentul primar (registrul, nu recapitulația) și adaugă documentul secundar în documenteProblematice, cu explicația diferenței.
-4. Dacă un document este ilizibil, incomplet sau nu conține ce promite numele lui, adaugă-l în documenteProblematice cu tipul primit și un motiv scurt. Nu ghici conținutul lui.
+3. Dacă același indicator apare în două documente cu valori diferite, întoarce valoarea din documentul primar (registrul, nu recapitulația) și descrie diferența în neconcordante. Tot acolo pun și totalurile care nu se închid sau listele afișate parțial. Nu le pune în documenteProblematice: acele documente s-au citit, doar că nu se potrivesc între ele.
+4. documenteProblematice este exclusiv pentru documente pe care NU le-ai putut citi — scanare proastă, pagini lipsă, format neașteptat, conținut care nu corespunde numelui. Nu ghici conținutul lor.
 5. La restanțieri, întoarce apartamentele individual, cu numărul așa cum apare pe listă. Dacă lista are zeci de apartamente restante, întoarce-le pe toate.
 6. modalitatePlata se completează doar când reiese explicit din document (mențiune de virament, ordin de plată, chitanță de casă). Altfel null.
 7. Diferențele sub 0,50 lei sunt rotunjiri și nu se semnalează.`;
@@ -155,6 +172,184 @@ Reguli, în ordinea importanței:
  * raspunsul, asa ca il taiem in transe si imbinam rezultatele.
  */
 const MAX_FISIERE_PE_CERERE = 12;
+
+/* ---------------------------------------------------- CURATAREA RASPUNSULUI */
+
+/**
+ * Numar din ce a intors modelul.
+ *
+ * Nu ne bazam pe faptul ca a respectat instructiunea „punct zecimal, fara
+ * separator de mii": documentele romanesti scriu „18.450,00 lei", iar un model
+ * care citeste asta poate intoarce sirul asa cum l-a vazut. Mai bine il
+ * intelegem noi decat sa pierdem cifra sau, mai rau, sa citim 18.450,00 ca 18,45.
+ *
+ * Orice nu se poate citi ca numar devine `null` — adica „nu s-a gasit", ceea ce
+ * regulile stiu sa trateze. Niciodata 0: zero e o afirmatie despre bani.
+ */
+export function numar(v: unknown): number | null {
+  if (typeof v === "number") return Number.isFinite(v) ? v : null;
+  if (typeof v !== "string") return null;
+
+  let s = v.trim();
+  if (!s) return null;
+
+  // Sumele negative apar si cu minus, si intre paranteze (uz contabil).
+  const inParanteze = /^\(.*\)$/.test(s);
+  s = s.replace(/[()]/g, "");
+  s = s.replace(/lei|ron|RON|\s| /g, "");
+  const negativ = inParanteze || s.startsWith("-");
+  s = s.replace(/^[-+]/, "");
+  if (!/^[\d.,]+$/.test(s)) return null;
+
+  const ultimaVirgula = s.lastIndexOf(",");
+  const ultimulPunct = s.lastIndexOf(".");
+  let intreg: string;
+  let zecimale = "";
+
+  if (ultimaVirgula === -1 && ultimulPunct === -1) {
+    intreg = s;
+  } else {
+    // Separatorul zecimal e ultimul care apare, DACA e urmat de una-doua cifre.
+    // „18.450" are trei cifre dupa punct, deci punctul separa miile.
+    const poz = Math.max(ultimaVirgula, ultimulPunct);
+    const dupa = s.length - poz - 1;
+    if (dupa >= 1 && dupa <= 2) {
+      intreg = s.slice(0, poz);
+      zecimale = s.slice(poz + 1);
+    } else {
+      intreg = s;
+    }
+  }
+
+  intreg = intreg.replace(/[.,]/g, "");
+  if (!/^\d*$/.test(intreg) || !/^\d*$/.test(zecimale)) return null;
+  if (intreg === "" && zecimale === "") return null;
+
+  const rezultat = Number(`${intreg || "0"}.${zecimale || "0"}`);
+  if (!Number.isFinite(rezultat)) return null;
+  return negativ ? -rezultat : rezultat;
+}
+
+function sir(v: unknown): string | null {
+  if (typeof v !== "string") return null;
+  const s = v.trim();
+  // Modelele scriu uneori „N/A" sau „nu se regaseste" in loc sa lase gol.
+  if (!s || /^(n\/?a|null|nedefinit|necunoscut|nu (se |a |apare|reiese))/i.test(s)) return null;
+  return s;
+}
+
+function boolean(v: unknown): boolean | null {
+  if (typeof v === "boolean") return v;
+  if (typeof v === "string") {
+    if (/^(da|true|yes)$/i.test(v.trim())) return true;
+    if (/^(nu|false|no)$/i.test(v.trim())) return false;
+  }
+  return null;
+}
+
+const lista = (v: unknown): unknown[] => (Array.isArray(v) ? v : []);
+const obiectDin = (v: unknown): Record<string, unknown> =>
+  v && typeof v === "object" && !Array.isArray(v) ? (v as Record<string, unknown>) : {};
+
+function chitanta(v: unknown): { numar: string | null; suma: number | null } {
+  const o = obiectDin(v);
+  return { numar: sir(o.numar), suma: numar(o.suma) };
+}
+
+/**
+ * Aduce raspunsul modelului la forma `ExtrasDosar`, camp cu camp.
+ *
+ * Tot ce nu se potriveste cade in `null` sau se scoate din liste. Nimic din ce
+ * intoarce modelul nu ajunge in reguli fara sa treaca pe aici — altfel un sir
+ * strecurat intr-un camp de suma ar face `soldFinal > PLAFON` sa fie o
+ * comparatie intre un text si un numar, iar constatarea ar disparea in tacere.
+ */
+export function curataExtras(brut: unknown): ExtrasDosar {
+  const r = obiectDin(brut);
+  const ident = obiectDin(r.identificare);
+  const per = obiectDin(r.perioada);
+  const casa = obiectDin(r.casa);
+  const banca = obiectDin(r.banca);
+  const fonduri = obiectDin(r.fonduri);
+  const listaPlata = obiectDin(r.lista);
+  const restantieri = obiectDin(r.restantieri);
+  const furnizori = obiectDin(r.furnizori);
+  const penalizari = obiectDin(r.penalizari);
+  const salarii = obiectDin(r.salarii);
+
+  return {
+    identificare: {
+      denumire: sir(ident.denumire), cui: sir(ident.cui), adresa: sir(ident.adresa),
+      iban: sir(ident.iban), banca: sir(ident.banca), presedinte: sir(ident.presedinte),
+      administrator: sir(ident.administrator), cenzor: sir(ident.cenzor),
+    },
+    perioada: {
+      luna: sir(per.luna), an: numar(per.an),
+      dataAfisarii: sir(per.dataAfisarii), dataScadenta: sir(per.dataScadenta),
+    },
+    casa: {
+      soldInitial: numar(casa.soldInitial), soldFinal: numar(casa.soldFinal),
+      totalIncasari: numar(casa.totalIncasari), totalPlati: numar(casa.totalPlati),
+      primaChitanta: chitanta(casa.primaChitanta), ultimaChitanta: chitanta(casa.ultimaChitanta),
+      soldMaximZilnic: numar(casa.soldMaximZilnic), zileCuIncasari: numar(casa.zileCuIncasari),
+    },
+    banca: {
+      soldInitial: numar(banca.soldInitial), soldFinal: numar(banca.soldFinal),
+      totalIncasari: numar(banca.totalIncasari), totalPlati: numar(banca.totalPlati),
+      conturi: lista(banca.conturi).map(obiectDin).map(c => ({
+        iban: sir(c.iban), descriere: sir(c.descriere) ?? "cont", sold: numar(c.sold),
+      })),
+    },
+    fonduri: {
+      rulment: numar(fonduri.rulment), reparatii: numar(fonduri.reparatii),
+      penalitati: numar(fonduri.penalitati),
+      altele: lista(fonduri.altele).map(obiectDin)
+        .map(f => ({ denumire: sir(f.denumire) ?? "", sold: numar(f.sold) }))
+        .filter(f => f.denumire),
+    },
+    lista: {
+      totalCheltuieli: numar(listaPlata.totalCheltuieli),
+      totalRestante: numar(listaPlata.totalRestante),
+      numarApartamente: numar(listaPlata.numarApartamente),
+      coloane: lista(listaPlata.coloane).map(sir).filter((c): c is string => Boolean(c)),
+      areColoanaRestante: boolean(listaPlata.areColoanaRestante),
+      areColoanaPenalizari: boolean(listaPlata.areColoanaPenalizari),
+      areColoanaFondRulment: boolean(listaPlata.areColoanaFondRulment),
+    },
+    restantieri: {
+      total: numar(restantieri.total),
+      // Un restantier fara suma n-ajuta pe nimeni si ar strica numaratoarea, deci
+      // intra in lista doar cei cu apartament SI suma citite.
+      apartamente: lista(restantieri.apartamente).map(obiectDin)
+        .map(a => ({ apartament: sir(a.apartament) ?? "", suma: numar(a.suma), luniIntarziere: numar(a.luniIntarziere) }))
+        .filter((a): a is { apartament: string; suma: number; luniIntarziere: number | null } =>
+          Boolean(a.apartament) && a.suma !== null),
+    },
+    furnizori: {
+      facturi: lista(furnizori.facturi).map(obiectDin)
+        .map(f => ({
+          furnizor: sir(f.furnizor) ?? "", numar: sir(f.numar), data: sir(f.data),
+          suma: numar(f.suma), achitata: boolean(f.achitata),
+          modalitatePlata: ["banca", "numerar"].includes(String(f.modalitatePlata)) ? String(f.modalitatePlata) : null,
+        }))
+        .filter(f => f.furnizor || f.numar || f.suma !== null),
+      totalNeachitat: numar(furnizori.totalNeachitat),
+    },
+    penalizari: {
+      aplicate: boolean(penalizari.aplicate), cotaZilnica: numar(penalizari.cotaZilnica),
+      total: numar(penalizari.total),
+    },
+    salarii: { exista: boolean(salarii.exista), total: numar(salarii.total) },
+    documenteProblematice: lista(r.documenteProblematice).map(obiectDin)
+      .map(d => ({ tip: sir(d.tip) ?? "necunoscut", problema: sir(d.problema) ?? "" }))
+      .filter(d => d.problema),
+    neconcordante: lista(r.neconcordante).map(obiectDin)
+      .map(n => ({ despre: sir(n.despre) ?? "", detaliu: sir(n.detaliu) ?? "" }))
+      .filter(n => n.despre || n.detaliu),
+  };
+}
+
+/* ------------------------------------------------------------------------- */
 
 export type RezultatExtragere = {
   extras: ExtrasDosar;
@@ -257,8 +452,9 @@ async function citesteTransa(
     tools: [{
       name: "raporteaza_date",
       description: "Întoarce cifrele citite din documentele atașate. Se apelează exact o dată.",
-      strict: true,
-      input_schema: SCHEMA_EXTRAS as Anthropic.Tool.InputSchema,
+      // Fara `strict`: vezi explicatia din capul fisierului. Forma se verifica
+      // in `curataExtras`, dupa raspuns.
+      input_schema: SCHEMA_EXTRAS as unknown as Anthropic.Tool.InputSchema,
     }],
     tool_choice: { type: "tool", name: "raporteaza_date" },
     messages: [{ role: "user", content: continut }],
@@ -271,9 +467,7 @@ async function citesteTransa(
   }
 
   return {
-    // `strict: true` garanteaza forma, dar parcurgem tot printr-un obiect gol ca
-    // sa nu depindem de prezenta fiecarui camp daca schema se schimba candva.
-    extras: { ...EXTRAS_GOL, ...(apel.input as Partial<ExtrasDosar>) },
+    extras: curataExtras(apel.input),
     tokensIn: raspuns.usage.input_tokens,
     tokensOut: raspuns.usage.output_tokens,
   };
@@ -375,6 +569,10 @@ function imbina(a: ExtrasDosar, b: ExtrasDosar): ExtrasDosar {
     documenteProblematice: [
       ...a.documenteProblematice,
       ...b.documenteProblematice.filter(x => !a.documenteProblematice.some(y => y.tip === x.tip && y.problema === x.problema)),
+    ],
+    neconcordante: [
+      ...a.neconcordante,
+      ...b.neconcordante.filter(x => !a.neconcordante.some(y => y.despre === x.despre)),
     ],
   };
 }

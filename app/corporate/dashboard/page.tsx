@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
+import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { acasaDupaRol } from "@/lib/rute";
 import CorporateDashboard from "./CorporateDashboard";
@@ -72,15 +73,23 @@ export default async function CorporateDashboardPage() {
 
   if (!isAdmin && session.user.corporateAccount.status === "pending") {
     return (
-      <main className="min-h-screen bg-[#050814] text-white flex items-center justify-center px-4">
+      <main className="flex min-h-screen items-center justify-center bg-app px-4 text-ink">
         <div className="max-w-md text-center">
-          <div className="text-6xl mb-6">⏳</div>
-          <h1 className="text-2xl font-bold mb-3">Cont în așteptare</h1>
-          <p className="text-slate-300 mb-2">Cererea ta de înregistrare este în curs de procesare.</p>
-          <p className="text-slate-400 text-sm">Vei primi un email de confirmare în maxim 24 ore după activarea contului.</p>
-          <a href="/" className="mt-6 inline-block rounded-xl border border-white/10 px-6 py-2.5 text-sm text-slate-300 hover:bg-white/[0.05] transition">
-            ← Înapoi la site
-          </a>
+          <div className="mx-auto mb-5 flex h-11 w-11 items-center justify-center rounded-full border border-line-strong bg-surface-3 text-muted">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7}
+              strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5" aria-hidden>
+              <circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" />
+            </svg>
+          </div>
+          <h1 className="text-[21px] font-semibold tracking-tight">Cont în așteptare</h1>
+          <p className="mt-2 text-[13.5px] leading-relaxed text-muted">
+            Cererea de înregistrare este în curs de procesare. Primiți un email de confirmare
+            în maximum 24 de ore de la activarea contului.
+          </p>
+          <Link href="/"
+            className="mt-6 inline-block rounded-[var(--radius-field)] border border-line-strong bg-surface-3 px-5 py-2.5 text-[13px] font-medium text-ink transition-colors hover:bg-surface-4">
+            Înapoi la site
+          </Link>
         </div>
       </main>
     );

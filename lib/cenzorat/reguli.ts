@@ -418,6 +418,30 @@ const documenteNecitite: Regula = ({ extras }) => {
   }];
 };
 
+/**
+ * Ce a observat modelul citind, si nicio regula n-a prins.
+ *
+ * Severitatea e „info", cu greutate zero: NU misca scorul. Cantarirea o fac
+ * regulile, pe cifre, unde se poate reface calculul. Aici e vorba de piste —
+ * uneori se suprapun peste o regula care a tras oricum (si atunci ar dubla
+ * pedeapsa), alteori prind ceva ce nicio regula n-acopera, cum ar fi o lista de
+ * plata afisata doar partial. Cenzorul decide ce face cu ele.
+ */
+const neconcordanteObservate: Regula = ({ extras }) => {
+  if (extras.neconcordante.length === 0) return [];
+  const n = extras.neconcordante.length;
+  return [{
+    cod: "AI-NECONCORDANTE",
+    titlu: `${n} ${n === 1 ? "nepotrivire observată" : "nepotriviri observate"} între documente`,
+    detaliu: "Observate la citirea documentelor, nu de o regulă de verificare. Nu intră în scor — unele se suprapun peste constatările de mai sus, altele merită urmărite separat.",
+    severitate: "info",
+    sursa: "ai",
+    temei: null,
+    probe: extras.neconcordante.map(x => ({ eticheta: x.despre, valoare: x.detaliu })),
+    recomandare: null,
+  }];
+};
+
 /* ------------------------------------------------------------------- */
 
 const REGULI: Regula[] = [
@@ -437,6 +461,8 @@ const REGULI: Regula[] = [
   platiNumerar,
   fondRulment,
   identificarePersoane,
+  // Ultima: e context pentru cenzor, nu o constatare de sine statatoare.
+  neconcordanteObservate,
 ];
 
 export function aplicaReguli(ctx: ContextVerificare): Constatare[] {

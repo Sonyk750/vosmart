@@ -96,6 +96,20 @@ export type ExtrasDosar = {
   };
   /** Ce nu s-a putut citi. Fara asta, un dosar ilizibil ar trece drept curat. */
   documenteProblematice: { tip: string; problema: string }[];
+  /**
+   * Nepotriviri intre documente, observate de model la citire.
+   *
+   * Stau separat de `documenteProblematice` fiindca sunt altceva: documentul s-a
+   * citit perfect, doar ca nu se potriveste cu altul. Le-am tinut la un loc la
+   * inceput si constatarea iesea „3 documente nu au putut fi citite" pentru trei
+   * documente citite impecabil.
+   *
+   * Nu intra in scor: verificarea si cantarirea le fac regulile, pe cifre. Astea
+   * ajung in fata cenzorului ca piste de urmarit — unele prind lucruri pe care
+   * nicio regula nu le acopera (o lista afisata partial, o suma care apare in
+   * doua feluri).
+   */
+  neconcordante: { despre: string; detaliu: string }[];
 };
 
 export const EXTRAS_GOL: ExtrasDosar = {
@@ -110,6 +124,7 @@ export const EXTRAS_GOL: ExtrasDosar = {
   penalizari: { aplicate: null, cotaZilnica: null, total: null },
   salarii: { exista: null, total: null },
   documenteProblematice: [],
+  neconcordante: [],
 };
 
 /* ------------------------------------------------------------------ */

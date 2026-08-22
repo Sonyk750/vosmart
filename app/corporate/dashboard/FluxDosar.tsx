@@ -108,6 +108,14 @@ export default function FluxDosar({ dosarId, peFinal }: { dosarId: string; peFin
 
       <div className="px-5 pt-4">
         <Bara procent={flux.procent} ton={ton} inLucru={!gata && !flux.esuat} />
+        {/* Bara numara toate cele sase etape, iar ultimele doua le face un om.
+            Fara randul asta, un dosar verificat complet arata „67%" langa
+            titlul „Verificare încheiată" si pare blocat. */}
+        {flux.etapaCurenta === "revizuire" && (
+          <p className="mt-1.5 text-[11.5px] text-faint">
+            Partea automată s-a încheiat. Restul barei se completează când cenzorul semnează.
+          </p>
+        )}
       </div>
 
       <ol className="px-5 py-4">
