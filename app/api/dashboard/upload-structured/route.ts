@@ -94,6 +94,23 @@ export async function POST(req: NextRequest) {
       }, { status: 413 });
     }
 
+    // Listă albă de tipuri. Nu ține doar de „ce știe AI-ul să citească": numele
+    // fișierului își păstrează extensia, deci un .html sau .svg încărcat ca
+    // „document" ar fi conținut activ, gata să ruleze cod dacă ajunge vreodată
+    // servit. Verificăm și antetul MIME, și extensia — primul vine din browser,
+    // deci se poate minți, a doua decide cum se servește fișierul.
+    const MIME_PERMISE = ["application/pdf", "image/png", "image/jpeg", "image/webp"];
+    const EXT_PERMISE = [".pdf", ".png", ".jpg", ".jpeg", ".webp"];
+    const refuzat = files.find(f => {
+      const ext = f.name.slice(f.name.lastIndexOf(".")).toLowerCase();
+      return !MIME_PERMISE.includes(f.type) || !EXT_PERMISE.includes(ext);
+    });
+    if (refuzat) {
+      return NextResponse.json({
+        error: `Fișierul „${refuzat.name}" nu este acceptat. Încărcați doar PDF sau imagini (PNG, JPG, WEBP).`,
+      }, { status: 415 });
+    }
+
     // Citim fișierele în memorie (buffer); scrierea pe disc e opțională — pe Vercel filesystem-ul e read-only
     const savedFiles: { type: string; label: string; fileName: string; fileUrl: string; buffer: Buffer; mimeType: string }[] = [];
 
@@ -104,20 +121,17 @@ export async function POST(req: NextRequest) {
       const safeName = `${type}_${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
       const buffer = Buffer.from(await file.arrayBuffer());
 
-      // Încercăm să scriem pe disc (funcționează local, eșuează silențios pe Vercel)
-      let fileUrl = `/uploads/${associationId}/${period.replace("-", "_")}/${safeName}`;
+      // Fișierele NU mai ajung în `public/`. Tot ce e acolo se servește static,
+      // fără nicio verificare de sesiune: oricine nimerea adresa descărca lista
+      // de plată a altei asociații. Scriem doar în /tmp, care nu se servește și
+      // trăiește cât ține funcția — analiza AI folosește oricum buffer-ul din
+      // memorie, nu fișierul de pe disc.
+      const fileUrl = `dosar/${associationId}/${period.replace("-", "_")}/${safeName}`;
       try {
-        const uploadDir = path.join(process.cwd(), "public", "uploads", associationId, period.replace("-", "_"));
-        await mkdir(uploadDir, { recursive: true });
-        await writeFile(path.join(uploadDir, safeName), buffer);
-      } catch {
-        // Pe Vercel scriem în /tmp pentru durata funcției
-        try {
-          const tmpDir = path.join("/tmp", "vosmart", associationId, period.replace("-", "_"));
-          await mkdir(tmpDir, { recursive: true });
-          await writeFile(path.join(tmpDir, safeName), buffer);
-        } catch { /* AI analiza foloseste buffer-ul, nu fisierul de pe disc */ }
-      }
+        const tmpDir = path.join("/tmp", "vosmart", associationId, period.replace("-", "_"));
+        await mkdir(tmpDir, { recursive: true });
+        await writeFile(path.join(tmpDir, safeName), buffer);
+      } catch { /* analiza merge pe buffer; fisierul de pe disc e doar de comoditate */ }
 
       savedFiles.push({ type, label, fileName: file.name, fileUrl, buffer, mimeType: file.type });
     }
@@ -133,7 +147,7 @@ export async function POST(req: NextRequest) {
         title: titleAssoc ? `${titleAssoc} — ${monthName} ${year}` : `Dosar verificare ${monthName} ${year}`,
         type: "dosar_lunar",
         fileName: `dosar_${period}.zip`,
-        fileUrl: `/uploads/${associationId}/${period.replace("-", "_")}/`,
+        fileUrl: `dosar/${associationId}/${period.replace("-", "_")}/`,
         month: monthName,
         year: parseInt(year),
         status: "analyzing",

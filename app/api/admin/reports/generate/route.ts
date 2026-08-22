@@ -116,7 +116,10 @@ export async function POST(req: NextRequest) {
   const listaPlata = allDocs.find((d: any) => d.type === "lista_plata");
   const pdfContentParts: any[] = [];
 
-  if (listaPlata) {
+  // Doar dosarele vechi mai au fișiere sub `public/uploads` — cele noi nu se mai
+  // scriu acolo deloc (vezi upload-structured). Pentru restul, raportul se face
+  // din constatările AI salvate la încărcare, fără să mai deschidă PDF-ul.
+  if (listaPlata?.fileUrl?.startsWith("/uploads/")) {
     try {
       const pdfPath = path.join(process.cwd(), "public", listaPlata.fileUrl.replace(/^\//, ""));
       const uploadsBase = path.join(process.cwd(), "public", "uploads");
