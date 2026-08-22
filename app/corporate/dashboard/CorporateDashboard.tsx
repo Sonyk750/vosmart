@@ -1,1343 +1,381 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import Image from "next/image";
 import CardPaymentForm from "@/app/components/CardPaymentForm";
 import { CORPORATE_PACKAGES, CorporatePackage } from "@/lib/billing";
-import JSZip from "jszip";
+import {
+  Buton, Card, CardCap, dataRo, Eticheta, Gol, Ic, Paginare, Schelet, Statistica, Ton,
+} from "@/app/components/ui";
+import DosarNou from "./DosarNou";
+import ListaDosare from "./ListaDosare";
+import FluxDosar from "./FluxDosar";
+
+/**
+ * Panoul firmei / asociatiei.
+ *
+ * Ce s-a schimbat fata de varianta veche, pe scurt:
+ *  - incarcarea si lista de dosare au iesit din fisierul asta in componente
+ *    proprii (`DosarNou`, `ListaDosare`), fiindca aveau peste 700 de linii aici
+ *    si nu se mai putea citi nimic;
+ *  - listele vin pe pagini, nu toate deodata la fiecare 8 secunde;
+ *  - rapoartele nu se mai deschid intr-un `<pre>` cu text brut, ci ca document;
+ *  - nuantele vin din tokeni, nu din valori scrise de mana la fiecare card.
+ *
+ * Logica de abonament a ramas neatinsa.
+ */
 
 interface Corporate {
   id: string; companyName: string; package: string; maxAssoc: number;
   status: string; logoUrl: string | null; cui: string | null;
   subscriptionStatus: string | null; currentPeriodEnd: string | null;
-  associations: any[];
+  associations: { id: string; name: string; filesUploadedCount: number; maxDocuments: number }[];
 }
-interface User { id: string; name: string | null; email: string; role: string; }
+interface User { id: string; name: string | null; email: string; role: string }
+
+type Fila = "dosare" | "rapoarte" | "abonament";
 
 const ALL_PACKAGES: CorporatePackage[] = ["trial", "starter", "business", "professional", "enterprise"];
 
-export default function CorporateDashboard({ user, corporate, isAdmin = false }: { user: User; corporate: Corporate; isAdmin?: boolean }) {
+type Raport = {
+  id: string; titlu: string; luna: string | null; an: number | null;
+  status: string; creatLa: string; semnatDe: string | null; semnatLa: string | null;
+};
+
+export default function CorporateDashboard({
+  corporate, isAdmin = false,
+}: { user: User; corporate: Corporate; isAdmin?: boolean }) {
   const router = useRouter();
-  const [tab, setTab] = useState<"overview" | "documente" | "rapoarte" | "abonament">("overview");
+  const [fila, setFila] = useState<Fila>("dosare");
+  const [previewPackage, setPreviewPackage] = useState<CorporatePackage>(corporate.package as CorporatePackage);
 
-  // Admin: comutare între pachete pentru testare
-  const [previewPackage, setPreviewPackage] = useState<CorporatePackage>(
-    corporate.package as CorporatePackage
-  );
-  const effectivePackageKey: CorporatePackage = isAdmin ? previewPackage : (corporate.package as CorporatePackage);
-  const pkg = CORPORATE_PACKAGES[effectivePackageKey];
+  const cheiePachet: CorporatePackage = isAdmin ? previewPackage : (corporate.package as CorporatePackage);
+  const pachet = CORPORATE_PACKAGES[cheiePachet];
 
-  const defaultAssoc = corporate.associations?.[0];
-  const dosareUsed = defaultAssoc?.filesUploadedCount ?? 0;
-  const dosareMax = defaultAssoc?.maxDocuments ?? corporate.maxAssoc;
-  const dosarePct = dosareMax > 0 ? Math.round((dosareUsed / dosareMax) * 100) : 0;
+  const asociatie = corporate.associations?.[0];
+  const folosite = asociatie?.filesUploadedCount ?? 0;
+  const maxim = asociatie?.maxDocuments ?? corporate.maxAssoc;
+  const laLimita = maxim > 0 && folosite >= maxim;
 
-  const [logoPreview, setLogoPreview] = useState(corporate.logoUrl || "");
+  // Un dosar tocmai trimis isi arata fluxul in capul paginii, ca omul sa vada ce
+  // se intampla fara sa il caute in lista.
+  const [dosarNou, setDosarNou] = useState<string | null>(null);
+  const [reincarcaLista, setReincarcaLista] = useState(0);
 
-  // Abonament corporate
-  const [subscribing, setSubscribing] = useState(false);
-  const [subscribeClientSecret, setSubscribeClientSecret] = useState("");
-  const [subMsg, setSubMsg] = useState("");
-
-  // Upload state
-  const [uploadMonth, setUploadMonth] = useState("");
-  const [uploadYear, setUploadYear] = useState(new Date().getFullYear().toString());
-  const [assocName, setAssocName] = useState("");
-  const [uploadSubTab, setUploadSubTab] = useState<"fisiere" | "zip">("fisiere");
-  const [uploadFiles, setUploadFiles] = useState<{ type: string; label: string; file: File | null; required: boolean; extended?: boolean }[]>([
-    { type: "lista_plata",            label: "Lista de plată",        file: null, required: true },
-    { type: "explicatii_lista",       label: "Explicațiile listei",   file: null, required: true },
-    { type: "distributia_facturilor", label: "Distribuire facturi",   file: null, required: true },
-    { type: "registru_casa",          label: "Registru casă",         file: null, required: false, extended: true },
-    { type: "registru_jurnal",        label: "Registru jurnal",       file: null, required: false, extended: true },
-    { type: "situatie_activ_pasiv",   label: "Situație activ/pasiv",  file: null, required: false, extended: true },
-    { type: "stat_plata",             label: "Stat de plată",         file: null, required: false, extended: true },
-  ]);
-  const [invoiceFiles, setInvoiceFiles] = useState<File[]>([]);
-  // Tipuri care permit mai multe fișiere deodată (doar pachete plătite)
-  const [multiFiles, setMultiFiles] = useState<Record<string, File[]>>({});
-  const [zipFile, setZipFile] = useState<File | null>(null);
-  const [zipExtracted, setZipExtracted] = useState<{ name: string; assignedType: string; file: File }[]>([]);
-  const [zipLoading, setZipLoading] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [uploadMsg, setUploadMsg] = useState("");
-  const [analysisProgress, setAnalysisProgress] = useState(0);
-  const [analysisStep, setAnalysisStep] = useState("");
-  const [analysisDossierName, setAnalysisDossierName] = useState("");
-  const analysisTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const [documents, setDocuments] = useState<any[]>([]);
-
-  // Rapoarte state
-  const [reports, setReports] = useState<any[]>([]);
-  const [deletingDocId, setDeletingDocId] = useState<string | null>(null);
-  const [confirmDeleteDocId, setConfirmDeleteDocId] = useState<string | null>(null);
-  const [openReportId, setOpenReportId] = useState<string | null>(null);
-
-  useEffect(() => {
-    fetchDocuments();
-    fetchReports();
-  }, []);
-
-  // Auto-polling cât timp există documente în analiză
-  useEffect(() => {
-    const hasAnalyzing = documents.some((d: any) => d.status === "analyzing");
-    if (!hasAnalyzing) {
-      // Analiza s-a terminat — resetăm bara de progres
-      if (analysisProgress > 0) {
-        setAnalysisProgress(100);
-        setAnalysisStep("Raport generat!");
-        setTimeout(() => { setAnalysisProgress(0); setAnalysisStep(""); setAnalysisDossierName(""); }, 2500);
-      }
-      return;
-    }
-    const interval = setInterval(() => {
-      fetchDocuments();
-      fetchReports();
-    }, 8000);
-    return () => clearInterval(interval);
-  }, [documents]);
-
-  async function fetchDocuments() {
-    const res = await fetch("/api/dashboard/documents");
-    if (res.ok) setDocuments(await res.json());
-  }
-
-  async function fetchReports() {
-    const res = await fetch("/api/dashboard/reports");
-    if (res.ok) setReports(await res.json());
-  }
-
-  const MONTHS_RO = [
-    { val: "01", name: "Ianuarie" }, { val: "02", name: "Februarie" },
-    { val: "03", name: "Martie" },   { val: "04", name: "Aprilie" },
-    { val: "05", name: "Mai" },      { val: "06", name: "Iunie" },
-    { val: "07", name: "Iulie" },    { val: "08", name: "August" },
-    { val: "09", name: "Septembrie" },{ val: "10", name: "Octombrie" },
-    { val: "11", name: "Noiembrie" }, { val: "12", name: "Decembrie" },
-  ];
-  const YEARS = ["2024", "2025", "2026", "2027"];
-
-  // Tipuri cu upload multiplu — doar pachete plătite
-  const EXTRA_MULTI: { type: string; label: string; icon: string }[] = [
-    { type: "extras_cont",     label: "Extras de cont",               icon: "🏧" },
-    { type: "registru_banca",  label: "Registru bancă",               icon: "🏦" },
-    { type: "registru_fond",   label: "Registru fond",                icon: "💰" },
-    { type: "citiri_apometre", label: "Citire apometre/repartitoare", icon: "💧" },
-  ];
-  // Pachetul Trial permite doar documentele de bază; restul tipurilor apar la pachetele plătite
-  const showExtended = effectivePackageKey !== "trial";
-
-  const ZIP_TYPE_MAP: { patterns: string[]; type: string; label: string }[] = [
-    { patterns: ["lista"],                              type: "lista_plata",            label: "Lista de plată" },
-    { patterns: ["explicat"],                           type: "explicatii_lista",       label: "Explicațiile listei" },
-    { patterns: ["distribut", "repartiz"],              type: "distributia_facturilor", label: "Distribuire facturi" },
-    { patterns: ["factur", "furniz"],                   type: "facturi",                label: "Facturi" },
-    { patterns: ["extras", "cont", "bancar"],           type: "extras_cont",            label: "Extras de cont" },
-    { patterns: ["casa", "casă"],                       type: "registru_casa",          label: "Registru casă" },
-    { patterns: ["banca", "bancă"],                     type: "registru_banca",         label: "Registru bancă" },
-    { patterns: ["jurnal"],                             type: "registru_jurnal",        label: "Registru jurnal" },
-    { patterns: ["fond"],                               type: "registru_fond",          label: "Registru fond" },
-    { patterns: ["activ", "pasiv", "bilant", "bilanț"], type: "situatie_activ_pasiv",   label: "Situație activ/pasiv" },
-    { patterns: ["apometr", "citir", "contor", "repartitor"], type: "citiri_apometre", label: "Citire apometre/repartitoare" },
-    { patterns: ["stat"],                               type: "stat_plata",             label: "Stat de plată" },
-  ];
-
-  function guessTypeFromName(name: string) {
-    const lower = name.toLowerCase();
-    for (const entry of ZIP_TYPE_MAP) {
-      if (entry.patterns.some(p => lower.includes(p))) return entry;
-    }
-    return { type: "altele", label: name };
-  }
-
-  async function handleZipChange(zipF: File) {
-    setZipFile(zipF);
-    setZipLoading(true);
-    setZipExtracted([]);
-    try {
-      const zip = await JSZip.loadAsync(zipF);
-      const extracted: { name: string; assignedType: string; file: File }[] = [];
-      for (const [name, entry] of Object.entries(zip.files)) {
-        if (entry.dir) continue;
-        const ext = name.split(".").pop()?.toLowerCase() || "";
-        const allowed = ["pdf", "jpg", "jpeg", "png", "xlsx", "xls", "doc", "docx"];
-        if (!allowed.includes(ext)) continue;
-        const buffer = await entry.async("arraybuffer");
-        const mimeMap: Record<string, string> = { pdf: "application/pdf", jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", xls: "application/vnd.ms-excel", doc: "application/msword", docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" };
-        const mime = mimeMap[ext] || "application/octet-stream";
-        const file = new File([buffer], name.split("/").pop() || name, { type: mime });
-        const { type } = guessTypeFromName(name);
-        extracted.push({ name: name.split("/").pop() || name, assignedType: type, file });
-      }
-      setZipExtracted(extracted);
-    } catch {
-      setUploadMsg("✗ Nu s-a putut deschide arhiva ZIP.");
-    }
-    setZipLoading(false);
-  }
-
-  function startAnalysisProgress() {
-    setAnalysisProgress(0);
-    setAnalysisStep("Se pregătesc fișierele...");
-    let progress = 0;
-    const STEPS = [
-      { at: 8, label: "Se încarcă fișierele..." },
-      { at: 22, label: "Se procesează documentele..." },
-      { at: 45, label: "Analiză AI în curs..." },
-      { at: 68, label: "Generare raport de cenzor..." },
-      { at: 82, label: "Finalizare raport..." },
-    ];
-    analysisTimerRef.current = setInterval(() => {
-      progress += 1;
-      if (progress >= 90) { if (analysisTimerRef.current) clearInterval(analysisTimerRef.current); return; }
-      const step = STEPS.filter(s => s.at <= progress).pop();
-      setAnalysisProgress(progress);
-      if (step) setAnalysisStep(step.label);
-    }, 560);
-  }
-
-  function stopAnalysisProgress() {
-    if (analysisTimerRef.current) { clearInterval(analysisTimerRef.current); analysisTimerRef.current = null; }
-  }
-
-  async function handleUpload(e: React.FormEvent) {
-    e.preventDefault();
-    if (!assocName.trim()) { setUploadMsg("Introdu numele asociației"); return; }
-    if (!uploadMonth || !uploadYear) { setUploadMsg("Selectează luna și anul"); return; }
-
-    const period = `${uploadYear}-${uploadMonth}`;
-
-    // Build files list
-    let allFiles: { file: File; type: string; label: string }[] = [];
-
-    if (uploadSubTab === "fisiere") {
-      const missing = uploadFiles.filter(f => f.required && !f.file).map(f => f.label);
-      if (missing.length > 0) { setUploadMsg("Lipsesc: " + missing.join(", ")); return; }
-      if (invoiceFiles.length < 2) { setUploadMsg("Adaugă cel puțin 2 facturi (obligatorii pentru raportul de cenzor)"); return; }
-      for (const uf of uploadFiles) {
-        if (uf.file && (!uf.extended || showExtended)) allFiles.push({ file: uf.file, type: uf.type, label: uf.label });
-      }
-      invoiceFiles.forEach((file, idx) => {
-        allFiles.push({ file, type: idx === 0 ? "facturi" : `facturi_${idx + 1}`, label: invoiceFiles.length > 1 ? `Factură furnizori (${idx + 1})` : "Facturi furnizori" });
-      });
-      // Registre cu upload multiplu (registru bancă, registru fond) — doar pachete plătite
-      if (showExtended) {
-        for (const m of EXTRA_MULTI) {
-          const arr = multiFiles[m.type] || [];
-          arr.forEach((file, idx) => {
-            allFiles.push({ file, type: idx === 0 ? m.type : `${m.type}_${idx + 1}`, label: arr.length > 1 ? `${m.label} (${idx + 1})` : m.label });
-          });
-        }
-      }
-    } else {
-      if (zipExtracted.length === 0) { setUploadMsg("Alege o arhivă ZIP validă"); return; }
-      const hasReq = ["lista_plata", "explicatii_lista", "distributia_facturilor"].every(t => zipExtracted.some(z => z.assignedType === t));
-      const hasFacturi = zipExtracted.filter(z => z.assignedType === "facturi").length >= 2;
-      if (!hasReq || !hasFacturi) { setUploadMsg("ZIP-ul trebuie să conțină: lista de plată, explicațiile listei, distribuire facturi și cel puțin 2 facturi"); return; }
-      allFiles = zipExtracted.map(z => ({ file: z.file, type: z.assignedType, label: guessTypeFromName(z.name).label }));
-    }
-
-    const monthLabel = MONTHS_RO.find(m => m.val === uploadMonth)?.name || uploadMonth;
-    setAnalysisDossierName(`${assocName.trim()} — ${monthLabel} ${uploadYear}`);
-    startAnalysisProgress();
-    setUploading(true);
-    setUploadMsg("");
-
-    const form = new FormData();
-    form.append("period", period);
-    form.append("associationName", assocName.trim());
-    form.append("cui", corporate.cui || "");
-    form.append("address", "");
-    for (const { file, type, label } of allFiles) {
-      form.append("files", file);
-      form.append("fileTypes", type);
-      form.append("fileLabels", label);
-    }
-
-    const res = await fetch("/api/dashboard/upload-structured", { method: "POST", body: form });
-    const data = await res.json();
-
-    stopAnalysisProgress();
-
-    if (res.ok) {
-      setAnalysisProgress(92);
-      setAnalysisStep("Analiză AI în fundal...");
-      setUploadMsg("✓ Dosar trimis! Analiza AI rulează — raportul apare automat când e gata.");
-      setUploadFiles(prev => prev.map(f => ({ ...f, file: null })));
-      setInvoiceFiles([]);
-      setMultiFiles({});
-      setZipFile(null); setZipExtracted([]);
-      setUploadMonth(""); setAssocName("");
-      fetchDocuments(); fetchReports();
-      router.refresh();
-      // Auto-refresh la 15s și 40s ca să prindă rezultatul analizei
-      setTimeout(() => { fetchDocuments(); fetchReports(); router.refresh(); }, 15000);
-      setTimeout(() => { fetchDocuments(); fetchReports(); router.refresh(); }, 40000);
-    } else {
-      setUploadMsg("✗ " + (data.error || "Eroare la upload"));
-      setAnalysisProgress(0); setAnalysisStep("");
-    }
-    setUploading(false);
-  }
-
-  async function deleteDocument(id: string) {
-    setDeletingDocId(id);
-    const res = await fetch(`/api/dashboard/documents/${id}`, { method: "DELETE" });
-    if (res.ok) {
-      setDocuments(prev => prev.filter(d => d.id !== id));
-      router.refresh();
-    }
-    setDeletingDocId(null);
-    setConfirmDeleteDocId(null);
-  }
-
-  function printReportAsPDF(title: string, content: string) {
-    const escape = (s: string) => s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
-
-    function mdToHtml(md: string): string {
-      const lines = md.split("\n");
-      let html = "";
-      let inTable = false;
-      let tableHtml = "";
-
-      for (let i = 0; i < lines.length; i++) {
-        let line = lines[i];
-
-        // Tabele markdown
-        if (line.startsWith("|")) {
-          if (!inTable) { inTable = true; tableHtml = "<table><tbody>"; }
-          const isHeader = lines[i+1]?.startsWith("|") && lines[i+1]?.includes("---");
-          const isSep = line.replace(/[\s|:-]/g,"") === "";
-          if (isSep) continue;
-          const cells = line.split("|").filter((_,idx,arr) => idx > 0 && idx < arr.length-1);
-          const tag = isHeader ? "th" : "td";
-          tableHtml += "<tr>" + cells.map(c => `<${tag}>${mdInline(c.trim())}</${tag}>`).join("") + "</tr>";
-          continue;
-        } else if (inTable) {
-          html += tableHtml + "</tbody></table>";
-          inTable = false; tableHtml = "";
-        }
-
-        if (/^#{3} (.+)/.test(line)) { html += `<h3>${mdInline(line.replace(/^### /,""))}</h3>`; continue; }
-        if (/^#{2} (.+)/.test(line)) { html += `<h2>${mdInline(line.replace(/^## /,""))}</h2>`; continue; }
-        if (/^#{1} (.+)/.test(line)) { html += `<h1>${mdInline(line.replace(/^# /,""))}</h1>`; continue; }
-        if (/^---+$/.test(line)) { html += "<hr>"; continue; }
-        if (/^[-*] (.+)/.test(line)) { html += `<li>${mdInline(line.replace(/^[-*] /,""))}</li>`; continue; }
-        if (line.trim() === "") { html += "<br>"; continue; }
-        html += `<p>${mdInline(line)}</p>`;
-      }
-      if (inTable) html += tableHtml + "</tbody></table>";
-      return html;
-    }
-
-    function mdInline(s: string): string {
-      return escape(s)
-        .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-        .replace(/\*(.+?)\*/g, "<em>$1</em>")
-        .replace(/`(.+?)`/g, "<code>$1</code>");
-    }
-
-    const body = mdToHtml(content);
-    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${escape(title)}</title>
-<style>
-  body{font-family:Arial,sans-serif;max-width:900px;margin:0 auto;padding:32px;color:#111;font-size:13px;line-height:1.6}
-  h1{font-size:16px;font-weight:700;border-bottom:2px solid #7c3aed;padding-bottom:6px;margin-top:24px;color:#1a1a2e}
-  h2{font-size:14px;font-weight:700;color:#1a1a2e;margin-top:20px;border-left:3px solid #7c3aed;padding-left:8px}
-  h3{font-size:13px;font-weight:700;color:#374151;margin-top:14px}
-  table{border-collapse:collapse;width:100%;margin:10px 0;font-size:11px}
-  th{background:#f0ebff;font-weight:700;text-align:left;padding:5px 8px;border:1px solid #ccc}
-  td{padding:4px 8px;border:1px solid #ddd;vertical-align:top}
-  tr:nth-child(even) td{background:#fafafa}
-  hr{border:none;border-top:1px solid #ddd;margin:16px 0}
-  li{margin:2px 0;padding-left:4px}
-  strong{font-weight:700}
-  em{font-style:italic}
-  code{background:#f3f0ff;padding:1px 4px;border-radius:3px;font-size:11px}
-  br{display:block;margin:2px 0}
-  @media print{body{padding:16px}button{display:none}}
-</style></head>
-<body>
-<div style="text-align:center;margin-bottom:24px;padding-bottom:16px;border-bottom:2px solid #7c3aed">
-  <img src="/logo-vosmart.png" alt="VoSmart" style="height:36px;margin-bottom:8px;display:block;margin:0 auto 8px">
-  <div style="font-size:11px;color:#666">vosmart.ro · Raport generat automat cu AI</div>
-</div>
-${body}
-<div style="margin-top:32px;padding-top:12px;border-top:1px solid #ddd;font-size:10px;color:#888;text-align:center">
-  Document generat automat de platforma VoSmart · ${new Date().toLocaleDateString("ro-RO")}
-</div>
-<script>window.onload=()=>{window.print()}</script>
-</body></html>`;
-
-    const w = window.open("","_blank");
-    if (w) { w.document.write(html); w.document.close(); }
-  }
-
-  async function handleLogout() {
+  async function iesire() {
     await fetch("/api/auth/logout", { method: "POST" });
     window.location.href = "/corporate";
   }
 
-  async function startSubscription() {
-    setSubscribing(true);
-    setSubMsg("");
-    try {
-      const res = await fetch("/api/billing/subscribe", { method: "POST" });
-      const data = await res.json();
-      if (res.ok) {
-        setSubscribeClientSecret(data.clientSecret);
-      } else {
-        setSubMsg("✗ " + (data.error || "Eroare la inițierea plății"));
-      }
-    } catch {
-      setSubMsg("✗ Eroare de conexiune");
-    } finally {
-      setSubscribing(false);
-    }
-  }
-
-  function handleSubscribeSuccess() {
-    setSubscribeClientSecret("");
-    setSubMsg("✓ Plata a fost procesată. Abonamentul va fi activat în câteva minute.");
-    setTimeout(() => router.refresh(), 3000);
-  }
-
-  const statusBadge = (status: string) => {
-    const map: Record<string, [string, string]> = {
-      published: ["bg-emerald-500/15 text-emerald-300", "Publicat"],
-      analyzed: ["bg-cyan-500/15 text-cyan-300", "Analizat"],
-      analyzing: ["bg-violet-500/15 text-violet-300 animate-pulse", "Se analizează"],
-      uploaded: ["bg-slate-500/15 text-slate-300", "Încărcat"],
-      error: ["bg-red-500/15 text-red-300", "Eroare"],
-      draft: ["bg-slate-500/15 text-slate-300", "Draft"],
-    };
-    const [cls, label] = map[status] || ["bg-slate-500/15 text-slate-300", status];
-    return <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${cls}`}>{label}</span>;
-  };
-
-  const subscriptionStatusBadge = (status: string | null) => {
-    const map: Record<string, [string, string]> = {
-      active: ["bg-emerald-500/15 text-emerald-300 border border-emerald-500/20", "✓ Activ"],
-      trialing: ["bg-cyan-500/15 text-cyan-300 border border-cyan-500/20", "Perioadă de probă"],
-      incomplete: ["bg-yellow-500/15 text-yellow-300 border border-yellow-500/20", "⏳ Incomplet"],
-      past_due: ["bg-red-500/15 text-red-300 border border-red-500/20", "Plată restantă"],
-      canceled: ["bg-slate-500/15 text-slate-300", "Anulat"],
-      unpaid: ["bg-red-500/15 text-red-300 border border-red-500/20", "Neplătit"],
-    };
-    const [cls, label] = (status && map[status]) || ["bg-slate-500/15 text-slate-300", "Fără abonament"];
-    return <span className={`rounded-full px-3 py-1 text-xs font-medium ${cls}`}>{label}</span>;
-  };
-
   return (
-    <main className="min-h-screen bg-[#050814] text-white">
-      <div className="pointer-events-none fixed inset-0 -z-10">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,rgba(124,58,237,0.18),transparent_40%)]" />
-      </div>
-
-      {/* Header */}
-      <header className="sticky top-0 z-50 border-b border-white/5 bg-[#050814]/95 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-3">
-          <div className="flex items-center gap-4">
-            {logoPreview ? (
-              <img src={logoPreview} alt="Logo" className="h-9 w-auto object-contain" />
+    <main className="min-h-screen bg-app text-ink">
+      {/* ------------------------------------------------------------ cap */}
+      <header className="sticky top-0 z-40 border-b border-line bg-app/85 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-2.5 sm:px-6">
+          <div className="flex min-w-0 items-center gap-3">
+            {corporate.logoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={corporate.logoUrl} alt={corporate.companyName} className="h-8 w-auto object-contain" />
             ) : (
-              <Image src="/logo-vosmart.png" alt="VoSmart" width={80} height={36}
-                className="h-auto" style={{ mixBlendMode: "screen", width: "70px" }} />
+              <Image src="/logo-vosmart.png" alt="VoSmart" width={72} height={32}
+                className="h-auto" style={{ mixBlendMode: "screen", width: "64px" }} />
             )}
-            <div className="hidden sm:block">
-              <p className="text-sm font-semibold">{corporate.companyName}</p>
-              <p className="text-xs text-slate-400">{pkg ? `${pkg.name} — ${pkg.priceRon} lei/lună` : corporate.package}</p>
+            <span aria-hidden className="h-5 w-px bg-line-strong" />
+            <div className="min-w-0">
+              <p className="truncate text-[13.5px] font-medium leading-tight">{corporate.companyName}</p>
+              <p className="text-[11.5px] leading-tight text-faint">
+                {pachet ? `${pachet.name}${pachet.priceRon > 0 ? ` · ${pachet.priceRon} lei/lună` : ""}` : corporate.package}
+              </p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <a href="/" className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-1.5 text-xs text-slate-300 transition hover:bg-white/[0.08]">← Site</a>
-            <button onClick={handleLogout}
-              className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-1.5 text-xs text-slate-300 transition hover:bg-white/[0.08]">
-              Ieșire
-            </button>
+          <div className="flex shrink-0 items-center gap-1.5">
+            <Link href="/" className="hidden rounded-[var(--radius-field)] px-3 py-1.5 text-[12.5px] text-muted transition-colors hover:bg-surface-3 hover:text-ink sm:inline-block">
+              Site
+            </Link>
+            <Buton fel="fantoma" marime="mic" onClick={iesire}>
+              <Ic.iesire className="h-3.5 w-3.5" /> Ieșire
+            </Buton>
           </div>
         </div>
       </header>
 
-      {/* Admin package switcher */}
       {isAdmin && (
-        <div className="border-b border-amber-500/20 bg-amber-500/5">
-          <div className="mx-auto max-w-7xl px-5 py-3 sm:px-6">
-            <div className="flex items-center gap-3 flex-wrap">
-              <span className="text-xs text-amber-400 font-semibold uppercase tracking-wider shrink-0">
-                🔧 Mod test admin — pachet simulat:
-              </span>
-              <div className="flex gap-2 flex-wrap">
-                {ALL_PACKAGES.map(pk => {
-                  const pkInfo = CORPORATE_PACKAGES[pk];
-                  const isSelected = previewPackage === pk;
-                  return (
-                    <button key={pk} onClick={() => setPreviewPackage(pk)}
-                      className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
-                        isSelected
-                          ? "bg-amber-500 text-black shadow-[0_0_12px_rgba(245,158,11,0.5)]"
-                          : "border border-amber-500/25 text-amber-300 hover:bg-amber-500/15"
-                      }`}>
-                      {pkInfo.name}
-                      {pkInfo.priceRon > 0 && <span className="ml-1 opacity-60">{pkInfo.priceRon}L</span>}
-                      {pkInfo.priceRon === 0 && <span className="ml-1 opacity-60">gratuit</span>}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
+        <div className="border-b border-warn/20 bg-warn-dim/40">
+          <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-2 px-4 py-2 sm:px-6">
+            <span className="text-[11px] font-medium uppercase tracking-wider text-warn">Mod test — pachet simulat</span>
+            {ALL_PACKAGES.map(p => (
+              <button key={p} onClick={() => setPreviewPackage(p)}
+                className={`rounded-md px-2 py-1 text-[11.5px] font-medium transition-colors ${
+                  previewPackage === p ? "bg-warn text-app" : "text-warn/80 hover:bg-warn/15"
+                }`}>
+                {CORPORATE_PACKAGES[p].name}
+              </button>
+            ))}
           </div>
         </div>
       )}
 
-      <div className="mx-auto max-w-7xl px-5 py-8 sm:px-6">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold">Panou {corporate.companyName}</h1>
-          <p className="text-slate-400 mt-1 text-sm">
-            Dashboard corporate — documente și rapoarte
-            {isAdmin && <span className="ml-2 text-amber-400">· Pachet simulat: <strong>{pkg?.name}</strong></span>}
-          </p>
+      <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
+        {/* ------------------------------------------------- sumar scurt */}
+        <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <Statistica
+            pictograma={<Ic.dosar className="h-4 w-4" />}
+            valoare={<>{folosite}<span className="text-[15px] font-normal text-faint">/{maxim >= 9999 ? "∞" : maxim}</span></>}
+            eticheta="Dosare folosite"
+            ton={laLimita ? "bad" : folosite >= maxim - 1 ? "warn" : "brand"}
+          />
+          <Statistica pictograma={<Ic.raport className="h-4 w-4" />} valoare={<RapoarteSemnate />} eticheta="Rapoarte semnate" ton="ok" />
+          <Statistica pictograma={<Ic.scut className="h-4 w-4" />} valoare={pachet?.docsPerDosar ?? 30} eticheta="Documente / dosar" />
+          <Statistica
+            pictograma={<Ic.cheie className="h-4 w-4" />}
+            valoare={corporate.subscriptionStatus === "active" ? "Activ" : corporate.subscriptionStatus === "trialing" ? "Probă" : "—"}
+            eticheta="Abonament"
+            ton={corporate.subscriptionStatus === "active" ? "ok" : "neutru"}
+          />
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          {/* Pachet activ */}
-          <div className="rounded-2xl border border-violet-500/20 bg-violet-500/5 p-5">
-            <div className="text-2xl mb-2">📦</div>
-            <div className="text-xl font-bold leading-tight">{pkg?.name ?? corporate.package}</div>
-            <div className="text-xs text-slate-400 mt-1">
-              {effectivePackageKey === "enterprise"
-                ? "Dosare nelimitate"
-                : `${pkg?.maxAssoc ?? corporate.maxAssoc} dosare · ${pkg?.docsPerDosar ?? 30} doc/dosar`}
-            </div>
-          </div>
-
-          {/* Dosare utilizate */}
-          <div className={`rounded-2xl border p-5 ${dosarePct >= 100 ? "border-red-500/30 bg-red-500/5" : dosarePct >= 80 ? "border-yellow-500/30 bg-yellow-500/5" : "border-white/8 bg-white/[0.03]"}`}>
-            <div className="text-2xl mb-2">📁</div>
-            <div className="text-2xl font-bold">
-              {dosareUsed}
-              <span className="text-slate-500 text-sm font-normal">
-                /{dosareMax >= 9999 ? "∞" : dosareMax}
-              </span>
-            </div>
-            <div className="text-xs text-slate-500 mt-1">Dosare utilizate</div>
-            <div className="mt-2 h-1 rounded-full bg-white/8 overflow-hidden">
-              <div className="h-full rounded-full transition-all duration-500"
-                style={{ width: `${Math.min(100, dosarePct)}%`, background: dosarePct >= 100 ? "#ef4444" : dosarePct >= 80 ? "#eab308" : "#7c3aed" }} />
-            </div>
-          </div>
-
-          {/* Rapoarte publicate */}
-          <div className="rounded-2xl border border-white/8 bg-white/[0.03] p-5">
-            <div className="text-2xl mb-2">✅</div>
-            <div className="text-2xl font-bold">{reports.filter((r: any) => r.status === "published").length}</div>
-            <div className="text-xs text-slate-500 mt-1">Rapoarte publicate</div>
-          </div>
-
-          {/* Se analizează */}
-          <div className="rounded-2xl border border-white/8 bg-white/[0.03] p-5">
-            <div className="text-2xl mb-2">🤖</div>
-            <div className="text-2xl font-bold">{documents.filter((d: any) => d.status === "analyzing").length}</div>
-            <div className="text-xs text-slate-500 mt-1">Se analizează</div>
-          </div>
-        </div>
-
-        {/* Tabs */}
-        <div className="flex gap-2 mb-6 border-b border-white/5 pb-1 flex-wrap">
-          {[
-            { key: "overview", label: "📊 Prezentare" },
-            { key: "documente", label: "📁 Documente" },
-            ...(!isAdmin ? [{ key: "rapoarte", label: "📋 Rapoarte" }] : []),
-            { key: "abonament", label: "💳 Abonament" },
-          ].map(t => (
-            <button key={t.key} onClick={() => setTab(t.key as any)}
-              className={`px-4 py-2.5 rounded-xl text-sm font-medium transition ${tab === t.key ? "bg-violet-600 text-white shadow-[0_0_20px_rgba(124,58,237,0.3)]" : "text-slate-400 hover:text-white hover:bg-white/[0.05]"}`}>
-              {t.label}
+        {/* ------------------------------------------------------- file */}
+        <nav className="mb-5 flex gap-0.5 border-b border-line">
+          {([
+            { cheie: "dosare" as const, text: "Dosare" },
+            { cheie: "rapoarte" as const, text: "Rapoarte" },
+            { cheie: "abonament" as const, text: "Abonament" },
+          ]).map(f => (
+            <button
+              key={f.cheie}
+              onClick={() => setFila(f.cheie)}
+              aria-current={fila === f.cheie ? "page" : undefined}
+              className={`relative -mb-px px-3.5 py-2.5 text-[13.5px] font-medium transition-colors ${
+                fila === f.cheie ? "text-ink" : "text-faint hover:text-muted"
+              }`}
+            >
+              {f.text}
+              {fila === f.cheie && <span className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-brand" />}
             </button>
           ))}
-        </div>
+        </nav>
 
-        {/* OVERVIEW */}
-        {tab === "overview" && (
-          <div className="space-y-4">
-            {/* Pachet info */}
-            <div className="rounded-2xl border border-violet-500/20 bg-violet-500/5 p-5">
-              <div className="flex items-center justify-between flex-wrap gap-6">
-                <div>
-                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Pachet activ</p>
-                  <p className="text-2xl font-bold">{pkg?.name ?? corporate.package}</p>
-                  {pkg && pkg.priceRon > 0 && <p className="text-sm text-violet-300 mt-0.5">{pkg.priceRon} lei/lună</p>}
-                  {pkg && pkg.priceRon === 0 && effectivePackageKey === "enterprise" && (
-                    <p className="text-sm text-amber-300 mt-0.5">Preț personalizat</p>
-                  )}
-                </div>
-                <div className="flex gap-8 text-center">
-                  <div>
-                    <p className="text-xs text-slate-500 uppercase tracking-wider">Dosare incluse</p>
-                    <p className="text-3xl font-bold mt-1">{corporate.maxAssoc >= 9999 ? "∞" : corporate.maxAssoc}</p>
-                    <p className="text-xs text-slate-500 mt-0.5">dosare/abonament</p>
-                  </div>
-                  {effectivePackageKey !== "enterprise" && (
-                    <div>
-                      <p className="text-xs text-slate-500 uppercase tracking-wider">Doc/dosar</p>
-                      <p className="text-3xl font-bold mt-1">{pkg?.docsPerDosar ?? 30}</p>
-                      <p className="text-xs text-slate-500 mt-0.5">fișiere PDF max</p>
-                    </div>
-                  )}
-                  <div>
-                    <p className="text-xs text-slate-500 uppercase tracking-wider">Utilizate</p>
-                    <p className="text-3xl font-bold mt-1">{dosareUsed}</p>
-                    <p className="text-xs text-slate-500 mt-0.5">din {dosareMax >= 9999 ? "∞" : dosareMax}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Documente în analiză */}
-            {documents.filter((d: any) => d.status === "analyzing").length > 0 && (
-              <div className="rounded-2xl border border-violet-500/20 bg-violet-500/5 p-5">
-                <p className="text-sm font-semibold text-violet-300 mb-2 flex items-center gap-2">
-                  <span className="animate-pulse">●</span> Documente în analiză AI
-                </p>
-                <p className="text-xs text-slate-400">Analiza poate dura 30-60 secunde. Reîncarcă pagina pentru a verifica statusul.</p>
-              </div>
+        {fila === "dosare" && (
+          <div className="space-y-5">
+            {dosarNou && (
+              <FluxDosar
+                dosarId={dosarNou}
+                peFinal={() => { setReincarcaLista(v => v + 1); setDosarNou(null); }}
+              />
             )}
 
-            {/* Acces rapid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <button onClick={() => setTab("documente")}
-                className="rounded-2xl border border-white/8 bg-white/[0.03] p-6 text-left hover:bg-white/[0.06] hover:border-violet-500/30 transition group">
-                <div className="text-3xl mb-3">📁</div>
-                <p className="font-semibold">Încarcă documente</p>
-                <p className="text-sm text-slate-400 mt-1">Trimite dosarul lunar pentru analiză AI</p>
-                <span className="text-violet-400 text-sm mt-3 inline-block group-hover:translate-x-1 transition-transform">Deschide →</span>
-              </button>
-              {!isAdmin && (
-                <button onClick={() => setTab("rapoarte")}
-                  className="rounded-2xl border border-white/8 bg-white/[0.03] p-6 text-left hover:bg-white/[0.06] hover:border-cyan-500/30 transition group">
-                  <div className="text-3xl mb-3">📋</div>
-                  <p className="font-semibold">Rapoartele mele</p>
-                  <p className="text-sm text-slate-400 mt-1">{reports.filter((r: any) => r.status === "published").length} rapoarte publicate</p>
-                  <span className="text-cyan-400 text-sm mt-3 inline-block group-hover:translate-x-1 transition-transform">Vezi rapoarte →</span>
-                </button>
-              )}
-            </div>
+            <DosarNou
+              numeImplicit={asociatie?.name}
+              doarDeBaza={cheiePachet === "trial"}
+              blocat={laLimita}
+              motivBlocare={`Pachetul ${pachet?.name ?? corporate.package} include ${maxim} ${maxim === 1 ? "dosar" : "dosare"}. Ștergeți un dosar vechi sau treceți la un plan mai mare — dosarele suplimentare costă 40 lei bucata.`}
+              peTrimis={id => { setDosarNou(id); setReincarcaLista(v => v + 1); router.refresh(); }}
+            />
 
-            {documents.length === 0 && (
-              <div className="rounded-3xl border border-white/8 bg-white/[0.03] p-12 text-center">
-                <div className="text-5xl mb-4">📤</div>
-                <p className="text-slate-300 font-medium">Nu ai documente încă</p>
-                <p className="text-sm text-slate-500 mt-2">Încarcă primul dosar pentru a genera un raport de admin</p>
-                <button onClick={() => setTab("documente")}
-                  className="mt-4 rounded-xl bg-violet-600 px-6 py-2.5 text-sm font-semibold transition hover:bg-violet-500">
-                  Încarcă documente →
-                </button>
-              </div>
-            )}
+            <ListaDosare reincarca={reincarcaLista} />
           </div>
         )}
 
-        {/* DOCUMENTE */}
-        {tab === "documente" && (() => {
-          const assoc = corporate.associations?.[0];
-          const filesUsed: number = assoc?.filesUploadedCount ?? 0;
-          const filesMax: number = assoc?.maxDocuments ?? 5;
-          const atLimit = filesUsed >= filesMax;
+        {fila === "rapoarte" && <FilaRapoarte />}
 
-          const multiCount = showExtended ? Object.values(multiFiles).reduce((s, arr) => s + arr.length, 0) : 0;
-          const docsFilled = uploadFiles.filter(f => f.file && (!f.extended || showExtended)).length + invoiceFiles.length + multiCount;
-          const docsMax = pkg?.docsPerDosar ?? 30;
-          const barHue = Math.round(120 - (docsFilled / docsMax) * 120);
-          const barPct = Math.min(100, (docsFilled / docsMax) * 100);
-
-          return (
-          <div className="space-y-6">
-            {/* Upload form */}
-            <div className="rounded-2xl border border-white/10 bg-white/[0.025] p-6">
-              <div className="flex items-start justify-between gap-4 mb-4">
-                <div>
-                  <h2 className="text-lg font-semibold">Trimite dosar la analiză AI</h2>
-                  <p className="text-sm text-slate-400 mt-0.5">Analiza durează 30–60 secunde.</p>
-                </div>
-                {/* Contor documente */}
-                <div className={`shrink-0 rounded-xl border px-3 py-2 text-right ${
-                  atLimit ? "border-red-500/40 bg-red-500/10" : filesUsed >= filesMax - 1 ? "border-yellow-500/40 bg-yellow-500/10" : "border-white/10 bg-white/[0.03]"
-                }`}>
-                  <p className="text-[10px] uppercase tracking-wider text-slate-500">Dosare / Limită</p>
-                  <p className={`text-lg font-bold ${atLimit ? "text-red-400" : filesUsed >= filesMax - 1 ? "text-yellow-400" : "text-white"}`}>
-                    {filesUsed}<span className="text-slate-600 text-sm font-normal">/{filesMax}</span>
-                  </p>
-                </div>
-              </div>
-
-              {/* Banner limită atinsă */}
-              {atLimit && (
-                <div className="mb-5 rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 flex items-start gap-3">
-                  <span className="text-xl shrink-0">⛔</span>
-                  <div>
-                    <p className="text-sm font-semibold text-red-300">Limita de dosare a fost atinsă</p>
-                    <p className="text-xs text-red-400/80 mt-0.5">
-                      Pachetul <strong>{corporate.package}</strong> permite maximum <strong>{filesMax} dosare</strong>.
-                      Contactează administratorul pentru upgrade sau dosare suplimentare (40 lei/dosar).
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {/* Avertizare aproape de limită */}
-              {!atLimit && filesUsed >= filesMax - 1 && (
-                <div className="mb-5 rounded-xl border border-yellow-500/30 bg-yellow-500/8 px-4 py-3 flex items-start gap-3">
-                  <span className="text-xl shrink-0">⚠️</span>
-                  <p className="text-xs text-yellow-300">
-                    Atenție: mai ai un singur dosar disponibil. Poți cumpăra dosare suplimentare la <strong>40 lei/dosar</strong> — contactează <a href="mailto:office@vosmart.ro" className="underline">office@vosmart.ro</a>.
-                  </p>
-                </div>
-              )}
-
-              <form onSubmit={handleUpload} className="space-y-5">
-
-                {/* Rând 1: Asociatie + Calendar */}
-                <div className="grid gap-4 sm:grid-cols-2">
-                  {/* Asociatie */}
-                  <div>
-                    <label className="block text-xs text-slate-400 uppercase tracking-wider mb-2">Asociație *</label>
-                    <input
-                      type="text" value={assocName} onChange={e => setAssocName(e.target.value)}
-                      placeholder="ex: Bloc 12 Sc. B — Str. Mihai Eminescu"
-                      className="w-full rounded-xl border border-white/10 bg-[#0d0d1a] px-4 py-3 text-white text-sm placeholder-slate-600 outline-none focus:border-violet-500 transition" />
-                  </div>
-
-                  {/* Calendar luna + an */}
-                  <div>
-                    <label className="block text-xs text-slate-400 uppercase tracking-wider mb-2">Perioada verificată *</label>
-                    <div className="flex gap-2">
-                      <select value={uploadMonth} onChange={e => setUploadMonth(e.target.value)}
-                        className="flex-1 rounded-xl border border-white/10 bg-[#0d0d1a] px-3 py-3 text-white text-sm outline-none focus:border-violet-500 transition appearance-none">
-                        <option value="">Luna...</option>
-                        {MONTHS_RO.map(m => <option key={m.val} value={m.val}>{m.name}</option>)}
-                      </select>
-                      <select value={uploadYear} onChange={e => setUploadYear(e.target.value)}
-                        className="w-28 rounded-xl border border-white/10 bg-[#0d0d1a] px-3 py-3 text-white text-sm outline-none focus:border-violet-500 transition appearance-none">
-                        {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
-                      </select>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Sub-tabs: Fisiere / ZIP */}
-                <div className="flex gap-1 p-1 rounded-xl bg-white/[0.04] border border-white/8 w-fit">
-                  {[
-                    { key: "fisiere" as const, label: "📄 Fișiere individuale" },
-                    { key: "zip" as const, label: "📦 Arhivă ZIP" },
-                  ].map(t => (
-                    <button key={t.key} type="button" onClick={() => setUploadSubTab(t.key)}
-                      className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
-                        uploadSubTab === t.key ? "bg-violet-600 text-white" : "text-slate-400 hover:text-white"
-                      }`}>
-                      {t.label}
-                    </button>
-                  ))}
-                </div>
-
-                {/* TAB: Fisiere individuale */}
-                {uploadSubTab === "fisiere" && (
-                  <div className="space-y-4">
-
-                    {/* SECTIUNEA 1: Documente principale obligatorii */}
-                    <div className="space-y-2.5">
-                      <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
-                        Documente principale — obligatorii
-                      </p>
-                      {uploadFiles.filter(f => f.required).map(uf => {
-                        const idx = uploadFiles.indexOf(uf);
-                        return (
-                          <div key={uf.type} className="flex items-center gap-3">
-                            <div className="w-48 shrink-0 flex items-center gap-1.5">
-                              <span className="text-xs text-red-400">●</span>
-                              <span className="text-sm text-slate-300">{uf.label}</span>
-                              <span className="text-red-400 text-xs">*</span>
-                            </div>
-                            <label className={`flex-1 flex items-center gap-2.5 rounded-xl border px-4 py-2.5 cursor-pointer transition text-sm ${
-                              uf.file ? "border-emerald-500/40 bg-emerald-500/8 text-emerald-300" : "border-white/8 bg-white/[0.03] text-slate-500 hover:border-violet-500/40 hover:text-slate-300"
-                            }`}>
-                              <span>{uf.file ? "✅" : "📄"}</span>
-                              <span className="truncate flex-1">{uf.file ? uf.file.name : "Alege fișier..."}</span>
-                              {uf.file && <button type="button" onClick={e => { e.preventDefault(); setUploadFiles(p=>p.map((f,i)=>i===idx?{...f,file:null}:f)); }} className="text-slate-500 hover:text-red-400 transition ml-1 shrink-0">✕</button>}
-                              <input type="file" accept=".pdf,.jpg,.jpeg,.png,.xlsx,.xls,.doc,.docx" className="hidden"
-                                onChange={e => { const file=e.target.files?.[0]||null; setUploadFiles(p=>p.map((f,i)=>i===idx?{...f,file}:f)); }} />
-                            </label>
-                          </div>
-                        );
-                      })}
-                    </div>
-
-                    {/* SECTIUNEA 2: Documente suplimentare (doar pachete platite) */}
-                    {showExtended && (
-                      <div className="space-y-2.5 border-t border-white/5 pt-4">
-                        <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
-                          Documente suplimentare — opționale
-                        </p>
-                        {/* Ordinea: extras_cont(m), registru_casa, registru_banca(m),
-                            registru_jurnal, registru_fond(m), situatie_activ_pasiv,
-                            citiri_apometre(m), stat_plata */}
-                        {([
-                          { kind: "multi",  type: "extras_cont",      label: "Extras de cont",               icon: "🏧" },
-                          { kind: "single", type: "registru_casa" },
-                          { kind: "multi",  type: "registru_banca",    label: "Registru bancă",               icon: "🏦" },
-                          { kind: "single", type: "registru_jurnal" },
-                          { kind: "multi",  type: "registru_fond",     label: "Registru fond",                icon: "💰" },
-                          { kind: "single", type: "situatie_activ_pasiv" },
-                          { kind: "multi",  type: "citiri_apometre",   label: "Citire apometre/repartitoare", icon: "💧" },
-                          { kind: "single", type: "stat_plata" },
-                        ] as { kind: string; type: string; label?: string; icon?: string }[]).map(item => {
-                          if (item.kind === "single") {
-                            const uf = uploadFiles.find(f => f.type === item.type);
-                            const idx = uploadFiles.findIndex(f => f.type === item.type);
-                            if (!uf) return null;
-                            return (
-                              <div key={uf.type} className="flex items-center gap-3">
-                                <div className="w-48 shrink-0 flex items-center gap-1.5">
-                                  <span className="text-xs text-slate-600">○</span>
-                                  <span className="text-sm text-slate-300">{uf.label}</span>
-                                </div>
-                                <label className={`flex-1 flex items-center gap-2.5 rounded-xl border px-4 py-2.5 cursor-pointer transition text-sm ${
-                                  uf.file ? "border-emerald-500/40 bg-emerald-500/8 text-emerald-300" : "border-white/8 bg-white/[0.03] text-slate-500 hover:border-violet-500/40 hover:text-slate-300"
-                                }`}>
-                                  <span>{uf.file ? "✅" : "📄"}</span>
-                                  <span className="truncate flex-1">{uf.file ? uf.file.name : "Alege fișier..."}</span>
-                                  {uf.file && <button type="button" onClick={e => { e.preventDefault(); setUploadFiles(p=>p.map((f,i)=>i===idx?{...f,file:null}:f)); }} className="text-slate-500 hover:text-red-400 transition ml-1 shrink-0">✕</button>}
-                                  <input type="file" accept=".pdf,.jpg,.jpeg,.png,.xlsx,.xls,.doc,.docx" className="hidden"
-                                    onChange={e => { const file=e.target.files?.[0]||null; setUploadFiles(p=>p.map((f,i)=>i===idx?{...f,file}:f)); }} />
-                                </label>
-                              </div>
-                            );
-                          } else {
-                            const m = { type: item.type, label: item.label!, icon: item.icon! };
-                            const arr = multiFiles[m.type] || [];
-                            return (
-                              <div key={m.type}>
-                                <div className="flex items-center gap-1.5 mb-1.5">
-                                  <span className="text-xs text-slate-600">○</span>
-                                  <span className="text-sm text-slate-300">{m.label}</span>
-                                  <span className="text-xs text-slate-600 ml-1">(una sau mai multe)</span>
-                                </div>
-                                {arr.length > 0 && (
-                                  <div className="space-y-1.5 mb-1.5">
-                                    {arr.map((file, fidx) => (
-                                      <div key={fidx} className="flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/8 px-3 py-2.5">
-                                        <span className="text-base">{m.icon}</span>
-                                        <span className="text-sm text-emerald-300 flex-1 truncate">{file.name}</span>
-                                        <span className="text-xs text-emerald-600 shrink-0">{Math.round(file.size/1024)} KB</span>
-                                        <button type="button" onClick={() => setMultiFiles(p=>({...p,[m.type]:(p[m.type]||[]).filter((_,i)=>i!==fidx)}))}
-                                          className="text-slate-500 hover:text-red-400 transition ml-1 text-sm">✕</button>
-                                      </div>
-                                    ))}
-                                  </div>
-                                )}
-                                <label className={`flex items-center gap-3 rounded-xl border px-4 py-2.5 cursor-pointer transition text-sm w-full ${
-                                  arr.length > 0 ? "border-violet-500/30 bg-violet-500/5 text-violet-300 hover:bg-violet-500/10" : "border-white/8 bg-white/[0.03] text-slate-500 hover:border-violet-500/40 hover:text-slate-300"
-                                }`}>
-                                  <span>{m.icon}</span>
-                                  <span className="flex-1">{arr.length > 0 ? `+ Adaugă mai multe (${m.label.toLowerCase()})` : `Selectează ${m.label.toLowerCase()}`}</span>
-                                  <input type="file" accept=".pdf,.jpg,.jpeg,.png,.xlsx,.xls,.doc,.docx" multiple className="hidden"
-                                    onChange={e => { const files=Array.from(e.target.files||[]); if(files.length>0) setMultiFiles(p=>({...p,[m.type]:[...(p[m.type]||[]),...files]})); e.target.value=""; }} />
-                                </label>
-                              </div>
-                            );
-                          }
-                        })}
-                      </div>
-                    )}
-
-                    {/* SECTIUNEA 3: Facturi (obligatorii, min. 2) */}
-                    <div className="border-t border-white/5 pt-4">
-                      <div className="flex items-center gap-1.5 mb-2">
-                        <span className="text-xs text-red-400">●</span>
-                        <span className="text-sm text-slate-300">Facturi</span>
-                        <span className="text-red-400 text-xs">*</span>
-                        <span className="text-xs text-slate-500 ml-1">
-                          (minimum 2 obligatorii · necesare pentru raportul de cenzor)
-                        </span>
-                      </div>
-                      {invoiceFiles.length > 0 && (
-                        <div className="space-y-1.5 mb-2">
-                          {invoiceFiles.map((file, idx) => (
-                            <div key={idx} className="flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/8 px-3 py-2.5">
-                              <span className="text-base">🧾</span>
-                              <span className="text-sm text-emerald-300 flex-1 truncate">{file.name}</span>
-                              <span className="text-xs text-emerald-600 shrink-0">{Math.round(file.size/1024)} KB</span>
-                              <button type="button" onClick={() => setInvoiceFiles(p=>p.filter((_,i)=>i!==idx))}
-                                className="text-slate-500 hover:text-red-400 transition ml-1 text-sm">✕</button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                      <label className={`flex items-center gap-3 rounded-xl border px-4 py-3 cursor-pointer transition text-sm w-full ${
-                        invoiceFiles.length >= 2
-                          ? "border-violet-500/30 bg-violet-500/5 text-violet-300 hover:bg-violet-500/10"
-                          : invoiceFiles.length === 1
-                          ? "border-yellow-500/30 bg-yellow-500/8 text-yellow-300 hover:bg-yellow-500/15"
-                          : "border-white/8 bg-white/[0.03] text-slate-500 hover:border-violet-500/40 hover:text-slate-300"
-                      }`}>
-                        <span>📁</span>
-                        <span className="flex-1">
-                          {invoiceFiles.length === 0
-                            ? "Selectează facturi (min. 2 obligatorii)"
-                            : invoiceFiles.length === 1
-                            ? "⚠️ Mai adaugă cel puțin o factură"
-                            : `+ Adaugă mai multe facturi`}
-                        </span>
-                        <input type="file" accept=".pdf,.jpg,.jpeg,.png,.xlsx,.xls" multiple className="hidden"
-                          onChange={e => { const files=Array.from(e.target.files||[]); if(files.length>0) setInvoiceFiles(p=>[...p,...files]); e.target.value=""; }} />
-                      </label>
-                    </div>
-
-                    {/* Bara progres documente (verde → rosu) */}
-                    <div className="pt-3 border-t border-white/5">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs text-slate-500">Documente pregătite</span>
-                        <span className="text-xs font-semibold" style={{ color: `hsl(${barHue},75%,55%)` }}>
-                          {docsFilled}/{docsMax}
-                        </span>
-                      </div>
-                      <div className="h-2 rounded-full bg-white/8 overflow-hidden">
-                        <div className="h-full rounded-full transition-all duration-500"
-                          style={{ width: `${barPct}%`, background: `hsl(${barHue},75%,50%)`, boxShadow: `0 0 8px hsl(${barHue},75%,40%)` }} />
-                      </div>
-                      <div className="flex justify-between mt-1">
-                        {[...Array(docsMax)].map((_, i) => (
-                          <span key={i} className="text-[10px]" style={{ color: i < docsFilled ? `hsl(${Math.round(120-(i/(docsMax-1))*120)},75%,55%)` : "rgba(255,255,255,0.1)" }}>▐</span>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* TAB: Arhiva ZIP */}
-                {uploadSubTab === "zip" && (
-                  <div className="space-y-4">
-                    {/* Drop zone */}
-                    <label className={`relative flex flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed px-6 py-10 cursor-pointer transition ${
-                      zipFile ? "border-emerald-500/40 bg-emerald-500/5" : "border-white/15 hover:border-violet-500/50 hover:bg-violet-500/5"
-                    }`}>
-                      <div className="text-4xl">{zipFile ? "📦" : "⬆️"}</div>
-                      {zipFile ? (
-                        <div className="text-center">
-                          <p className="font-medium text-emerald-300">{zipFile.name}</p>
-                          <p className="text-xs text-slate-400 mt-1">{Math.round(zipFile.size / 1024)} KB · {zipExtracted.length} fișiere detectate</p>
-                        </div>
-                      ) : (
-                        <div className="text-center">
-                          <p className="text-slate-300 font-medium">Trage ZIP-ul aici sau apasă să alegi</p>
-                          <p className="text-xs text-slate-500 mt-1">Acceptăm arhive .zip cu PDF-uri, imagini și Excel</p>
-                        </div>
-                      )}
-                      <input type="file" accept=".zip" className="hidden"
-                        onChange={e => { const f=e.target.files?.[0]; if(f) handleZipChange(f); }} />
-                    </label>
-
-                    {zipLoading && (
-                      <div className="flex items-center gap-2 text-sm text-violet-300">
-                        <span className="w-4 h-4 rounded-full border-2 border-violet-300/30 border-t-violet-300 animate-spin"/>
-                        Se extrage arhiva...
-                      </div>
-                    )}
-
-                    {/* Lista fisiere extrase */}
-                    {zipExtracted.length > 0 && (
-                      <div className="rounded-xl border border-white/8 bg-white/[0.02] overflow-hidden">
-                        <div className="px-4 py-2.5 border-b border-white/5 bg-white/[0.03]">
-                          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Fișiere detectate în ZIP</p>
-                        </div>
-                        {zipExtracted.map((z, i) => {
-                          const entry = ZIP_TYPE_MAP.find(m => m.type === z.assignedType);
-                          return (
-                            <div key={i} className="flex items-center gap-3 px-4 py-2.5 border-b border-white/5 last:border-0">
-                              <span className="text-base">📄</span>
-                              <span className="text-sm text-slate-300 flex-1 truncate">{z.name}</span>
-                              <select value={z.assignedType} onChange={e => setZipExtracted(p=>p.map((x,xi)=>xi===i?{...x,assignedType:e.target.value}:x))}
-                                className="rounded-lg border border-white/10 bg-[#0d0d1a] px-2 py-1 text-xs text-white outline-none focus:border-violet-500">
-                                <option value="lista_plata">Lista de plată</option>
-                                <option value="explicatii_lista">Explicațiile listei</option>
-                                <option value="distributia_facturilor">Distribuire facturi</option>
-                                <option value="facturi">Facturi</option>
-                                <option value="extras_cont">Extras de cont</option>
-                                {showExtended && <>
-                                  <option value="registru_casa">Registru casă</option>
-                                  <option value="registru_banca">Registru bancă</option>
-                                  <option value="registru_jurnal">Registru jurnal</option>
-                                  <option value="registru_fond">Registru fond</option>
-                                  <option value="situatie_activ_pasiv">Situație activ/pasiv</option>
-                                  <option value="citiri_apometre">Citire apometre/repartitoare</option>
-                                  <option value="stat_plata">Stat de plată</option>
-                                </>}
-                                <option value="altele">Altele</option>
-                              </select>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-
-                    {/* Structura asteptata */}
-                    {!zipFile && (
-                      <div className="rounded-xl border border-violet-500/15 bg-violet-500/5 p-4">
-                        <p className="text-xs font-semibold text-violet-300 mb-2">Structura recomandată în ZIP</p>
-                        <div className="space-y-1">
-                          {[
-                            "lista_plata.pdf  ← obligatoriu",
-                            "explicatii_lista.pdf  ← obligatoriu",
-                            "distribuire_facturi.pdf  ← obligatoriu",
-                            "factura_1.pdf  ← obligatoriu",
-                            "factura_2.pdf  ← obligatoriu",
-                            ...(showExtended ? [
-                              "extras_cont.pdf (opțional)",
-                              "registru_casa.pdf (opțional)",
-                              "registru_banca.pdf (opțional)",
-                              "registru_jurnal.pdf (opțional)",
-                              "registru_fond.pdf (opțional)",
-                              "situatie_activ_pasiv.pdf (opțional)",
-                              "citiri_apometre.pdf (opțional)",
-                              "stat_plata.pdf (opțional)",
-                            ] : []),
-                          ].map(f => (
-                            <div key={f} className="flex items-center gap-2 text-xs text-slate-400">
-                              <span className="text-slate-600">📄</span> {f}
-                            </div>
-                          ))}
-                        </div>
-                        <p className="text-[10px] text-slate-600 mt-2">Fișierele sunt mapate automat pe baza numelui. Poți corecta manual dacă e nevoie.</p>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {uploadMsg && (
-                  <div className={`rounded-xl border px-4 py-3 text-sm ${
-                    uploadMsg.startsWith("✓") ? "border-emerald-500/30 bg-emerald-500/8 text-emerald-300"
-                    : uploadMsg.startsWith("✗") ? "border-red-500/30 bg-red-500/8 text-red-300"
-                    : "border-violet-500/30 bg-violet-500/8 text-violet-300"
-                  }`}>
-                    {uploadMsg}
-                  </div>
-                )}
-
-                <button type="submit" disabled={uploading || atLimit}
-                  className={`w-full rounded-xl px-6 py-4 font-semibold transition flex items-center justify-center gap-2 ${
-                    atLimit
-                      ? "bg-red-500/10 border border-red-500/30 text-red-400 cursor-not-allowed"
-                      : "bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 shadow-[0_0_25px_rgba(124,58,237,0.3)] disabled:opacity-50"
-                  }`}>
-                  {uploading ? (
-                    <><span className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin"/>Se analizează...</>
-                  ) : atLimit ? (
-                    "⛔ Limită atinsă — șterge un dosar sau contactează admin"
-                  ) : "🤖 Trimite dosar la analiză AI"}
-                </button>
-              </form>
-
-              {/* Bara progres analiză — apare după submit și cât timp există documente în analiză */}
-              {(uploading || analysisProgress > 0 || documents.some((d: any) => d.status === "analyzing")) && (() => {
-                const isAnalyzing = documents.some((d: any) => d.status === "analyzing");
-                const displayProgress = isAnalyzing && analysisProgress === 0 ? 92 : analysisProgress;
-                const displayStep = isAnalyzing && !analysisStep ? "Analiză AI în fundal..." : analysisStep;
-                const displayName = analysisDossierName || documents.find((d: any) => d.status === "analyzing")?.title || "";
-                return (
-                  <div className="mt-4 rounded-xl border border-violet-500/20 bg-violet-500/5 p-4">
-                    <div className="mb-2">
-                      <p className="text-xs text-slate-500 uppercase tracking-wider mb-0.5">Se analizează dosar</p>
-                      <p className="text-sm font-semibold text-violet-200">{displayName}</p>
-                    </div>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs text-violet-300">{displayStep}</span>
-                      <span className="text-sm font-bold text-violet-200">{displayProgress}%</span>
-                    </div>
-                    <div className="h-2.5 rounded-full bg-white/8 overflow-hidden">
-                      <div className="h-full rounded-full transition-all duration-700 relative"
-                        style={{ width: `${displayProgress}%`, background: "linear-gradient(90deg,#7c3aed,#06b6d4)" }}>
-                        <div className="absolute inset-0 animate-pulse opacity-40 rounded-full"
-                          style={{ background: "linear-gradient(90deg,transparent,rgba(255,255,255,0.4),transparent)" }} />
-                      </div>
-                    </div>
-                    <div className="flex justify-between mt-1.5 text-[10px] text-slate-600">
-                      <span>Pregătire</span><span>Procesare</span><span>Analiză AI</span><span>Raport</span><span>Complet</span>
-                    </div>
-                  </div>
-                );
-              })()}
-            </div>
-
-            {/* Dosarele mele */}
-            {documents.length > 0 && (
-              <div className="rounded-2xl border border-white/10 bg-white/[0.025] p-6">
-                <h2 className="text-lg font-semibold mb-4">Dosarele mele</h2>
-                <div className="space-y-3">
-                  {documents.map((doc: any) => {
-                    const isAnalyzing = doc.status === "analyzing";
-                    const isError = doc.status === "error";
-                    const isConfirmingDelete = confirmDeleteDocId === doc.id;
-                    const isDeleting = deletingDocId === doc.id;
-                    return (
-                      <div key={doc.id} className={`rounded-xl border overflow-hidden transition ${
-                        isAnalyzing ? "border-violet-500/25 bg-violet-500/5"
-                        : isError ? "border-red-500/25 bg-red-500/5"
-                        : "border-white/8 bg-white/[0.02]"
-                      }`}>
-                        {/* Rândul principal */}
-                        <div className="flex items-center gap-3 px-4 py-3">
-                          {/* Icon status */}
-                          <div className="text-xl shrink-0">
-                            {isAnalyzing ? "🔄" : isError ? "❌" : "✅"}
-                          </div>
-
-                          {/* Info */}
-                          <div className="flex-1 min-w-0">
-                            <p className="font-semibold text-sm text-white truncate">{doc.title}</p>
-                            <div className="flex items-center gap-2 mt-0.5">
-                              {statusBadge(doc.status)}
-                              {doc.aiScore !== null && doc.aiScore !== undefined && (
-                                <span className={`text-xs font-bold ${doc.aiScore >= 80 ? "text-emerald-400" : doc.aiScore >= 60 ? "text-yellow-400" : "text-red-400"}`}>
-                                  {doc.aiScore.toFixed(0)}%
-                                </span>
-                              )}
-                            </div>
-                            {doc.aiSummary && !isError && (
-                              <p className="text-xs text-slate-400 mt-1">{doc.aiSummary}</p>
-                            )}
-                            {isError && (
-                              <p className="text-xs text-red-400 mt-1">
-                                {doc.aiSummary || "Analiza a eșuat — verifică formatul fișierelor și reîncearcă."}
-                              </p>
-                            )}
-
-                            {/* Documentele dosarului. Linkul nu duce la fișier, ci
-                                la ruta care verifică întâi dacă dosarul e al tău. */}
-                            {Array.isArray(doc.files) && doc.files.length > 0 && (
-                              <div className="mt-2 flex flex-wrap gap-1.5">
-                                {doc.files.map((f: any) => (
-                                  <a key={f.id} href={`/api/dashboard/documents/${doc.id}/fisiere/${f.id}`}
-                                    title={`Descarcă ${f.fileName}`}
-                                    className="rounded-lg border border-white/10 bg-white/[0.03] px-2 py-1 text-[11px] text-slate-300 transition hover:border-cyan-500/40 hover:text-cyan-300">
-                                    ⬇ {f.label || f.fileName}
-                                  </a>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Butoane */}
-                          <div className="shrink-0 flex items-center gap-2">
-                            {doc.status === "analyzed" && !isAdmin && (
-                              <button type="button" onClick={() => setTab("rapoarte")}
-                                className="rounded-lg border border-cyan-500/30 bg-cyan-500/10 px-3 py-1.5 text-xs text-cyan-300 hover:bg-cyan-500/20 transition font-medium">
-                                📋 Raport
-                              </button>
-                            )}
-                          {!isConfirmingDelete ? (
-                            <button type="button"
-                              onClick={() => setConfirmDeleteDocId(doc.id)}
-                              className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-xs text-red-400 hover:bg-red-500/20 hover:text-red-300 transition font-medium">
-                              🗑 Șterge
-                            </button>
-                          ) : (
-                            <div className="flex items-center gap-2">
-                              <button type="button" onClick={() => setConfirmDeleteDocId(null)}
-                                className="rounded-lg border border-white/10 px-2.5 py-1.5 text-xs text-slate-400 hover:text-white transition">
-                                Anulează
-                              </button>
-                              <button type="button" onClick={() => deleteDocument(doc.id)} disabled={isDeleting}
-                                className="rounded-lg bg-red-600 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-red-500 transition disabled:opacity-50 flex items-center gap-1">
-                                {isDeleting
-                                  ? <><span className="w-3 h-3 rounded-full border border-white/30 border-t-white animate-spin"/>...</>
-                                  : "Confirmă"}
-                              </button>
-                            </div>
-                          )}
-                          </div>
-                        </div>
-
-                        {/* Bara analiză în curs */}
-                        {isAnalyzing && (
-                          <div className="px-4 pb-3">
-                            <div className="h-1 rounded-full bg-white/8 overflow-hidden">
-                              <div className="h-full rounded-full animate-pulse" style={{ width: "70%", background: "linear-gradient(90deg,#7c3aed,#06b6d4)" }} />
-                            </div>
-                            <p className="text-[11px] text-violet-400 mt-1">Reîncarcă pagina pentru a vedea rezultatul</p>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-          </div>
-          );
-        })()}
-
-        {/* RAPOARTE */}
-        {tab === "rapoarte" && (
-          <div className="space-y-4">
-            <h2 className="text-lg font-semibold">Rapoartele mele</h2>
-            {reports.length === 0 ? (
-              <div className="rounded-3xl border border-white/8 bg-white/[0.03] p-12 text-center text-slate-400">
-                <div className="text-4xl mb-3">📋</div>
-                <p>Nu există rapoarte încă.</p>
-                <p className="text-sm mt-2">Trimite un dosar la analiză pentru a genera primul raport.</p>
-                <button onClick={() => setTab("documente")}
-                  className="mt-4 rounded-xl bg-violet-600 px-6 py-2.5 text-sm font-semibold transition hover:bg-violet-500">
-                  Încarcă documente →
-                </button>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {reports.map((report: any) => {
-                  const content = report.aiDraft || report.content || "";
-                  const isOpen = openReportId === report.id;
-                  const assocName = report.association?.name || corporate.associations?.[0]?.name || "";
-                  const displayTitle = assocName && !report.title.includes(assocName)
-                    ? `${report.title} — ${assocName}`
-                    : report.title;
-                  return (
-                    <div key={report.id} className="rounded-2xl border border-white/10 bg-white/[0.025] overflow-hidden">
-                      {/* Header raport */}
-                      <div className="flex items-center gap-3 px-5 py-4">
-                        <div className="text-2xl">📋</div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-semibold text-white">{displayTitle}</p>
-                          {report.month && report.year && (
-                            <p className="text-xs text-slate-400 mt-0.5">{report.month} {report.year}</p>
-                          )}
-                        </div>
-                        <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium ${
-                          report.status === "published" ? "bg-emerald-500/15 text-emerald-300"
-                          : "bg-cyan-500/15 text-cyan-300"
-                        }`}>
-                          {report.status === "published" ? "✓ Publicat" : "Analizat"}
-                        </span>
-                      </div>
-
-                      {/* Butoane acțiuni */}
-                      <div className="flex gap-2 px-5 pb-4">
-                        <button
-                          onClick={() => setOpenReportId(isOpen ? null : report.id)}
-                          className="flex-1 rounded-xl border border-violet-500/30 bg-violet-500/10 px-4 py-2.5 text-sm font-semibold text-violet-300 hover:bg-violet-500/20 transition">
-                          {isOpen ? "▲ Ascunde raportul" : "📄 Citește raportul"}
-                        </button>
-                        {content && (
-                          <button
-                            onClick={() => printReportAsPDF(displayTitle, content)}
-                            className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-2.5 text-sm font-semibold text-emerald-300 hover:bg-emerald-500/20 transition">
-                            📥 Descarcă PDF
-                          </button>
-                        )}
-                      </div>
-
-                      {/* Conținut raport */}
-                      {isOpen && content && (
-                        <div className="border-t border-white/8 bg-black/20 px-5 py-5">
-                          <pre className="whitespace-pre-wrap text-sm text-slate-200 leading-relaxed font-sans">
-                            {content}
-                          </pre>
-                        </div>
-                      )}
-                      {isOpen && !content && (
-                        <div className="border-t border-white/8 px-5 py-4 text-sm text-slate-500">
-                          Conținutul raportului nu este disponibil încă.
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
+        {fila === "abonament" && (
+          <FilaAbonament corporate={corporate} pachet={pachet} cheiePachet={cheiePachet} />
         )}
-
-        {/* ABONAMENT */}
-        {tab === "abonament" && (() => {
-          const status = corporate.subscriptionStatus;
-          const isActive = status === "active" || status === "trialing";
-          return (
-            <div className="max-w-2xl">
-              <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6">
-                <div className="flex items-start justify-between gap-4 flex-wrap mb-2">
-                  <div>
-                    <p className="text-sm text-slate-400">Pachetul tău</p>
-                    <p className="text-xl font-bold">{pkg ? pkg.name : corporate.package}</p>
-                    {pkg && <p className="text-sm text-violet-300">{pkg.priceRon} lei/lună</p>}
-                  </div>
-                  {subscriptionStatusBadge(status)}
-                </div>
-                {corporate.currentPeriodEnd && (
-                  <p className="text-xs text-slate-500">
-                    Valabil până la {new Date(corporate.currentPeriodEnd).toLocaleDateString("ro-RO")}
-                  </p>
-                )}
-
-                {!isActive && (
-                  <div className="mt-5 border-t border-white/5 pt-5">
-                    {subscribeClientSecret ? (
-                      <CardPaymentForm
-                        clientSecret={subscribeClientSecret}
-                        onSuccess={handleSubscribeSuccess}
-                        submitLabel={`Activează — ${pkg ? pkg.priceRon : ""} lei/lună`}
-                      />
-                    ) : (
-                      <button onClick={startSubscription} disabled={subscribing}
-                        className="w-full rounded-xl bg-violet-600 px-6 py-3.5 font-semibold transition hover:bg-violet-500 disabled:opacity-50">
-                        {subscribing ? "Se încarcă..." : "Activează abonamentul"}
-                      </button>
-                    )}
-                    {subMsg && (
-                      <p className={`mt-3 text-sm ${subMsg.startsWith("✓") ? "text-emerald-400" : "text-red-400"}`}>{subMsg}</p>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* Pachete disponibile */}
-              <div className="mt-6 rounded-2xl border border-white/8 bg-white/[0.03] p-5">
-                <p className="text-sm font-semibold mb-3 text-slate-300">Pachete disponibile</p>
-                <div className="space-y-2">
-                  {[
-                    { key: "trial",        name: "Trial",        price: "Gratuit",          assoc: "1 dosar · 5 doc/dosar" },
-                    { key: "starter",      name: "Starter",      price: "350 lei/lună",     assoc: "10 dosare · 30 doc/dosar" },
-                    { key: "business",     name: "Business",     price: "720 lei/lună",     assoc: "25 dosare · 30 doc/dosar" },
-                    { key: "professional", name: "Professional",  price: "1.390 lei/lună",   assoc: "50 dosare · 30 doc/dosar" },
-                    { key: "enterprise",   name: "Enterprise",   price: "Personalizat",     assoc: "Nelimitat · 30 doc/dosar" },
-                  ].map(p => (
-                    <div key={p.key} className={`flex items-center justify-between rounded-xl border p-3 ${corporate.package === p.key ? "border-violet-500/40 bg-violet-500/10" : "border-white/5 bg-white/[0.02]"}`}>
-                      <div>
-                        <span className="text-sm font-medium">{p.name}</span>
-                        <span className="text-xs text-slate-500 ml-2">{p.assoc}</span>
-                      </div>
-                      <span className="text-sm text-violet-300">{p.price}</span>
-                    </div>
-                  ))}
-                </div>
-                <div className="mt-4 rounded-xl border border-white/5 bg-white/[0.02] p-3 space-y-1">
-                  <p className="text-xs text-slate-400 font-medium">Suplimentare disponibile:</p>
-                  <p className="text-xs text-slate-500">• Dosar suplimentar (30 documente incluse) — <span className="text-white">40 lei</span></p>
-                  <p className="text-xs text-slate-500">• Document suplimentar (peste limita dosarului) — <span className="text-white">1,3 lei/doc</span></p>
-                </div>
-                <p className="text-xs text-slate-500 mt-3">
-                  Upgrade sau suplimentare: <a href="mailto:office@vosmart.ro" className="text-violet-400 hover:underline">office@vosmart.ro</a>
-                </p>
-              </div>
-            </div>
-          );
-        })()}
       </div>
-
-      {/* Footer */}
-      <footer className="mt-16 border-t border-white/5 py-6 text-center">
-        <div className="flex items-center justify-center gap-2 text-slate-600 text-xs">
-          <span>Powered by</span>
-          <Image src="/logo-vosmart.png" alt="VoSmart" width={60} height={26}
-            className="h-auto opacity-40" style={{ mixBlendMode: "screen", width: "50px" }} />
-        </div>
-      </footer>
     </main>
+  );
+}
+
+/* ------------------------------------------------------------- rapoarte */
+
+function RapoarteSemnate() {
+  const [n, setN] = useState<number | null>(null);
+  useEffect(() => {
+    fetch("/api/dashboard/reports?pePagina=1")
+      .then(r => (r.ok ? r.json() : null))
+      .then(d => setN(d?.total ?? 0))
+      .catch(() => setN(0));
+  }, []);
+  return <>{n === null ? "—" : n}</>;
+}
+
+function FilaRapoarte() {
+  const [rapoarte, setRapoarte] = useState<Raport[]>([]);
+  const [pagina, setPagina] = useState(1);
+  const [pagini, setPagini] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [incarca, setIncarca] = useState(true);
+
+  useEffect(() => {
+    let activ = true;
+    fetch(`/api/dashboard/reports?pagina=${pagina}`)
+      .then(r => (r.ok ? r.json() : null))
+      .then(d => {
+        if (!activ || !d) return;
+        setRapoarte(d.rapoarte);
+        setPagini(d.pagini);
+        setTotal(d.total);
+        setIncarca(false);
+      })
+      .catch(() => { if (activ) setIncarca(false); });
+    return () => { activ = false; };
+  }, [pagina]);
+
+  if (incarca && rapoarte.length === 0) {
+    return <Card className="space-y-3 px-5 py-5"><Schelet className="h-12" /><Schelet className="h-12" /></Card>;
+  }
+
+  if (total === 0) {
+    return (
+      <Card>
+        <Gol
+          pictograma={<Ic.raport className="h-5 w-5" />}
+          titlu="Niciun raport semnat încă"
+          text="Rapoartele apar aici după ce cenzorul revizuiește dosarul și îl semnează. Până atunci, starea verificării se vede la fila Dosare."
+        />
+      </Card>
+    );
+  }
+
+  return (
+    <Card className="overflow-hidden">
+      <CardCap titlu="Rapoarte de cenzor" sub="Documente semnate, gata de pus la dosarul asociației." />
+      <ul className="divide-y divide-line">
+        {rapoarte.map(r => (
+          <li key={r.id} className="rise flex items-center gap-4 px-5 py-3.5">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-ok/30 bg-ok-dim text-ok">
+              <Ic.semnatura className="h-4 w-4" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[13.5px] font-medium text-ink">{r.titlu}</p>
+              <p className="text-[12px] text-faint">
+                {r.luna} {r.an}
+                {r.semnatDe && ` · semnat de ${r.semnatDe}`}
+                {r.semnatLa && ` · ${dataRo(r.semnatLa)}`}
+              </p>
+            </div>
+            <a
+              href={`/raport/${r.id}`}
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-[var(--radius-field)] border border-line-strong bg-surface-3 px-3 py-1.5 text-[12.5px] font-medium text-ink transition-colors hover:bg-surface-4"
+            >
+              Deschide <Ic.dreapta className="h-3.5 w-3.5" />
+            </a>
+          </li>
+        ))}
+      </ul>
+      <Paginare pagina={pagina} pagini={pagini} total={total} numeElement="rapoarte" peSchimbare={setPagina} />
+    </Card>
+  );
+}
+
+/* ------------------------------------------------------------ abonament */
+
+function FilaAbonament({
+  corporate, pachet, cheiePachet,
+}: {
+  corporate: Corporate;
+  pachet: { name: string; priceRon: number; maxAssoc: number; docsPerDosar: number } | undefined;
+  cheiePachet: CorporatePackage;
+}) {
+  const router = useRouter();
+  const [porneste, setPorneste] = useState(false);
+  const [secret, setSecret] = useState("");
+  const [mesaj, setMesaj] = useState("");
+
+  const stare = corporate.subscriptionStatus;
+  const activ = stare === "active" || stare === "trialing";
+
+  const TON_STARE: Record<string, [Ton, string]> = {
+    active: ["ok", "Activ"],
+    trialing: ["info", "Perioadă de probă"],
+    incomplete: ["warn", "Incomplet"],
+    past_due: ["bad", "Plată restantă"],
+    canceled: ["neutru", "Anulat"],
+    unpaid: ["bad", "Neplătit"],
+  };
+  const [tonStare, textStare] = (stare && TON_STARE[stare]) || (["neutru", "Fără abonament"] as [Ton, string]);
+
+  async function incepe() {
+    setPorneste(true);
+    setMesaj("");
+    try {
+      const r = await fetch("/api/billing/subscribe", { method: "POST" });
+      const d = await r.json();
+      if (r.ok) setSecret(d.clientSecret);
+      else setMesaj(d.error || "Plata nu a putut fi inițiată.");
+    } catch {
+      setMesaj("Eroare de conexiune.");
+    } finally {
+      setPorneste(false);
+    }
+  }
+
+  return (
+    <div className="grid max-w-3xl gap-4">
+      <Card>
+        <CardCap
+          titlu={pachet?.name ?? corporate.package}
+          sub={pachet && pachet.priceRon > 0 ? `${pachet.priceRon} lei/lună` : cheiePachet === "enterprise" ? "Preț personalizat" : "Gratuit"}
+          actiune={<Eticheta ton={tonStare}>{textStare}</Eticheta>}
+        />
+        <div className="px-5 py-4">
+          {corporate.currentPeriodEnd && (
+            <p className="mb-3 text-[12.5px] text-faint">Valabil până la {dataRo(corporate.currentPeriodEnd)}</p>
+          )}
+          {!activ && (
+            secret ? (
+              <CardPaymentForm
+                clientSecret={secret}
+                onSuccess={() => {
+                  setSecret("");
+                  setMesaj("Plata a fost procesată. Abonamentul se activează în câteva minute.");
+                  setTimeout(() => router.refresh(), 3000);
+                }}
+                submitLabel={`Activează — ${pachet ? pachet.priceRon : ""} lei/lună`}
+              />
+            ) : (
+              <Buton fel="principal" marime="mare" className="w-full" incarca={porneste} onClick={incepe}>
+                Activează abonamentul
+              </Buton>
+            )
+          )}
+          {mesaj && <p className="mt-3 text-[12.5px] text-muted">{mesaj}</p>}
+        </div>
+      </Card>
+
+      <Card>
+        <CardCap titlu="Planuri" />
+        <ul className="divide-y divide-line">
+          {ALL_PACKAGES.map(p => {
+            const info = CORPORATE_PACKAGES[p];
+            const alSau = corporate.package === p;
+            return (
+              <li key={p} className={`flex items-center justify-between gap-4 px-5 py-3 ${alSau ? "bg-brand-dim" : ""}`}>
+                <div>
+                  <p className="text-[13.5px] font-medium text-ink">
+                    {info.name}
+                    {alSau && <span className="ml-2 text-[11.5px] font-normal text-brand-soft">planul dvs.</span>}
+                  </p>
+                  <p className="text-[12px] text-faint">
+                    {info.maxAssoc >= 9999 ? "Dosare nelimitate" : `${info.maxAssoc} dosare`} · {info.docsPerDosar} documente/dosar
+                  </p>
+                </div>
+                <span className="tnum shrink-0 text-[13px] text-muted">
+                  {p === "enterprise" ? "Personalizat" : info.priceRon === 0 ? "Gratuit" : `${info.priceRon} lei/lună`}
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+        <div className="space-y-1 border-t border-line px-5 py-3.5 text-[12px] text-faint">
+          <p>Dosar suplimentar (30 documente incluse) — <span className="text-muted">40 lei</span></p>
+          <p>Document peste limita dosarului — <span className="text-muted">1,30 lei</span></p>
+          <p className="pt-1">
+            Upgrade sau suplimentare: <a href="mailto:office@vosmart.ro" className="text-brand-soft hover:underline">office@vosmart.ro</a>
+          </p>
+        </div>
+      </Card>
+    </div>
   );
 }

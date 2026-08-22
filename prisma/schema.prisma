@@ -141,8 +141,66 @@ model Document {
   aiTokensOut   Int?
   createdAt     DateTime @default(now())
 
+  // --- Fluxul de cenzorat. Vezi lib/cenzorat/pipeline.ts ---
+  // `status` de mai sus ramane cum era, ca sa nu se strice ecranele vechi;
+  // etapa de mai jos e cea care spune unde chiar se afla dosarul.
+  etapa       String    @default("intrare") // intrare | extragere | verificare | sinteza | revizuire | semnat
+  stareEtapa  String    @default("asteptare") // asteptare | in_lucru | gata | esuata
+  /// Cifrele citite din documente (ExtrasDosar). Din ele se calculeaza tot restul.
+  extras      Json?
+  /// Cat la suta din datele asteptate s-au gasit efectiv in documente.
+  incredere   Int?
+  verdict     String?
+  inceputLa   DateTime?
+  terminatLa  DateTime?
+
   association Association @relation(fields: [associationId], references: [id], onDelete: Cascade)
   files       DocumentFile[]
+  constatari  Constatare[]
+  evenimente  EvenimentFlux[]
+}
+
+/// O constatare de cenzorat: ce s-a gasit, cat de grav e, pe ce se sprijina.
+/// Inainte, „constatarile" erau un sir JSON cu titluri de sectiune dintr-un text
+/// generat de AI. Aici fiecare are severitate, sursa, probe si o stare pe care
+/// cenzorul o schimba la revizuire — iar scorul se recalculeaza din ele.
+model Constatare {
+  id          String   @id @default(cuid())
+  documentId  String
+  /// Cod stabil (ex. CASA-PLAFON), ca aceeasi problema sa poata fi urmarita de la o luna la alta.
+  cod         String
+  titlu       String
+  detaliu     String
+  severitate  String   // critica | ridicata | medie | scazuta | info
+  sursa       String   // regula | ai | cenzor
+  temei       String?
+  /// Cifrele pe care se sprijina constatarea, ca sa nu fie nevoie de redeschiderea PDF-ului.
+  probe       Json?
+  recomandare String?
+  stare       String   @default("deschisa") // deschisa | acceptata | respinsa
+  notaCenzor  String?
+  ordine      Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([documentId])
+}
+
+/// Jurnalul fluxului. Bara de progres din ecranul clientului se alimenteaza de
+/// aici, nu dintr-un contor care creste singur la fiecare 560 de milisecunde.
+model EvenimentFlux {
+  id         String   @id @default(cuid())
+  documentId String
+  etapa      String
+  stare      String   // in_lucru | gata | esuata
+  mesaj      String
+  createdAt  DateTime @default(now())
+
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([documentId, createdAt])
 }
 
 // Fisierele unui dosar, asa cum stau ele in Vercel Blob (store PRIVAT). In baza
@@ -178,6 +236,13 @@ model Report {
   approvedAt    DateTime?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+
+  /// Raportul in forma structurata (date + constatari + scor), din care se
+  /// genereaza si ecranul, si PDF-ul. `aiDraft` ramane pentru rapoartele vechi.
+  data       Json?
+  documentId String?
+  semnatDe   String?
+  semnatLa   DateTime?
 
   association Association @relation(fields: [associationId], references: [id], onDelete: Cascade)
 }

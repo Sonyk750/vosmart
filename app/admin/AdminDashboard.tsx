@@ -50,11 +50,6 @@ export default function AdminDashboard({ user }: { user: User }) {
   const [clientiSubTab, setClientiSubTab] = useState<"corporates" | "associations" | "adauga-corporate">("corporates");
   const [actionMsg, setActionMsg] = useState<Record<string, string>>({});
   const [actionWorking, setActionWorking] = useState<string | null>(null);
-  const [selectedDoc, setSelectedDoc] = useState<Document | null>(null);
-  const [selectedAssoc, setSelectedAssoc] = useState<Association | null>(null);
-  const [draftText, setDraftText] = useState("");
-  const [generating, setGenerating] = useState(false);
-  const [approving, setApproving] = useState(false);
   const [msg, setMsg] = useState("");
 
   // New cenzor form
@@ -198,72 +193,9 @@ export default function AdminDashboard({ user }: { user: User }) {
     fetchCorporates();
   }
 
-  async function generateDraft(doc: Document) {
-    setGenerating(true);
-    setDraftText("");
-    setMsg("");
-    // Verificam daca exista deja un draft din analiza AI
-    const res = await fetch(`/api/admin/reports/draft?documentId=${doc.id}`);
-    if (res.ok) {
-      const data = await res.json();
-      if (data.draft) {
-        setDraftText(data.draft);
-        setMsg("✓ Draft încărcat din analiza AI");
-        setGenerating(false);
-        return;
-      }
-    }
-    // Altfel generăm unul nou
-    const res2 = await fetch("/api/admin/reports/generate", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ documentId: doc.id }),
-    });
-    const data = await res2.json();
-    if (res2.ok) {
-      setDraftText(data.draft);
-      setMsg("✓ Draft generat de AI");
-    } else {
-      setMsg("✗ " + (data.error || "Eroare"));
-    }
-    setGenerating(false);
-  }
-
-  async function approveReport(reportId: string) {
-    setApproving(true);
-    const res = await fetch("/api/admin/reports/approve", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ reportId }),
-    });
-    if (res.ok) {
-      setMsg("✓ Raport aprobat și publicat la client!");
-      fetchDocuments();
-    } else {
-      setMsg("✗ Eroare la aprobare");
-    }
-    setApproving(false);
-  }
-
-  async function publishDraft(doc: Document) {
-    if (!draftText) return;
-    setApproving(true);
-    const res = await fetch("/api/admin/reports/publish", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ documentId: doc.id, draft: draftText, associationId: doc.associationId }),
-    });
-    const data = await res.json();
-    if (res.ok) {
-      setMsg("✓ Raport publicat! Clientul îl poate vedea acum.");
-      setSelectedDoc(null);
-      setDraftText("");
-      fetchDocuments();
-    } else {
-      setMsg("✗ " + (data.error || "Eroare"));
-    }
-    setApproving(false);
-  }
+  // Aici stateau `generateDraft`, `approveReport` si `publishDraft` — vechiul
+  // flux de raport, cu textarea si buton „Draft AI". Au plecat odata cu rutele
+  // lor: revizuirea si semnarea se fac in /admin/dosar/[id], pe constatari.
 
   async function createCenzor(e: React.FormEvent) {
     e.preventDefault();
@@ -415,6 +347,17 @@ export default function AdminDashboard({ user }: { user: User }) {
           )}
         </div>
 
+        {/* Mesajul de la aprobarea unui client. Se afisa pana acum doar in
+            panoul de revizuire, care a plecat — deci nu se vedea decat daca
+            aveai din intamplare un document selectat. */}
+        {msg && (
+          <div className="mb-6 flex items-start justify-between gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3">
+            <p className="text-sm text-slate-300">{msg}</p>
+            <button onClick={() => setMsg("")} aria-label="Închide"
+              className="shrink-0 text-slate-500 transition hover:text-white">✕</button>
+          </div>
+        )}
+
         {/* OVERVIEW */}
         {tab === "overview" && (
           <div>
@@ -496,10 +439,12 @@ export default function AdminDashboard({ user }: { user: User }) {
                             {d.aiScore.toFixed(0)}%
                           </span>
                         )}
-                        <button onClick={() => { setSelectedDoc(d); goTo("documente"); setMsg(""); setDraftText(""); }}
+                        {/* Revizuirea se face in pupitrul de dosar, unde documentul
+                            sta langa constatare. Vezi app/admin/dosar/[id]. */}
+                        <a href={`/admin/dosar/${d.id}`}
                           className="rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold transition hover:bg-violet-500">
                           Revizuiește
-                        </button>
+                        </a>
                       </div>
                     </div>
                   ))}
@@ -511,18 +456,18 @@ export default function AdminDashboard({ user }: { user: User }) {
 
         {/* DOCUMENTE */}
         {tab === "documente" && (
-          <div className="grid gap-6 lg:grid-cols-2">
-            {/* Lista documente */}
+          // O singura coloana: panoul din dreapta era al doilea pupitru de
+          // revizuire si a plecat. Fiecare rand duce in /admin/dosar/[id].
+          <div>
             <div className="space-y-3">
-              <h2 className="text-lg font-semibold mb-4">Toate documentele</h2>
+              <h2 className="text-lg font-semibold mb-4">Toate dosarele</h2>
               {allDocs.length === 0 ? (
                 <div className="rounded-2xl border border-white/8 bg-white/[0.03] p-8 text-center text-slate-400">
                   Nu există documente încă.
                 </div>
               ) : allDocs.map(d => (
-                <div key={d.id}
-                  onClick={() => { setSelectedDoc(d); setDraftText(""); setMsg(""); }}
-                  className={`rounded-2xl border p-5 cursor-pointer transition ${selectedDoc?.id === d.id ? "border-violet-500/50 bg-violet-500/8" : "border-white/8 bg-white/[0.03] hover:bg-white/[0.06]"}`}>
+                <a key={d.id} href={`/admin/dosar/${d.id}`}
+                  className="block rounded-2xl border border-white/8 bg-white/[0.03] p-5 transition hover:bg-white/[0.06]">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold truncate">{d.title}</p>
@@ -538,104 +483,10 @@ export default function AdminDashboard({ user }: { user: User }) {
                       )}
                     </div>
                   </div>
-                </div>
+                </a>
               ))}
             </div>
 
-            {/* Detalii document selectat */}
-            <div>
-              {selectedDoc ? (
-                <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 sticky top-24">
-                  <h3 className="text-lg font-semibold mb-1">{selectedDoc.title}</h3>
-                  <p className="text-sm text-slate-400 mb-4">{selectedDoc.fileName}</p>
-
-                  {selectedDoc.aiScore !== null && (
-                    <div className="mb-4">
-                      <div className="flex items-center gap-3 mb-2">
-                        <span className="text-sm text-slate-400">Scor AI:</span>
-                        <span className={`text-xl font-bold ${selectedDoc.aiScore >= 80 ? "text-emerald-400" : selectedDoc.aiScore >= 60 ? "text-yellow-400" : "text-red-400"}`}>
-                          {selectedDoc.aiScore.toFixed(0)}%
-                        </span>
-                      </div>
-                      <div className="w-full bg-white/10 rounded-full h-2">
-                        <div className={`h-2 rounded-full ${selectedDoc.aiScore >= 80 ? "bg-emerald-400" : selectedDoc.aiScore >= 60 ? "bg-yellow-400" : "bg-red-400"}`}
-                          style={{ width: `${selectedDoc.aiScore}%` }} />
-                      </div>
-                    </div>
-                  )}
-
-                  {selectedDoc.aiFindings && (() => {
-                    try {
-                      const findings = JSON.parse(selectedDoc.aiFindings);
-                      return findings.length > 0 ? (
-                        <div className="mb-4 rounded-xl border border-yellow-500/20 bg-yellow-500/5 p-4">
-                          <p className="text-xs font-semibold text-yellow-300 mb-2">Probleme găsite de AI:</p>
-                          <ul className="space-y-1.5">
-                            {findings.map((f: string, i: number) => (
-                              <li key={i} className="text-xs text-slate-300 flex gap-2">
-                                <span className="text-yellow-400 flex-shrink-0">▸</span>{f}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      ) : null;
-                    } catch { return null; }
-                  })()}
-
-                  {selectedDoc.aiSummary && (
-                    <div className="mb-4 rounded-xl border border-cyan-500/20 bg-cyan-500/5 p-4">
-                      <p className="text-xs font-semibold text-cyan-300 mb-1">Rezumat AI:</p>
-                      <p className="text-xs text-slate-300">{selectedDoc.aiSummary}</p>
-                    </div>
-                  )}
-
-                  {/* Draft raport */}
-                  <div className="border-t border-white/5 pt-4 mt-4">
-                    <p className="text-sm font-semibold mb-3">Raport de admin</p>
-                    <textarea
-                      value={draftText}
-                      onChange={e => setDraftText(e.target.value)}
-                      rows={8}
-                      placeholder="Generează draft-ul cu AI sau scrie manual raportul..."
-                      className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-white placeholder-slate-500 outline-none focus:border-violet-500 transition resize-none"
-                    />
-                    {msg && (
-                      <p className={`text-xs mt-2 ${msg.startsWith("✓") ? "text-emerald-400" : "text-red-400"}`}>{msg}</p>
-                    )}
-                    <div className="flex gap-3 mt-3">
-                      <button onClick={() => generateDraft(selectedDoc)} disabled={generating}
-                        className="flex-1 rounded-xl border border-cyan-500/30 bg-cyan-500/10 px-4 py-2.5 text-sm font-semibold text-cyan-300 transition hover:bg-cyan-500/20 disabled:opacity-50">
-                        {generating ? "Generează..." : "✨ Draft AI"}
-                      </button>
-                      {draftText && (
-                        <button
-                          onClick={() => {
-                            const blob = new Blob([draftText], { type: "text/plain;charset=utf-8" });
-                            const url = URL.createObjectURL(blob);
-                            const a = document.createElement("a");
-                            a.href = url;
-                            a.download = `Raport_Admin_${selectedDoc.title.replace(/\s+/g, "_")}.txt`;
-                            a.click();
-                            URL.revokeObjectURL(url);
-                          }}
-                          className="flex-1 rounded-xl border border-violet-500/30 bg-violet-500/10 px-4 py-2.5 text-sm font-semibold text-violet-300 transition hover:bg-violet-500/20">
-                          📄 Descarcă PDF
-                        </button>
-                      )}
-                      <button onClick={() => publishDraft(selectedDoc)} disabled={approving || !draftText}
-                        className="flex-1 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold transition hover:bg-emerald-500 disabled:opacity-50">
-                        {approving ? "Se publică..." : "✅ Aprobă & Publică"}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="rounded-2xl border border-white/8 bg-white/[0.03] p-12 text-center text-slate-400">
-                  <div className="text-4xl mb-3">📄</div>
-                  <p>Selectează un document din stânga pentru a-l revizui</p>
-                </div>
-              )}
-            </div>
           </div>
         )}
 

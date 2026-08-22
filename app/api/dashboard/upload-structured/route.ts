@@ -2,8 +2,29 @@ import { NextRequest, NextResponse, after } from "next/server";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { salveazaFisier } from "@/lib/stocare";
+import { lipsuri, TIPURI_TRIAL, tipDeBaza } from "@/lib/cenzorat/documente";
+import { ruleazaFlux } from "@/lib/cenzorat/pipeline";
+import { FisierDeCitit } from "@/lib/cenzorat/extragere";
 
-export const maxDuration = 60;
+/**
+ * Preluarea unui dosar.
+ *
+ * Ruta face un singur lucru: verifica, pune fisierele la pastrare si deschide
+ * dosarul. Analiza NU se mai face aici, in coada raspunsului, cu un singur apel
+ * la model si un `AbortSignal.timeout(50000)` peste el — se face in
+ * `lib/cenzorat/pipeline.ts`, pe etape, fiecare cu urma ei in jurnal.
+ */
+
+export const maxDuration = 300;
+
+/** Cat incape intr-un dosar. Peste atat, cererea nu mai ajunge intreaga la server. */
+const LIMITA_DOSAR_MB = 20;
+
+// Extensia conteaza separat de antetul MIME: antetul vine din browser, deci se
+// poate minti, iar extensia decide cum ar fi servit fisierul mai tarziu. Un
+// .html sau .svg incarcat drept „document" e continut activ, nu hartie.
+const MIME_PERMISE = ["application/pdf", "image/png", "image/jpeg", "image/webp"];
+const EXT_PERMISE = [".pdf", ".png", ".jpg", ".jpeg", ".webp"];
 
 export async function POST(req: NextRequest) {
   const user = await getSession();
@@ -22,468 +43,159 @@ export async function POST(req: NextRequest) {
 
   try {
     const form = await req.formData();
-    const period = form.get("period") as string;
-    const associationName = form.get("associationName") as string;
-    const cui = form.get("cui") as string;
-    const address = form.get("address") as string;
+    const period = String(form.get("period") ?? "");
+    const associationName = String(form.get("associationName") ?? "").trim();
 
     const files = form.getAll("files") as File[];
-    const fileTypes = form.getAll("fileTypes") as string[];
-    const fileLabels = form.getAll("fileLabels") as string[];
+    const fileTypes = form.getAll("fileTypes").map(String);
+    const fileLabels = form.getAll("fileLabels").map(String);
 
-    console.log("Upload - files:", files.length, "types:", fileTypes, "period:", period);
-
-    if (!period || files.length === 0) {
-      return NextResponse.json({ error: "Perioada și documentele sunt obligatorii" }, { status: 400 });
+    if (!/^\d{4}-\d{2}$/.test(period)) {
+      return NextResponse.json({ error: "Perioada nu este validă." }, { status: 400 });
+    }
+    if (files.length === 0) {
+      return NextResponse.json({ error: "Nu ai atașat niciun document." }, { status: 400 });
     }
 
-    // Normalizăm tipurile: facturi_2, facturi_3... → facturi (pentru validare)
-    const normalizedTypes = fileTypes.map((t: string) => t.startsWith("facturi") ? "facturi" : t);
-
-    // Verificăm documentele obligatorii
-    const required = ["lista_plata", "explicatii_lista", "distributia_facturilor", "facturi"];
-    const missing = required.filter(r => !normalizedTypes.includes(r));
-    if (missing.length > 0) {
-      return NextResponse.json({ error: `Documente obligatorii lipsă: ${missing.join(", ")}` }, { status: 400 });
+    // Ce lipseste se spune pe numele documentului („Lista de plată"), nu pe
+    // cheia din baza de date („lista_plata"), ca omul sa stie ce sa caute.
+    const lipsa = lipsuri(fileTypes);
+    if (lipsa.length > 0) {
+      return NextResponse.json({ error: `Dosarul nu e complet. Lipsesc: ${lipsa.join(", ")}.` }, { status: 400 });
     }
 
-    // Trial: verificăm tipurile de documente permise
-    const TRIAL_ALLOWED_TYPES = ["lista_plata", "explicatii_lista", "distributia_facturilor", "facturi", "extras_cont"];
-    const association = await prisma.association.findUnique({
+    const asociatie = await prisma.association.findUnique({
       where: { id: associationId },
       select: { filesUploadedCount: true, maxDocuments: true, corporateId: true },
     });
 
-    if (association?.corporateId) {
-      const corpAccount = await prisma.corporateAccount.findUnique({
-        where: { id: association.corporateId },
+    if (asociatie?.corporateId) {
+      const firma = await prisma.corporateAccount.findUnique({
+        where: { id: asociatie.corporateId },
         select: { package: true, status: true },
       });
 
       // Ecranul „Cont în așteptare" din panou nu e o incuietoare — e doar un
-      // ecran. Analiza AI costa bani reali la fiecare dosar, deci poarta se pune
+      // ecran. Analiza costa bani reali la fiecare dosar, deci poarta se pune
       // aici, in ruta: cont neactivat inseamna zero dosare trimise.
-      if (corpAccount && corpAccount.status !== "active") {
+      if (firma && firma.status !== "active") {
         return NextResponse.json({
           error: "Contul firmei nu este activat. Finalizați plata sau așteptați activarea de către VoSmart.",
         }, { status: 403 });
       }
 
-      if (corpAccount?.package === "trial") {
-        const blocked = normalizedTypes.filter((t: string) => !TRIAL_ALLOWED_TYPES.includes(t));
-        if (blocked.length > 0) {
+      if (firma?.package === "trial") {
+        const refuzate = [...new Set(fileTypes.map(tipDeBaza))].filter(t => !TIPURI_TRIAL.includes(t));
+        if (refuzate.length > 0) {
           return NextResponse.json({
-            error: `Contul Trial permite doar: Listă de plată, Explicații, Distribuirea facturilor, Facturi și Extras de cont. Documentele nesolicitate: ${blocked.join(", ")}. Faceți upgrade la un plan plătit pentru toate tipurile.`,
+            error: `Contul Trial acceptă doar documentele de bază. Nu sunt incluse: ${refuzate.join(", ")}. Treceți la un plan plătit pentru dosarul complet.`,
           }, { status: 403 });
         }
       }
     }
 
-    if (association && association.filesUploadedCount >= association.maxDocuments) {
+    if (asociatie && asociatie.filesUploadedCount >= asociatie.maxDocuments) {
       return NextResponse.json({
-        error: `Ați atins limita de ${association.maxDocuments} dosare pentru asociația dvs. Contactați administratorul pentru a crește limita.`
+        error: `Ați atins limita de ${asociatie.maxDocuments} dosare. Contactați administratorul pentru a o crește.`,
       }, { status: 403 });
     }
 
-    // Verificăm dimensiunea totală a fișierelor (max 20MB per dosar)
-    const totalSizeBytes = files.reduce((sum, f) => sum + f.size, 0);
-    if (totalSizeBytes > 20 * 1024 * 1024) {
+    const totalOcteti = files.reduce((s, f) => s + f.size, 0);
+    if (totalOcteti > LIMITA_DOSAR_MB * 1024 * 1024) {
       return NextResponse.json({
-        error: `Dimensiunea totală a fișierelor (${Math.round(totalSizeBytes / 1024 / 1024)}MB) depășește limita de 20MB. Comprimați fișierele și reîncercați.`
+        error: `Dosarul are ${Math.round(totalOcteti / 1024 / 1024)} MB, peste limita de ${LIMITA_DOSAR_MB} MB. Trimiteți facturile într-un singur PDF sau reduceți rezoluția scanărilor.`,
       }, { status: 413 });
     }
 
-    // Listă albă de tipuri. Nu ține doar de „ce știe AI-ul să citească": numele
-    // fișierului își păstrează extensia, deci un .html sau .svg încărcat ca
-    // „document" ar fi conținut activ, gata să ruleze cod dacă ajunge vreodată
-    // servit. Verificăm și antetul MIME, și extensia — primul vine din browser,
-    // deci se poate minți, a doua decide cum se servește fișierul.
-    const MIME_PERMISE = ["application/pdf", "image/png", "image/jpeg", "image/webp"];
-    const EXT_PERMISE = [".pdf", ".png", ".jpg", ".jpeg", ".webp"];
     const refuzat = files.find(f => {
       const ext = f.name.slice(f.name.lastIndexOf(".")).toLowerCase();
       return !MIME_PERMISE.includes(f.type) || !EXT_PERMISE.includes(ext);
     });
     if (refuzat) {
       return NextResponse.json({
-        error: `Fișierul „${refuzat.name}" nu este acceptat. Încărcați doar PDF sau imagini (PNG, JPG, WEBP).`,
+        error: `Fișierul „${refuzat.name}" nu este acceptat. Trimiteți PDF sau imagini (PNG, JPG, WEBP).`,
       }, { status: 415 });
     }
 
-    // Fișierele NU mai ajung în `public/`. Tot ce e acolo se servește static,
-    // fără nicio verificare de sesiune: oricine nimerea adresa descărca lista de
-    // plată a altei asociații. Acum merg în Blob, în store PRIVAT, iar adresa
-    // singură nu deschide nimic — descărcarea trece prin ruta care întreabă
-    // întâi a cui e dosarul. Buffer-ul rămâne în memorie pentru analiza AI.
-    const savedFiles: { type: string; label: string; fileName: string; fileUrl: string; buffer: Buffer; mimeType: string; blobUrl: string | null; size: number }[] = [];
+    /* ------------------------------------------------------- PĂSTRARE */
+
+    const [an, luna] = period.split("-");
+    const numeLuna = new Date(`${an}-${luna}-01`).toLocaleString("ro-RO", { month: "long" });
+
+    const dosar = await prisma.document.create({
+      data: {
+        associationId,
+        title: associationName ? `${associationName} — ${numeLuna} ${an}` : `Dosar ${numeLuna} ${an}`,
+        type: "dosar_lunar",
+        fileName: `dosar_${period}`,
+        fileUrl: `dosare/${associationId}/${period.replace("-", "_")}/`,
+        month: numeLuna,
+        year: parseInt(an, 10),
+        status: "analyzing",
+        etapa: "intrare",
+        stareEtapa: "in_lucru",
+      },
+    });
+
+    // Fisierele NU ajung in `public/`: tot ce e acolo se serveste static, fara
+    // verificare de sesiune. Merg in Blob, in store privat, iar continutul iese
+    // doar prin ruta de descarcare, care intreaba intai a cui e dosarul.
+    const pentruCitire: FisierDeCitit[] = [];
+    const randuriFisiere: { documentId: string; type: string; label: string; fileName: string; blobUrl: string; mimeType: string; size: number }[] = [];
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
-      const type = fileTypes[i];
-      const label = fileLabels[i];
-      const safeName = `${type}_${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
-      const buffer = Buffer.from(await file.arrayBuffer());
+      const tip = fileTypes[i] ?? "altele";
+      const numeSigur = `${tip}_${Date.now()}_${i}_${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+      const continut = Buffer.from(await file.arrayBuffer());
 
-      const cale = `dosare/${associationId}/${period.replace("-", "_")}/${safeName}`;
-      const salvat = await salveazaFisier(cale, buffer, file.type);
+      pentruCitire.push({ tip, numeFisier: file.name, mimeType: file.type, continut });
 
-      savedFiles.push({
-        type, label, fileName: file.name, fileUrl: cale, buffer, mimeType: file.type,
-        blobUrl: salvat?.url ?? null,
-        size: buffer.length,
-      });
-    }
-
-    // Creăm un document principal în DB pentru dosar
-    const [year, monthNum] = period.split("-");
-    const monthName = new Date(`${year}-${monthNum}-01`).toLocaleString("ro-RO", { month: "long" });
-
-    const titleAssoc = (associationName || "").trim();
-    const mainDoc = await prisma.document.create({
-      data: {
-        associationId: associationId,
-        title: titleAssoc ? `${titleAssoc} — ${monthName} ${year}` : `Dosar verificare ${monthName} ${year}`,
-        type: "dosar_lunar",
-        fileName: `dosar_${period}.zip`,
-        fileUrl: `dosar/${associationId}/${period.replace("-", "_")}/`,
-        month: monthName,
-        year: parseInt(year),
-        status: "analyzing",
+      const salvat = await salveazaFisier(
+        `dosare/${associationId}/${period.replace("-", "_")}/${numeSigur}`,
+        continut,
+        file.type,
+      );
+      if (salvat) {
+        randuriFisiere.push({
+          documentId: dosar.id,
+          type: tip,
+          label: fileLabels[i] ?? tip,
+          fileName: file.name,
+          blobUrl: salvat.url,
+          mimeType: file.type,
+          size: continut.length,
+        });
       }
-    });
-
-    // Fișierele care chiar au ajuns în Blob primesc un rând, ca să poată fi
-    // descărcate mai târziu. Dacă stocarea nu e configurată (`salveazaFisier`
-    // întoarce null), dosarul se analizează oricum — doar că nu se păstrează.
-    const deSalvat = savedFiles.filter(f => f.blobUrl);
-    if (deSalvat.length > 0) {
-      await prisma.documentFile.createMany({
-        data: deSalvat.map(f => ({
-          documentId: mainDoc.id,
-          type: f.type,
-          label: f.label,
-          fileName: f.fileName,
-          blobUrl: f.blobUrl!,
-          mimeType: f.mimeType,
-          size: f.size,
-        })),
-      });
     }
 
-    // Incrementăm contorul cu 1 dosar (nu cu numărul de fișiere)
+    if (randuriFisiere.length > 0) {
+      await prisma.documentFile.createMany({ data: randuriFisiere });
+    }
+
     await prisma.association.update({
       where: { id: associationId },
       data: { filesUploadedCount: { increment: 1 } },
     });
 
-    // Trimitem răspunsul imediat — analiza AI rulează în background după response
-    after(async () => {
-      await analyzeDocuments({
-        documentId: mainDoc.id,
-        associationId: associationId,
-        associationName,
-        cui,
-        address,
-        period,
-        monthName,
-        year,
-        savedFiles,
-      });
-    });
-
-    return NextResponse.json({ success: true, documentId: mainDoc.id });
-  } catch (e) {
-    console.error(e);
-    return NextResponse.json({ error: "Eroare la upload" }, { status: 500 });
-  }
-}
-
-async function analyzeDocuments({
-  documentId, associationId, associationName, cui, address,
-  period, monthName, year, savedFiles
-}: {
-  documentId: string;
-  associationId: string;
-  associationName: string;
-  cui: string;
-  address: string;
-  period: string;
-  monthName: string;
-  year: string;
-  savedFiles: { type: string; label: string; fileName: string; fileUrl: string; buffer: Buffer; mimeType: string }[];
-}) {
-  try {
-    const apiKey = process.env.ANTHROPIC_API_KEY;
-    if (!apiKey) throw new Error("ANTHROPIC_API_KEY lipseste din variabilele de mediu Vercel");
-
-    console.log(`[AI] Start analiza doc ${documentId}, ${savedFiles.length} fisiere, total ~${Math.round(savedFiles.reduce((s,f)=>s+f.buffer.length,0)/1024)}KB`);
-
-    // Construim mesajul pentru Claude cu toate documentele
-    const contentParts: any[] = [];
-
-    // Adăugăm fiecare document ca PDF sau imagine
-    for (const f of savedFiles) {
-      const base64 = f.buffer.toString("base64");
-      const isPdf = f.mimeType === "application/pdf";
-      const isImage = f.mimeType.startsWith("image/");
-
-      if (isPdf) {
-        contentParts.push({
-          type: "text",
-          text: `\n\n=== DOCUMENT: ${f.label} (${f.type}) ===\n`
-        });
-        contentParts.push({
-          type: "document",
-          source: { type: "base64", media_type: "application/pdf", data: base64 }
-        });
-      } else if (isImage) {
-        contentParts.push({
-          type: "text",
-          text: `\n\n=== DOCUMENT: ${f.label} (${f.type}) ===\n`
-        });
-        contentParts.push({
-          type: "image",
-          source: { type: "base64", media_type: f.mimeType, data: base64 }
-        });
-      } else {
-        // Pentru Excel/Word - trimitem cu notă că e un format binar
-        contentParts.push({
-          type: "text",
-          text: `\n\n=== DOCUMENT: ${f.label} (${f.type}) - Fișier: ${f.fileName} ===\n[Document în format ${f.mimeType} - analizează pe baza celorlalte documente]\n`
-        });
-      }
-    }
-
-    const promptText = `Ești un cenzor autorizat pentru asociații de proprietari din România, specializat în verificarea documentelor financiar-contabile conform Legii nr. 196/2018.
-
-Asociația: ${associationName || "Asociație de proprietari"}
-CUI: ${cui || "nedefinit"}
-Adresă: ${address || "nedefinită"}
-Perioada verificată: ${monthName} ${year}
-
-DOCUMENTE PRIMITE:
-${savedFiles.map(f => `- ${f.label}: ${f.fileName}`).join("\n")}
-
-CONȚINUT DOCUMENTE:
-${savedFiles.map(f => `=== ${f.label} (${f.type}) — ${f.fileName} ===`).join("\n")}
-
-SARCINA TA: Întocmește un RAPORT DE CONSULTANȚĂ PRIVIND ACTIVITATEA FINANCIAR-CONTABILĂ în stilul unui cenzor profesionist român, bazat EXCLUSIV pe datele reale din documentele de mai sus.
-
-VERIFICĂ ÎN ORDINE:
-
-1. DATE IDENTIFICARE ASOCIAȚIE
-   - Extrage din documente: denumire exactă, cod fiscal, IBAN, bancă, președinte, administrator, cenzor
-   - Compară cu datele din sistem dacă diferă
-
-2. REGISTRUL DE CASĂ
-   - Sold inițial și final al lunii
-   - Prima și ultima chitanță (număr și sumă)
-   - Zile cu încasări
-   - Dacă se respectă plafonul de casă sub 1000 lei (art. 67 Legea 196/2018)
-
-3. REGISTRUL DE BANCĂ / EXTRASUL DE CONT
-   - Sold cont curent
-   - Solduri depozite (dacă există)
-   - Sold cont colector (dacă există)
-   - Furnizori neachitați
-
-4. SOLDURI FONDURI
-   - Fond de rulment: sold
-   - Fond de reparații: sold
-   - Alte fonduri (penalizări, administrative etc.)
-
-5. RESTANȚIERI
-   - Identifică apartamentele cu restanțe din lista de plată
-   - Menționează numărul apartamentului și suma restantă
-   - Verifică dacă s-au aplicat penalizări conform art. 77 Legea 196/2018
-
-6. LISTA DE PLATĂ
-   - Conține toate coloanele prevăzute de lege?
-   - Data afișării respectă termenul de 5 zile?
-   - Total cheltuieli luna curentă
-
-7. VERIFICAREA PLĂȚILOR CĂTRE FURNIZORI
-   - Plățile sunt făcute integral și prin bancă?
-   - Există facturi neachitate?
-
-8. DECLARAȚII FISCALE
-   - D112 depusă la termen? (dacă există salarii în documente)
-
-9. LEGALITATEA CHELTUIELILOR
-   - Există cheltuieli fără documente justificative?
-   - Bonurile fiscale au CUI-ul asociației înscris?
-
-GENEREAZĂ RAPORTUL ÎN ACEST FORMAT EXACT:
-
----
-# RAPORT DE CONSULTANȚĂ PRIVIND ACTIVITATEA FINANCIAR-CONTABILĂ
-
-Atributul de identificare al Asociației de Proprietari este codul fiscal: [CUI din documente].
-Consultanța contabilă se referă la luna ${monthName} ${year}.
-
-Pe perioada supusă controlului, Asociația de Proprietari a fost reprezentată de [președinte] în calitate de președinte al Asociației.
-
-**Președinte:** [nume din documente]
-**Administrator:** [nume din documente]
-**Cenzor:** [nume din documente]
-
----
-## I. DATE DE IDENTIFICARE
-
-| Câmp | Valoare |
-|------|---------|
-| Asociația de Proprietari | [din documente] |
-| Cod fiscal | [din documente] |
-| Adresă | [din documente] |
-| Bancă | [din documente] |
-| IBAN | [din documente] |
-| Perioada verificată | ${monthName} ${year} |
-
----
-## II. OBIECTUL VERIFICĂRII
-
-Materialul documentar care a stat la baza verificării a constat în:
-- verificarea registrului de casă și de bancă;
-- verificarea listelor de plată a cotelor de contribuție;
-- verificarea plății furnizorilor de utilități și servicii.
-
-Documente primite:
-${savedFiles.map(f => `- ${f.label}: ${f.fileName}`).join("\n")}
-
----
-## III. CONSTATĂRI
-
-### 1. Registrul de casă — ${monthName} ${year}
-Sold inițial: [din documente] lei
-Sold final: [din documente] lei
-Prima chitanță: [număr] = [sumă] lei
-Ultima chitanță: [număr] = [sumă] lei
-[Observații dacă plafonul de casă e depășit sau alte probleme]
-
-### 2. Situația soldurilor la data de [ultima dată din registrul bancă]
-- Sold în casă: [sumă] lei
-- Sold la bancă (cont curent): [sumă] lei
-[- Depozite: listă cu solduri dacă există]
-- Fond de rulment: [sumă] lei
-- Fond de reparații: [sumă] lei
-- Alte fonduri: [sumă] lei
-- Furnizori pentru facturi neachitate: [sumă] lei
-
-### 3. Restanțieri
-[Dacă există restanțieri:]
-Se constată existența unui nivel [ridicat/moderat/scăzut] al restanțelor. Apartamentele cu restanțe: [lista apartamentelor cu sumele].
-Această situație [afectează/nu afectează] echilibrul financiar al asociației.
-Conform art. 55 alin. (1) lit. o) din Legea nr. 196/2018, comitetul executiv are obligația de a urmări recuperarea creanțelor.
-
-### 4. Lista de plată
-[Observații despre lista de plată - conține coloanele legale, data afișării, total cheltuieli]
-
-### 5. Verificarea plăților către furnizori
-[Observații despre plăți - sunt integrale, prin bancă, există restanțe la furnizori]
-
-### 6. Legalitatea cheltuielilor
-[Observații despre documente justificative, bonuri fiscale cu CUI etc.]
-
-[ADAUGĂ alte constatări relevante găsite în documente]
-
----
-## IV. RECOMANDĂRI
-
-[Recomandări concrete numerotate, bazate pe constatările de mai sus, cu articolele de lege aplicabile]
-
----
-## V. CONCLUZIE
-
-Scor corectitudine: [X]%
-[Concluzie generală - documentele sunt/nu sunt conforme, ce trebuie remediat]
-
----
-## VI. SEMNĂTURI
-
-Prezentul raport a fost încheiat în 2 exemplare, din care un exemplar a fost înaintat Asociației de Proprietari.
-
-Asociația de Proprietari | VoSmart Cenzorat SRL
-Președinte: [nume] | Cenzor: [nume]
-
-IMPORTANT:
-- Folosește DOAR datele reale din documente, nu inventa sume
-- Dacă un document lipsește sau nu ai putut citi datele, menționează explicit
-- Discrepanțele sub 0,50 lei provin din rotunjiri matematice și NU sunt constatări — ignoră-le
-- Concentrează-te pe probleme reale: plăți neefectuate, fonduri insuficiente, restanțieri, documente lipsă`;
-
-    contentParts.push({ type: "text", text: promptText });
-
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      signal: AbortSignal.timeout(50000),
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-        "anthropic-beta": "pdfs-2024-09-25",
+    await prisma.evenimentFlux.create({
+      data: {
+        documentId: dosar.id,
+        etapa: "intrare",
+        stare: "gata",
+        mesaj: `${files.length} ${files.length === 1 ? "document primit" : "documente primite"} · ${(totalOcteti / 1024 / 1024).toFixed(1)} MB`,
       },
-      body: JSON.stringify({
-        model: "claude-haiku-4-5-20251001",
-        max_tokens: 5000,
-        messages: [{ role: "user", content: contentParts }],
-      }),
     });
 
-    if (!response.ok) {
-      const err = await response.text();
-      throw new Error("Claude API error: " + err);
-    }
-
-    const data = await response.json();
-    const tokensIn: number = data.usage?.input_tokens || 0;
-    const tokensOut: number = data.usage?.output_tokens || 0;
-    const reportText = data.content?.[0]?.text || "";
-
-    // Extragem scorul din raport
-    const scoreMatch = reportText.match(/Scor corectitudine[:\s]+(\d+)%/i);
-    const score = scoreMatch ? parseInt(scoreMatch[1]) : 70;
-
-    // Extragem constatările ca findings
-    const findingsMatch = reportText.match(/## III\. CONSTATĂRI([\s\S]*?)## IV\./);
-    const findingsText = findingsMatch ? findingsMatch[1].trim() : "";
-    const findings = findingsText.split(/###\s+\d+\./).filter(Boolean).map((f: string) => f.trim().split("\n")[0]).filter(Boolean);
-
-    // Actualizăm documentul
-    await prisma.document.update({
-      where: { id: documentId },
-      data: {
-        status: "analyzed",
-        aiScore: score,
-        aiFindings: JSON.stringify(findings.slice(0, 10)),
-        aiSummary: `Dosar ${monthName} ${year} - ${savedFiles.length} documente analizate`,
-        aiTokensIn: tokensIn,
-        aiTokensOut: tokensOut,
-      }
+    // Raspunsul pleaca acum; analiza continua dupa el. Fisierele sunt deja in
+    // memorie, deci nu le mai coboram inca o data din stocare.
+    after(async () => {
+      await ruleazaFlux({ documentId: dosar.id, fisiere: pentruCitire });
     });
 
-    // Creăm raportul preliminar (draft pentru cenzor)
-    await prisma.report.create({
-      data: {
-        associationId,
-        title: associationName
-          ? `Raport cenzor ${monthName} ${year} — ${associationName}`
-          : `Raport cenzor ${monthName} ${year}`,
-        month: monthName,
-        year: parseInt(year),
-        aiDraft: reportText,
-        status: "draft",
-      }
-    });
-
-  } catch (e: any) {
-    const raw = e?.message || String(e);
-    // Eliminăm HTML din răspunsurile de eroare (ex: 504 Gateway Timeout page)
-    const clean = raw.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 300);
-    console.error("[AI] Eroare analiza:", clean);
-    await prisma.document.update({
-      where: { id: documentId },
-      data: { status: "error", aiSummary: clean }
-    });
+    return NextResponse.json({ success: true, documentId: dosar.id });
+  } catch (e) {
+    console.error("[dosar] eroare la preluare:", e);
+    return NextResponse.json({ error: "Dosarul nu a putut fi preluat. Încercați din nou." }, { status: 500 });
   }
 }
-

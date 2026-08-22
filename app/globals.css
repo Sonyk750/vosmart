@@ -1,15 +1,69 @@
 @import "tailwindcss";
 
+/* ==========================================================================
+   Sistemul de culori si spatiere al aplicatiei.
+   Un singur loc unde se decide cum arata produsul. Pana acum fiecare ecran isi
+   inventa nuantele lui (`bg-[#050814]`, `border-white/8`, `bg-white/[0.025]`),
+   deci doua panouri alaturate nu semanau intre ele. Tokenii de mai jos devin
+   utilitare Tailwind: `bg-surface-2`, `text-muted`, `border-line`.
+
+   Alegerea de fond: aplicatia are cromul intunecat, dar RAPOARTELE se afiseaza
+   pe hartie alba, in interiorul lui. Un raport de cenzor se semneaza si se
+   tipareste; daca il arati alb-pe-negru, arata a terminal, nu a document.
+   ========================================================================== */
+
+@theme {
+  /* Fundal si suprafete — scara de adancime, nu nuante la intamplare */
+  --color-app: #06080d;
+  --color-surface-1: #0a0d14;
+  --color-surface-2: #0f131c;
+  --color-surface-3: #151a25;
+  --color-surface-4: #1c2230;
+
+  /* Linii. Trei trepte: abia vizibila, normala, accentuata */
+  --color-line: rgba(255, 255, 255, 0.07);
+  --color-line-strong: rgba(255, 255, 255, 0.13);
+  --color-line-loud: rgba(255, 255, 255, 0.22);
+
+  /* Text */
+  --color-ink: #eef2f8;
+  --color-muted: #98a2b3;
+  --color-faint: #626b7c;
+
+  /* Accent de brand */
+  --color-brand: #7c5cff;
+  --color-brand-soft: #a08cff;
+  --color-brand-dim: rgba(124, 92, 255, 0.14);
+
+  /* Semantice — severitatea constatarilor si starile din flux */
+  --color-ok: #2dd4a7;
+  --color-ok-dim: rgba(45, 212, 167, 0.12);
+  --color-warn: #f5a524;
+  --color-warn-dim: rgba(245, 165, 36, 0.12);
+  --color-risk: #ff7a45;
+  --color-risk-dim: rgba(255, 122, 69, 0.12);
+  --color-bad: #ff5a65;
+  --color-bad-dim: rgba(255, 90, 101, 0.12);
+  --color-info: #38bdf8;
+  --color-info-dim: rgba(56, 189, 248, 0.12);
+
+  /* Hartia — suprafata pe care se citeste un raport */
+  --color-paper: #ffffff;
+  --color-paper-2: #f7f8fa;
+  --color-paper-ink: #16181d;
+  --color-paper-muted: #5b6472;
+  --color-paper-line: #e6e8ec;
+
+  --radius-card: 14px;
+  --radius-field: 10px;
+
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+}
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -22,9 +76,47 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
 
+/* Cifrele din tabele si din contoare trebuie sa stea in coloana. Fara asta,
+   un „12" si un „18" au latimi diferite si randurile tresar la fiecare refresh. */
+.tnum { font-variant-numeric: tabular-nums; }
+
+/* Bara de derulare, ca sa nu taie ferestrele albe de sistem in mijlocul unui
+   panou intunecat. */
+.scroll-slim { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,.16) transparent; }
+.scroll-slim::-webkit-scrollbar { width: 9px; height: 9px; }
+.scroll-slim::-webkit-scrollbar-thumb { background: rgba(255,255,255,.14); border-radius: 9px; border: 2px solid transparent; background-clip: content-box; }
+.scroll-slim::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,.24); background-clip: content-box; }
+.scroll-slim::-webkit-scrollbar-track { background: transparent; }
+
+/* Animatii folosite in fluxul de analiza. Cat timp AI-ul lucreaza, ecranul
+   trebuie sa arate ca se intampla ceva real, nu sa inghete. */
+@keyframes vs-shimmer { 100% { transform: translateX(100%); } }
+.shimmer { position: relative; overflow: hidden; }
+.shimmer::after {
+  content: ""; position: absolute; inset: 0; transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.09), transparent);
+  animation: vs-shimmer 1.6s infinite;
+}
+
+@keyframes vs-rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.rise { animation: vs-rise .32s cubic-bezier(.2,.7,.3,1) both; }
+
+@keyframes vs-pulse-ring {
+  0%   { box-shadow: 0 0 0 0 rgba(124,92,255,.45); }
+  70%  { box-shadow: 0 0 0 9px rgba(124,92,255,0); }
+  100% { box-shadow: 0 0 0 0 rgba(124,92,255,0); }
+}
+.pulse-ring { animation: vs-pulse-ring 2s infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .shimmer::after, .pulse-ring, .rise { animation: none; }
+}
+
+/* ---- Articolele de blog (neschimbat) ---- */
 .prose-blog h2 {
   font-size: 1.5rem;
   font-weight: 700;
