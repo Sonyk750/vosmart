@@ -9,8 +9,15 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
 
   const { id } = await params;
 
-  const association = await prisma.association.findUnique({
-    where: { id },
+  // Cenzorul vede DOAR asociatiile care i-au fost alocate — aceeasi clauza ca in
+  // rutele surori (/api/admin/clients, documents, reports). Aici lipsea, iar
+  // pagina se deschidea cu orice id: nume, CUI, adresa, toate documentele cu
+  // constatarile AI si toate rapoartele unei asociatii care nu era a lui.
+  const association = await prisma.association.findFirst({
+    where: {
+      id,
+      ...(user.role === "cenzor" ? { allocations: { some: { cenzorId: user.id } } } : {}),
+    },
     include: {
       user: { select: { name: true, email: true } },
       documents: { orderBy: { createdAt: "desc" } },
@@ -22,4 +29,3 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
 
   return <ClientDetailAdmin association={association as any} adminUser={user} />;
 }
-
