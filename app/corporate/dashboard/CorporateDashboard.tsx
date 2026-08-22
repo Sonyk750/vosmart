@@ -1109,6 +1109,20 @@ ${body}
                                 {doc.aiSummary || "Analiza a eșuat — verifică formatul fișierelor și reîncearcă."}
                               </p>
                             )}
+
+                            {/* Documentele dosarului. Linkul nu duce la fișier, ci
+                                la ruta care verifică întâi dacă dosarul e al tău. */}
+                            {Array.isArray(doc.files) && doc.files.length > 0 && (
+                              <div className="mt-2 flex flex-wrap gap-1.5">
+                                {doc.files.map((f: any) => (
+                                  <a key={f.id} href={`/api/dashboard/documents/${doc.id}/fisiere/${f.id}`}
+                                    title={`Descarcă ${f.fileName}`}
+                                    className="rounded-lg border border-white/10 bg-white/[0.03] px-2 py-1 text-[11px] text-slate-300 transition hover:border-cyan-500/40 hover:text-cyan-300">
+                                    ⬇ {f.label || f.fileName}
+                                  </a>
+                                ))}
+                              </div>
+                            )}
                           </div>
 
                           {/* Butoane */}

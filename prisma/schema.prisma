@@ -142,6 +142,27 @@ model Document {
   createdAt     DateTime @default(now())
 
   association Association @relation(fields: [associationId], references: [id], onDelete: Cascade)
+  files       DocumentFile[]
+}
+
+// Fisierele unui dosar, asa cum stau ele in Vercel Blob (store PRIVAT). In baza
+// tinem doar adresa; continutul nu se serveste niciodata direct, ci prin ruta de
+// descarcare, care verifica intai daca dosarul e al celui care cere. Vezi
+// lib/stocare.ts si app/api/dashboard/documents/[id]/fisiere/[fileId].
+model DocumentFile {
+  id         String   @id @default(cuid())
+  documentId String
+  type       String   // lista_plata | explicatii_lista | distributia_facturilor | facturi | extras_cont
+  label      String
+  fileName   String   // numele original, asa cum l-a trimis omul
+  blobUrl    String   // adresa din Blob; fara token nu se poate citi
+  mimeType   String
+  size       Int
+  createdAt  DateTime @default(now())
+
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([documentId])
 }
 
 model Report {

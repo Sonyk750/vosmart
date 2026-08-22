@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse, after } from "next/server";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { writeFile, mkdir } from "fs/promises";
-import path from "path";
+import { salveazaFisier } from "@/lib/stocare";
 
 export const maxDuration = 60;
 
@@ -111,8 +110,12 @@ export async function POST(req: NextRequest) {
       }, { status: 415 });
     }
 
-    // Citim fișierele în memorie (buffer); scrierea pe disc e opțională — pe Vercel filesystem-ul e read-only
-    const savedFiles: { type: string; label: string; fileName: string; fileUrl: string; buffer: Buffer; mimeType: string }[] = [];
+    // Fișierele NU mai ajung în `public/`. Tot ce e acolo se servește static,
+    // fără nicio verificare de sesiune: oricine nimerea adresa descărca lista de
+    // plată a altei asociații. Acum merg în Blob, în store PRIVAT, iar adresa
+    // singură nu deschide nimic — descărcarea trece prin ruta care întreabă
+    // întâi a cui e dosarul. Buffer-ul rămâne în memorie pentru analiza AI.
+    const savedFiles: { type: string; label: string; fileName: string; fileUrl: string; buffer: Buffer; mimeType: string; blobUrl: string | null; size: number }[] = [];
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
@@ -121,19 +124,14 @@ export async function POST(req: NextRequest) {
       const safeName = `${type}_${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
       const buffer = Buffer.from(await file.arrayBuffer());
 
-      // Fișierele NU mai ajung în `public/`. Tot ce e acolo se servește static,
-      // fără nicio verificare de sesiune: oricine nimerea adresa descărca lista
-      // de plată a altei asociații. Scriem doar în /tmp, care nu se servește și
-      // trăiește cât ține funcția — analiza AI folosește oricum buffer-ul din
-      // memorie, nu fișierul de pe disc.
-      const fileUrl = `dosar/${associationId}/${period.replace("-", "_")}/${safeName}`;
-      try {
-        const tmpDir = path.join("/tmp", "vosmart", associationId, period.replace("-", "_"));
-        await mkdir(tmpDir, { recursive: true });
-        await writeFile(path.join(tmpDir, safeName), buffer);
-      } catch { /* analiza merge pe buffer; fisierul de pe disc e doar de comoditate */ }
+      const cale = `dosare/${associationId}/${period.replace("-", "_")}/${safeName}`;
+      const salvat = await salveazaFisier(cale, buffer, file.type);
 
-      savedFiles.push({ type, label, fileName: file.name, fileUrl, buffer, mimeType: file.type });
+      savedFiles.push({
+        type, label, fileName: file.name, fileUrl: cale, buffer, mimeType: file.type,
+        blobUrl: salvat?.url ?? null,
+        size: buffer.length,
+      });
     }
 
     // Creăm un document principal în DB pentru dosar
@@ -153,6 +151,24 @@ export async function POST(req: NextRequest) {
         status: "analyzing",
       }
     });
+
+    // Fișierele care chiar au ajuns în Blob primesc un rând, ca să poată fi
+    // descărcate mai târziu. Dacă stocarea nu e configurată (`salveazaFisier`
+    // întoarce null), dosarul se analizează oricum — doar că nu se păstrează.
+    const deSalvat = savedFiles.filter(f => f.blobUrl);
+    if (deSalvat.length > 0) {
+      await prisma.documentFile.createMany({
+        data: deSalvat.map(f => ({
+          documentId: mainDoc.id,
+          type: f.type,
+          label: f.label,
+          fileName: f.fileName,
+          blobUrl: f.blobUrl!,
+          mimeType: f.mimeType,
+          size: f.size,
+        })),
+      });
+    }
 
     // Incrementăm contorul cu 1 dosar (nu cu numărul de fișiere)
     await prisma.association.update({

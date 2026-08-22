@@ -9,6 +9,14 @@ export async function GET() {
   const documents = await prisma.document.findMany({
     where: { associationId: user.association.id },
     orderBy: { createdAt: "desc" },
+    // Fisierele vin doar cu numele si id-ul. Adresa din Blob NU pleaca spre
+    // browser: descarcarea trece prin ruta care verifica a cui e dosarul.
+    include: {
+      files: {
+        select: { id: true, fileName: true, label: true, type: true, size: true },
+        orderBy: { createdAt: "asc" },
+      },
+    },
   });
   return NextResponse.json(documents);
 }

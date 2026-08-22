@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { stergeFisiere } from "@/lib/stocare";
 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const user = await getSession();
@@ -10,7 +11,11 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
 
   const doc = await prisma.document.findUnique({
     where: { id },
-    select: { associationId: true, association: { select: { userId: true } } },
+    select: {
+      associationId: true,
+      association: { select: { userId: true } },
+      files: { select: { blobUrl: true } },
+    },
   });
 
   if (!doc) return NextResponse.json({ error: "Document negăsit" }, { status: 404 });
@@ -18,6 +23,10 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
     return NextResponse.json({ error: "Neautorizat" }, { status: 403 });
 
   await prisma.document.delete({ where: { id } });
+
+  // Randurile pleaca odata cu documentul (cascada), dar fisierele din Blob nu:
+  // fara asta ar ramane acolo, ocupand spatiu platit, pe veci.
+  await stergeFisiere(doc.files.map(f => f.blobUrl));
 
   // Decrementăm contorul de dosare la ștergere, dar NICIODATĂ sub zero:
   // `updateMany` cu pragul în `where` face scăderea și verificarea într-o
