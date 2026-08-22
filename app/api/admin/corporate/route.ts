@@ -22,6 +22,13 @@ export async function PATCH(req: NextRequest) {
   if (!user) return NextResponse.json({ error: "Neautorizat" }, { status: 401 });
 
   const { id, status } = await req.json();
+
+  // Statusul venea direct din body, deci se putea scrie orice sir in coloana.
+  const STARI = { pending: "pending", active: "active", suspended: "rejected" } as const;
+  if (!(status in STARI)) {
+    return NextResponse.json({ error: "Status invalid" }, { status: 400 });
+  }
+
   const updated = await prisma.corporateAccount.update({
     where: { id },
     data: {
@@ -29,6 +36,14 @@ export async function PATCH(req: NextRequest) {
       activatedAt: status === "active" ? new Date() : undefined,
     },
   });
+
+  // Contul firmei si omul care intra pe el merg impreuna: altfel suspendarea
+  // firmei lasa utilizatorul sa se logheze mai departe, cu panoul lui cu tot.
+  const statusUser = STARI[status as keyof typeof STARI];
+  await prisma.user.update({ where: { id: updated.userId }, data: { status: statusUser } });
+  if (statusUser !== "active") {
+    await prisma.session.deleteMany({ where: { userId: updated.userId } });
+  }
 
   return NextResponse.json({ success: true, account: updated });
 }

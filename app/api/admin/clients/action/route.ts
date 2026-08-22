@@ -22,7 +22,12 @@ export async function POST(req: NextRequest) {
   }
 
   if (action === "suspend") {
-    await prisma.user.update({ where: { id: assoc.userId }, data: { status: "rejected" } });
+    // Sesiunile deschise cad odata cu suspendarea. `getSession` refuza oricum
+    // conturile care nu-s active, dar randurile ramase n-au ce cauta in baza.
+    await prisma.$transaction([
+      prisma.user.update({ where: { id: assoc.userId }, data: { status: "rejected" } }),
+      prisma.session.deleteMany({ where: { userId: assoc.userId } }),
+    ]);
     return NextResponse.json({ success: true, message: "Cont suspendat" });
   }
 

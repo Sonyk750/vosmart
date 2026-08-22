@@ -33,11 +33,17 @@ export async function POST(req: NextRequest) {
 
     if (!passwordValid) return NextResponse.json({ error: "Email sau parolă incorectă" }, { status: 401 });
 
-    if (user.role === "client" && user.status !== "active") {
-      return NextResponse.json({ error: "Contul tau asteapta aprobarea administratorului VoSmart." }, { status: 403 });
-    }
-    if (user.role === "corporate" && user.status !== "active") {
-      return NextResponse.json({ error: "Contul nu a fost activat. Verificați emailul pentru linkul de activare." }, { status: 403 });
+    // Verificarea acopera TOATE rolurile. Inainte se uita doar la `client` si
+    // `corporate`, deci un cenzor sau un admin suspendat intra in continuare in
+    // panoul intern — exact conturile cu cele mai multe drepturi.
+    if (user.status !== "active") {
+      const mesaj =
+        user.role === "client"
+          ? "Contul tau asteapta aprobarea administratorului VoSmart."
+          : user.role === "corporate"
+            ? "Contul nu a fost activat. Verificați emailul pentru linkul de activare sau finalizați plata."
+            : "Contul este suspendat. Contactați administratorul VoSmart.";
+      return NextResponse.json({ error: mesaj }, { status: 403 });
     }
 
     const token = crypto.randomBytes(32).toString("hex");

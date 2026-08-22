@@ -42,6 +42,10 @@ export default async function CorporateDashboardPage() {
 
   if (!session || session.expiresAt < new Date()) redirect("/login?next=/corporate/dashboard");
 
+  // Aceeasi regula ca in `getSession`: contul suspendat sau neactivat iese
+  // afara imediat, nu peste 30 de zile, cand expira cookie-ul.
+  if (session.user.status !== "active") redirect("/login");
+
   const isAdmin = session.user.role === "admin";
 
   // Logat, dar cu alt rol: nu-l trimitem la login (ar face drumul inapoi aici),

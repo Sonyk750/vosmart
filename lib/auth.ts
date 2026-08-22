@@ -12,6 +12,12 @@ export async function getSession() {
   });
 
   if (!session || session.expiresAt < new Date()) return null;
+
+  // Statusul se verifica la FIECARE cerere, nu doar la login. Altfel suspendarea
+  // unui cont n-are efect pana expira cookie-ul — adica pana la 30 de zile in
+  // care cel dat afara lucreaza mai departe ca si cum nimic nu s-ar fi intamplat.
+  if (session.user.status !== "active") return null;
+
   return session.user;
 }
 
