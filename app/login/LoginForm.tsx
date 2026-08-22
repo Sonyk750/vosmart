@@ -121,20 +121,28 @@ export default function LoginForm({ next }: { next: string | null }) {
             {/* Ambele duc in acelasi loc — difera doar de unde vine omul: unul si-a
                 uitat parola, celalalt vrea pur si simplu alta. Tot pe email se
                 confirma, pentru ca a doua oara nu stim daca e chiar el. */}
-            <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 pt-1 text-xs text-slate-500">
+            <div className="grid grid-cols-2 gap-2 pt-1">
               <button type="button" onClick={() => deschideCard("Ți-ai uitat parola?")}
                 disabled={!emailValid || trimiteCod}
                 title={emailValid ? "Primești un cod pe email" : "Completează întâi adresa de email"}
-                className="underline transition hover:text-violet-300 disabled:no-underline disabled:opacity-50">
+                className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2.5 text-xs font-semibold text-slate-300 transition hover:border-violet-500/40 hover:bg-violet-500/10 hover:text-violet-200 disabled:opacity-40 disabled:hover:border-white/10 disabled:hover:bg-white/[0.04] disabled:hover:text-slate-300">
                 {trimiteCod ? "Se trimite..." : "Am uitat parola"}
               </button>
               <button type="button" onClick={() => deschideCard("Schimbă parola")}
                 disabled={!emailValid || trimiteCod}
                 title={emailValid ? "Primești un cod pe email" : "Completează întâi adresa de email"}
-                className="underline transition hover:text-violet-300 disabled:no-underline disabled:opacity-50">
-                Vreau altă parolă
+                className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2.5 text-xs font-semibold text-slate-300 transition hover:border-violet-500/40 hover:bg-violet-500/10 hover:text-violet-200 disabled:opacity-40 disabled:hover:border-white/10 disabled:hover:bg-white/[0.04] disabled:hover:text-slate-300">
+                {trimiteCod ? "Se trimite..." : "Schimbă parola"}
               </button>
             </div>
+
+            {/* Fara adresa butoanele stau stinse — scriem de ce, altfel omul apasa
+                degeaba si crede ca s-a stricat pagina. */}
+            <p className="text-center text-xs text-slate-500">
+              {emailValid
+                ? "Apasă un buton și îți trimitem pe email un cod din 8 caractere."
+                : "Scrie-ți întâi adresa de email în căsuța de sus, ca să poți apăsa butoanele."}
+            </p>
           </form>
 
           <div className="mt-6 border-t border-white/5 pt-6 text-center">
