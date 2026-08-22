@@ -2,6 +2,7 @@ import { NextRequest, NextResponse, after } from "next/server";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { salveazaFisier } from "@/lib/stocare";
+import { asociatiaDeLucru, esteProprietar } from "@/lib/asociatie-curenta";
 import { lipsuri, TIPURI_TRIAL, tipDeBaza } from "@/lib/cenzorat/documente";
 import { ruleazaFlux } from "@/lib/cenzorat/pipeline";
 import { FisierDeCitit } from "@/lib/cenzorat/extragere";
@@ -28,18 +29,18 @@ const EXT_PERMISE = [".pdf", ".png", ".jpg", ".jpeg", ".webp"];
 
 export async function POST(req: NextRequest) {
   const user = await getSession();
-  if (!user || (!user.association && user.role !== "corporate"))
-    return NextResponse.json({ error: "Neautorizat" }, { status: 401 });
+  if (!user) return NextResponse.json({ error: "Neautorizat" }, { status: 401 });
 
-  let associationId = user.association?.id;
-  if (!associationId && user.role === "corporate") {
-    const corp = await prisma.corporateAccount.findUnique({
-      where: { userId: user.id },
-      include: { associations: { take: 1 } },
-    });
-    associationId = corp?.associations[0]?.id;
+  const associationId = await asociatiaDeLucru(user);
+  if (!associationId) {
+    return NextResponse.json({ error: "Contul nu are o asociație pentru care să trimită dosare." }, { status: 400 });
   }
-  if (!associationId) return NextResponse.json({ error: "Nu există asociație" }, { status: 400 });
+
+  // Proprietarul aplicatiei nu trece pe la casa de bilete: cota de dosare,
+  // pachetul si starea abonamentului masoara ce a cumparat un client, iar el nu
+  // cumpara de la el insusi. Limitele tehnice de mai jos — tip si marime — i se
+  // aplica si lui: nu sunt reguli de vanzare, sunt marginile platformei.
+  const proprietar = esteProprietar(user);
 
   try {
     const form = await req.formData();
@@ -69,7 +70,7 @@ export async function POST(req: NextRequest) {
       select: { filesUploadedCount: true, maxDocuments: true, corporateId: true },
     });
 
-    if (asociatie?.corporateId) {
+    if (!proprietar && asociatie?.corporateId) {
       const firma = await prisma.corporateAccount.findUnique({
         where: { id: asociatie.corporateId },
         select: { package: true, status: true },
@@ -94,7 +95,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    if (asociatie && asociatie.filesUploadedCount >= asociatie.maxDocuments) {
+    if (!proprietar && asociatie && asociatie.filesUploadedCount >= asociatie.maxDocuments) {
       return NextResponse.json({
         error: `Ați atins limita de ${asociatie.maxDocuments} dosare. Contactați administratorul pentru a o crește.`,
       }, { status: 403 });

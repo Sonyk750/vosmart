@@ -26,17 +26,27 @@ export async function noteaza(
   stare: StareEtapa,
   mesaj: string,
 ): Promise<void> {
-  await prisma.$transaction([
-    prisma.evenimentFlux.create({ data: { documentId, etapa, stare, mesaj } }),
-    prisma.document.update({
-      where: { id: documentId },
-      data: {
-        etapa,
-        stareEtapa: stare,
-        ...(stare === "esuata" ? { status: "error", aiSummary: mesaj } : {}),
-      },
-    }),
-  ]);
+  try {
+    await prisma.$transaction([
+      prisma.evenimentFlux.create({ data: { documentId, etapa, stare, mesaj } }),
+      prisma.document.update({
+        where: { id: documentId },
+        data: {
+          etapa,
+          stareEtapa: stare,
+          ...(stare === "esuata" ? { status: "error", aiSummary: mesaj } : {}),
+        },
+      }),
+    ]);
+  } catch {
+    // Dosarul poate sa nu mai existe: analiza dureaza vreo jumatate de minut, iar
+    // butonul de stergere e la indemana omului tot timpul asta. Cand se intampla,
+    // n-avem unde scrie si nici ce salva — dar mai ales n-avem voie sa aruncam de
+    // aici, fiindca `noteaza` e chemata SI din blocul care trateaza erorile: o
+    // exceptie in el ar iesi neprinsa din `after()` si ar umple jurnalul cu o
+    // violare de cheie externa in loc de motivul adevarat.
+    console.warn(`[flux] nu am putut nota „${mesaj}" — dosarul ${documentId} nu mai există`);
+  }
 }
 
 /** Aduce continutul fisierelor dosarului din stocare, ca sa poata fi recitite. */
@@ -218,15 +228,23 @@ export async function ruleazaFlux({ documentId, fisiere }: OptiuniFlux): Promise
 
     console.log(`[flux] dosar ${documentId} gata în ${Math.round((Date.now() - inceput) / 1000)}s`);
   } catch (e) {
+    // Intai intrebam daca dosarul mai exista. Daca omul l-a sters intre timp,
+    // nu e o defectiune: e o cerere anulata. Fara verificarea asta, jurnalul
+    // arata o violare de cheie externa si pare ca s-a stricat ceva.
+    const inca = await prisma.document.findUnique({ where: { id: documentId }, select: { etapa: true } });
+    if (!inca) {
+      console.log(`[flux] dosarul ${documentId} a fost șters în timpul analizei — mă opresc`);
+      return;
+    }
+
     const brut = e instanceof Error ? e.message : String(e);
     // Raspunsurile de eroare vin uneori ca pagini HTML (504 de la un proxy).
     // Le curatam, ca mesajul din ecranul clientului sa fie o propozitie, nu markup.
     const curat = brut.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 280);
     console.error("[flux] eroare:", curat);
-    const doc2 = await prisma.document.findUnique({ where: { id: documentId }, select: { etapa: true } });
     await noteaza(
       documentId,
-      (doc2?.etapa as Etapa) ?? "extragere",
+      (inca.etapa as Etapa) ?? "extragere",
       "esuata",
       `Analiza s-a oprit: ${curat || "eroare necunoscută"}`,
     );

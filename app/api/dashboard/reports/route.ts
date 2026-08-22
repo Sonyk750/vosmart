@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { asociatiaDeLucru } from "@/lib/asociatie-curenta";
 
 /**
  * Rapoartele asociatiei, pe pagini.
@@ -14,7 +15,10 @@ const PE_PAGINA = 6;
 
 export async function GET(req: NextRequest) {
   const user = await getSession();
-  if (!user || !user.association) return NextResponse.json({ error: "Neautorizat" }, { status: 401 });
+  if (!user) return NextResponse.json({ error: "Neautorizat" }, { status: 401 });
+
+  const associationId = await asociatiaDeLucru(user);
+  if (!associationId) return NextResponse.json({ error: "Contul nu are o asociație asociată." }, { status: 400 });
 
   const cauta = new URL(req.url).searchParams;
   const pagina = Math.max(1, parseInt(cauta.get("pagina") ?? "1", 10) || 1);
@@ -23,7 +27,7 @@ export async function GET(req: NextRequest) {
   // Clientul vede doar rapoartele SEMNATE. Un proiect nerevizuit inca poate
   // contine o constatare pe care cenzorul o va respinge; daca ajunge la
   // asociatie inainte de asta, VoSmart a acuzat pe cineva degeaba.
-  const unde = { associationId: user.association.id, status: "published" };
+  const unde = { associationId, status: "published" };
 
   const [total, randuri] = await Promise.all([
     prisma.report.count({ where: unde }),

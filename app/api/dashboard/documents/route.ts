@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { asociatiaDeLucru } from "@/lib/asociatie-curenta";
 
 /**
  * Lista dosarelor clientului, pe pagini.
@@ -16,13 +17,16 @@ const PE_PAGINA_MAXIM = 50;
 
 export async function GET(req: NextRequest) {
   const user = await getSession();
-  if (!user || !user.association) return NextResponse.json({ error: "Neautorizat" }, { status: 401 });
+  if (!user) return NextResponse.json({ error: "Neautorizat" }, { status: 401 });
+
+  const associationId = await asociatiaDeLucru(user);
+  if (!associationId) return NextResponse.json({ error: "Contul nu are o asociație asociată." }, { status: 400 });
 
   const cauta = new URL(req.url).searchParams;
   const pagina = Math.max(1, parseInt(cauta.get("pagina") ?? "1", 10) || 1);
   const pePagina = Math.min(PE_PAGINA_MAXIM, Math.max(1, parseInt(cauta.get("pePagina") ?? String(PE_PAGINA_IMPLICIT), 10) || PE_PAGINA_IMPLICIT));
 
-  const unde = { associationId: user.association.id };
+  const unde = { associationId };
 
   const [total, randuri] = await Promise.all([
     prisma.document.count({ where: unde }),
