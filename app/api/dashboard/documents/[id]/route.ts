@@ -19,10 +19,14 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
 
   await prisma.document.delete({ where: { id } });
 
-  // Decrementăm contorul de dosare la ștergere
+  // Decrementăm contorul de dosare la ștergere, dar NICIODATĂ sub zero:
+  // `updateMany` cu pragul în `where` face scăderea și verificarea într-o
+  // singură operație, deci două ștergeri simultane nu se pot strecura amândouă.
+  // Un contor negativ ar însemna cotă infinită — verificarea din upload compară
+  // `filesUploadedCount >= maxDocuments` și n-ar mai fi adevărată niciodată.
   if (doc.associationId) {
-    await prisma.association.update({
-      where: { id: doc.associationId },
+    await prisma.association.updateMany({
+      where: { id: doc.associationId, filesUploadedCount: { gt: 0 } },
       data: { filesUploadedCount: { decrement: 1 } },
     });
   }
