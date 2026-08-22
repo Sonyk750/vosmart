@@ -12,7 +12,14 @@ function verifyToken(token: string): { corporateId: string; valid: boolean } {
     .createHmac("sha256", process.env.NEXTAUTH_SECRET!)
     .update(payload)
     .digest("hex");
-  if (hmac !== expectedHmac) return { corporateId: "", valid: false };
+
+  // Comparatie in timp constant, ca la codul de resetare a parolei: `!==` pe
+  // siruri iese la prima diferenta, iar diferenta de timp se poate masura.
+  const primit = Buffer.from(hmac, "hex");
+  const asteptat = Buffer.from(expectedHmac, "hex");
+  if (primit.length !== asteptat.length || !crypto.timingSafeEqual(primit, asteptat)) {
+    return { corporateId: "", valid: false };
+  }
 
   try {
     const decoded = Buffer.from(payload, "base64url").toString();

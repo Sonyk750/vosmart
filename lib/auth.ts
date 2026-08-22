@@ -11,7 +11,14 @@ export async function getSession() {
     include: { user: { include: { association: true } } },
   });
 
-  if (!session || session.expiresAt < new Date()) return null;
+  if (!session) return null;
+
+  // Sesiunea expirata nu doar se refuza, ci se si sterge: altfel tabela crestea
+  // la nesfarsit, cu randuri care nu mai foloseau nimanui.
+  if (session.expiresAt < new Date()) {
+    await prisma.session.deleteMany({ where: { token } });
+    return null;
+  }
 
   // Statusul se verifica la FIECARE cerere, nu doar la login. Altfel suspendarea
   // unui cont n-are efect pana expira cookie-ul — adica pana la 30 de zile in

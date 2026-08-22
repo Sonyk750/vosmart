@@ -21,7 +21,13 @@ export async function POST(req: NextRequest) {
     }
 
     const user = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
-    if (!user) return NextResponse.json({ error: "Email sau parolă incorectă" }, { status: 401 });
+    if (!user) {
+      // Hash-fantoma: fara el, adresa inexistenta raspundea instant, iar cea
+      // existenta dupa un bcrypt de cost 12. Mesajul era acelasi, dar diferenta
+      // de timp spunea limpede care adresa are cont pe platforma.
+      await bcrypt.compare(password, "$2a$12$C6UzMDM.H6dfI/f/IKcEe.7GAdRRkPGnQlvUAvJIz1YvKPxMe6Xzu");
+      return NextResponse.json({ error: "Email sau parolă incorectă" }, { status: 401 });
+    }
 
     // Transparent migration: SHA-256 (64 hex chars) → bcrypt
     let passwordValid = false;
