@@ -32,6 +32,19 @@ model Session {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
+// Codurile de resetare a parolei. In tabela sta doar amprenta sha256 a codului,
+// nu codul: cine citeste tabela nu poate intra pe niciun cont. Vezi lib/parola-uitata.ts.
+model CodResetareParola {
+  id        String   @id @default(cuid())
+  email     String
+  codHash   String
+  expiraLa  DateTime
+  incercari Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([email])
+}
+
 model CorporateAccount {
   id           String    @id @default(cuid())
   userId       String    @unique

@@ -71,17 +71,12 @@ function PackageFromUrl({ onPackage }: { onPackage: (pkg: string) => void }) {
 }
 
 export default function CorporatePage() {
-  const [tab, setTab] = useState<"login" | "register">("register");
   const [selectedPackage, setSelectedPackage] = useState("business");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [isTrial, setIsTrial] = useState(false);
   const [emailError, setEmailError] = useState<string[]>([]);
-
-  // Login
-  const [loginEmail, setLoginEmail] = useState("");
-  const [loginPassword, setLoginPassword] = useState("");
 
   // Register
   const [companyName, setCompanyName] = useState("");
@@ -104,28 +99,6 @@ export default function CorporatePage() {
     }
     if (data.telefon && !phone) setPhone(data.telefon);
   });
-
-  async function handleLogin(e: React.FormEvent) {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
-    try {
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: loginEmail, password: loginPassword }),
-        credentials: "include",
-      });
-      const data = await res.json();
-      if (!res.ok) { setError(data.error || "Eroare"); return; }
-      if (data.role !== "corporate" && data.role !== "admin") {
-        setError("Acest cont nu este un cont corporate.");
-        return;
-      }
-      window.location.replace("/corporate/dashboard");
-    } catch { setError("Eroare de conexiune"); }
-    finally { setLoading(false); }
-  }
 
   async function handleRegister(e: React.FormEvent) {
     e.preventDefault();
@@ -337,118 +310,103 @@ export default function CorporatePage() {
             )
           ) : (
             <>
-              {/* Tabs */}
+              {/* Inregistrare aici, autentificarea in singurul loc unde se face: /login */}
               <div className="flex rounded-xl border border-white/10 bg-white/[0.03] p-1 mb-6">
-                <button onClick={() => { setTab("register"); setError(""); }}
-                  className={`flex-1 rounded-lg py-2.5 text-sm font-semibold transition ${tab === "register" ? "bg-violet-600 text-white shadow-[0_0_20px_rgba(124,58,237,0.4)]" : "text-slate-400 hover:text-white"}`}>
+                <span className="flex-1 rounded-lg bg-violet-600 py-2.5 text-center text-sm font-semibold text-white shadow-[0_0_20px_rgba(124,58,237,0.4)]">
                   Înregistrare
-                </button>
-                <button onClick={() => { setTab("login"); setError(""); }}
-                  className={`flex-1 rounded-lg py-2.5 text-sm font-semibold transition ${tab === "login" ? "bg-violet-600 text-white shadow-[0_0_20px_rgba(124,58,237,0.4)]" : "text-slate-400 hover:text-white"}`}>
+                </span>
+                <a href="/login"
+                  className="flex-1 rounded-lg py-2.5 text-center text-sm font-semibold text-slate-400 transition hover:text-white">
                   Autentificare
-                </button>
+                </a>
               </div>
 
               <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-8">
                 {error && <div className="mb-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">{error}</div>}
 
-                {tab === "login" ? (
-                  <form onSubmit={handleLogin} className="space-y-4">
-                    <h3 className="text-lg font-semibold mb-4">Intră în contul corporate</h3>
-                    <input type="email" required value={loginEmail} onChange={e => setLoginEmail(e.target.value)}
-                      placeholder="Email" className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-violet-500 transition" />
-                    <input type="password" required value={loginPassword} onChange={e => setLoginPassword(e.target.value)}
-                      placeholder="Parolă" className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-violet-500 transition" />
-                    <button type="submit" disabled={loading}
-                      className="w-full rounded-xl bg-violet-600 px-6 py-3.5 font-semibold transition hover:bg-violet-500 disabled:opacity-50">
-                      {loading ? "Se autentifică..." : "Intră în panou"}
-                    </button>
-                  </form>
-                ) : (
-                  <form onSubmit={handleRegister} className="space-y-4">
-                    <h3 className="text-lg font-semibold mb-1">
-                      {selectedPackage === "trial" ? "Activează contul Trial Gratuit" : "Înregistrare firmă de cenzorat"}
-                    </h3>
-                    <div className={`flex items-center gap-3 rounded-xl border px-4 py-3 mb-2 ${
-                      selectedPackage === "trial"
-                        ? "border-amber-500/30 bg-amber-500/10"
-                        : "border-white/10 bg-black/10"
-                    }`}>
-                      <span className="text-xs text-slate-400">Pachet ales:</span>
-                      <span className={`text-sm font-semibold ${selectedPackage === "trial" ? "text-amber-300" : "text-violet-300"}`}>
-                        {selectedPackage === "trial"
-                          ? "Trial Gratuit — 0 lei"
-                          : `${PACKAGES.find(p => p.key === selectedPackage)?.name} — ${PACKAGES.find(p => p.key === selectedPackage)?.priceLabel}`}
-                      </span>
-                    </div>
+                <form onSubmit={handleRegister} className="space-y-4">
+                  <h3 className="text-lg font-semibold mb-1">
+                    {selectedPackage === "trial" ? "Activează contul Trial Gratuit" : "Înregistrare firmă de cenzorat"}
+                  </h3>
+                  <div className={`flex items-center gap-3 rounded-xl border px-4 py-3 mb-2 ${
+                    selectedPackage === "trial"
+                      ? "border-amber-500/30 bg-amber-500/10"
+                      : "border-white/10 bg-black/10"
+                  }`}>
+                    <span className="text-xs text-slate-400">Pachet ales:</span>
+                    <span className={`text-sm font-semibold ${selectedPackage === "trial" ? "text-amber-300" : "text-violet-300"}`}>
+                      {selectedPackage === "trial"
+                        ? "Trial Gratuit — 0 lei"
+                        : `${PACKAGES.find(p => p.key === selectedPackage)?.name} — ${PACKAGES.find(p => p.key === selectedPackage)?.priceLabel}`}
+                    </span>
+                  </div>
 
+                  <div className="border-b border-white/5 pb-4">
+                    <p className="text-xs text-slate-400 uppercase tracking-wider mb-3">Date firmă</p>
+                    <div className="space-y-3">
+                      <input type="text" required value={companyName} onChange={e => setCompanyName(e.target.value)}
+                        placeholder="Numele firmei de cenzorat *" className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-violet-500 transition" />
+                      <div>
+                        <input type="text" value={cui} onChange={e => setCui(e.target.value)}
+                          placeholder="CUI / Cod fiscal" className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-violet-500 transition" />
+                        {cuiStatus === "loading" && <p className="mt-1.5 text-xs text-slate-500">Se caută firma după CUI...</p>}
+                        {cuiStatus === "found" && <p className="mt-1.5 text-xs text-emerald-400">Date completate automat din ANAF</p>}
+                        {cuiStatus === "notfound" && <p className="mt-1.5 text-xs text-slate-500">Firma nu a fost găsită în ANAF — completează manual</p>}
+                      </div>
+                      {selectedPackage !== "trial" && (
+                        <input type="text" value={regCom} onChange={e => setRegCom(e.target.value)}
+                          placeholder="Nr. Reg. Com. (ex: J40/1234/2020)"
+                          className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-violet-500 transition" />
+                      )}
+                      <input type="text" value={city} onChange={e => setCity(e.target.value)}
+                        placeholder="Oraș" className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-violet-500 transition" />
+                      <input type="text" value={street} onChange={e => setStreet(e.target.value)}
+                        placeholder="Stradă și număr" className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-violet-500 transition" />
+                      <input type="text" value={phone} onChange={e => setPhone(e.target.value)}
+                        placeholder="Telefon" className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-violet-500 transition" />
+                    </div>
+                  </div>
+
+                  {selectedPackage !== "trial" && (
                     <div className="border-b border-white/5 pb-4">
-                      <p className="text-xs text-slate-400 uppercase tracking-wider mb-3">Date firmă</p>
-                      <div className="space-y-3">
-                        <input type="text" required value={companyName} onChange={e => setCompanyName(e.target.value)}
-                          placeholder="Numele firmei de cenzorat *" className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-violet-500 transition" />
-                        <div>
-                          <input type="text" value={cui} onChange={e => setCui(e.target.value)}
-                            placeholder="CUI / Cod fiscal" className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-violet-500 transition" />
-                          {cuiStatus === "loading" && <p className="mt-1.5 text-xs text-slate-500">Se caută firma după CUI...</p>}
-                          {cuiStatus === "found" && <p className="mt-1.5 text-xs text-emerald-400">Date completate automat din ANAF</p>}
-                          {cuiStatus === "notfound" && <p className="mt-1.5 text-xs text-slate-500">Firma nu a fost găsită în ANAF — completează manual</p>}
-                        </div>
-                        {selectedPackage !== "trial" && (
-                          <input type="text" value={regCom} onChange={e => setRegCom(e.target.value)}
-                            placeholder="Nr. Reg. Com. (ex: J40/1234/2020)"
-                            className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-violet-500 transition" />
-                        )}
-                        <input type="text" value={city} onChange={e => setCity(e.target.value)}
-                          placeholder="Oraș" className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-violet-500 transition" />
-                        <input type="text" value={street} onChange={e => setStreet(e.target.value)}
-                          placeholder="Stradă și număr" className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-violet-500 transition" />
-                        <input type="text" value={phone} onChange={e => setPhone(e.target.value)}
-                          placeholder="Telefon" className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-violet-500 transition" />
+                      <p className="text-xs text-slate-400 uppercase tracking-wider mb-1">Date facturare</p>
+                      <p className="text-xs text-slate-600 mb-3">Folosite pe factura emisă după confirmare plată</p>
+                      <div className="rounded-xl border border-violet-500/15 bg-violet-500/5 px-4 py-3 text-xs text-slate-400 space-y-1">
+                        <p>✓ <strong className="text-slate-300">Firmă:</strong> {companyName || "—"}</p>
+                        {cui && <p>✓ <strong className="text-slate-300">CUI:</strong> {cui}</p>}
+                        {regCom && <p>✓ <strong className="text-slate-300">Reg. Com.:</strong> {regCom}</p>}
+                        {(city || street) && <p>✓ <strong className="text-slate-300">Adresă:</strong> {[street, city].filter(Boolean).join(", ")}</p>}
                       </div>
                     </div>
+                  )}
 
-                    {selectedPackage !== "trial" && (
-                      <div className="border-b border-white/5 pb-4">
-                        <p className="text-xs text-slate-400 uppercase tracking-wider mb-1">Date facturare</p>
-                        <p className="text-xs text-slate-600 mb-3">Folosite pe factura emisă după confirmare plată</p>
-                        <div className="rounded-xl border border-violet-500/15 bg-violet-500/5 px-4 py-3 text-xs text-slate-400 space-y-1">
-                          <p>✓ <strong className="text-slate-300">Firmă:</strong> {companyName || "—"}</p>
-                          {cui && <p>✓ <strong className="text-slate-300">CUI:</strong> {cui}</p>}
-                          {regCom && <p>✓ <strong className="text-slate-300">Reg. Com.:</strong> {regCom}</p>}
-                          {(city || street) && <p>✓ <strong className="text-slate-300">Adresă:</strong> {[street, city].filter(Boolean).join(", ")}</p>}
-                        </div>
-                      </div>
-                    )}
-
-                    <div>
-                      <p className="text-xs text-slate-400 uppercase tracking-wider mb-3">Date cont</p>
-                      <div className="space-y-3">
-                        <input type="text" required value={name} onChange={e => setName(e.target.value)}
-                          placeholder="Numele dvs. *" className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-violet-500 transition" />
-                        <input type="email" required value={email} onChange={e => setEmail(e.target.value)}
-                          placeholder="Email *" className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-violet-500 transition" />
-                        <input type="password" required minLength={8} value={password} onChange={e => setPassword(e.target.value)}
-                          placeholder="Parolă (minim 8 caractere) *" className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-violet-500 transition" />
-                      </div>
+                  <div>
+                    <p className="text-xs text-slate-400 uppercase tracking-wider mb-3">Date cont</p>
+                    <div className="space-y-3">
+                      <input type="text" required value={name} onChange={e => setName(e.target.value)}
+                        placeholder="Numele dvs. *" className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-violet-500 transition" />
+                      <input type="email" required value={email} onChange={e => setEmail(e.target.value)}
+                        placeholder="Email *" className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-violet-500 transition" />
+                      <input type="password" required minLength={8} value={password} onChange={e => setPassword(e.target.value)}
+                        placeholder="Parolă (minim 8 caractere) *" className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-violet-500 transition" />
                     </div>
+                  </div>
 
-                    <button type="submit" disabled={loading}
-                      className={`w-full rounded-xl px-6 py-4 font-semibold transition disabled:opacity-50 ${
-                        selectedPackage === "trial"
-                          ? "bg-amber-500 hover:bg-amber-400 text-black shadow-[0_0_25px_rgba(245,158,11,0.35)]"
-                          : "bg-violet-600 hover:bg-violet-500 shadow-[0_0_25px_rgba(124,58,237,0.35)]"
-                      }`}>
-                      {loading
-                        ? "Se procesează..."
-                        : selectedPackage === "trial"
-                          ? "Activează Trial Gratuit →"
-                          : selectedPackage === "enterprise"
-                            ? "Trimite cererea →"
-                            : "Continuă spre plată →"}
-                    </button>
-                  </form>
-                )}
+                  <button type="submit" disabled={loading}
+                    className={`w-full rounded-xl px-6 py-4 font-semibold transition disabled:opacity-50 ${
+                      selectedPackage === "trial"
+                        ? "bg-amber-500 hover:bg-amber-400 text-black shadow-[0_0_25px_rgba(245,158,11,0.35)]"
+                        : "bg-violet-600 hover:bg-violet-500 shadow-[0_0_25px_rgba(124,58,237,0.35)]"
+                    }`}>
+                    {loading
+                      ? "Se procesează..."
+                      : selectedPackage === "trial"
+                        ? "Activează Trial Gratuit →"
+                        : selectedPackage === "enterprise"
+                          ? "Trimite cererea →"
+                          : "Continuă spre plată →"}
+                  </button>
+                </form>
               </div>
             </>
           )}

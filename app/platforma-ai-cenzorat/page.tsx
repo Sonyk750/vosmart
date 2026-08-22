@@ -93,7 +93,7 @@ export default function PlatformaAiCenzoratPage() {
         <Link href="/" className="text-xl font-black tracking-tight">Vo<span className="text-cyan-300">Smart</span></Link>
         <div className="flex items-center gap-3 text-sm">
           <Link href="/cenzorat-asociatii" className="hidden text-slate-300 transition hover:text-white sm:inline">Pentru asociații</Link>
-          <Link href="/corporate/login" className="rounded-full border border-white/15 px-4 py-2 text-slate-100 transition hover:border-cyan-300/60">Autentificare</Link>
+          <Link href="/login" className="rounded-full border border-white/15 px-4 py-2 text-slate-100 transition hover:border-cyan-300/60">Autentificare</Link>
         </div>
       </nav>
 

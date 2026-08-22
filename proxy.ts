@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
+import { RUTA_LOGIN } from "@/lib/rute";
 
 const PROTECTED_PREFIXES = ["/admin", "/corporate/dashboard"];
-const PUBLIC_AUTH_PATHS = ["/admin/login", "/corporate/login"];
+// Rutele vechi de login au ramas ca redirectari catre /login; portarul nu are
+// ce cauta pe ele, altfel ar trimite omul in cerc.
+const PUBLIC_AUTH_PATHS = [RUTA_LOGIN, "/admin/login", "/corporate/login"];
 
 export function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
@@ -14,9 +17,8 @@ export function proxy(req: NextRequest) {
   const sessionToken = req.cookies.get("vosmart_session")?.value;
   if (!sessionToken) {
     const loginUrl = req.nextUrl.clone();
-    loginUrl.pathname = pathname.startsWith("/admin")
-      ? "/admin/login"
-      : "/corporate/login";
+    loginUrl.pathname = RUTA_LOGIN;
+    loginUrl.search = "";
     loginUrl.searchParams.set("next", pathname);
     return NextResponse.redirect(loginUrl);
   }

@@ -5,7 +5,7 @@ import ClientDetailAdmin from "./ClientDetailAdmin";
 
 export default async function ClientDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await requireAdmin();
-  if (!user) redirect("/admin/login");
+  if (!user) redirect("/login");
 
   const { id } = await params;
 

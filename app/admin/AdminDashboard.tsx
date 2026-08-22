@@ -325,7 +325,7 @@ export default function AdminDashboard({ user }: { user: User }) {
 
   async function handleLogout() {
     await fetch("/api/auth/logout", { method: "POST" });
-    window.location.href = "/admin/login";
+    window.location.href = "/login";
   }
 
   function packageBadge(pkg: string) {
@@ -948,7 +948,7 @@ export default function AdminDashboard({ user }: { user: User }) {
                   });
                   const data = await res.json();
                   if (res.ok) {
-                    setColegMsg("✓ Cont creat! Colegul se poate loga la /corporate/login");
+                    setColegMsg("✓ Cont creat! Colegul se poate loga la /login");
                     setColegNume(""); setColegFunctia(""); setColegEmail(""); setColegTelefon(""); setColegParola("");
                     fetchCorporates();
                   } else {
@@ -982,7 +982,7 @@ export default function AdminDashboard({ user }: { user: User }) {
                   )}
                 </form>
                 <div className="mt-4 rounded-xl bg-indigo-500/10 border border-indigo-500/20 p-3 text-xs text-indigo-300">
-                  Colegii creați se pot loga la <strong>/corporate/login</strong> și au aceleași drepturi ca un cont Corporate.
+                  Colegii creați se pot loga la <strong>/login</strong> și au aceleași drepturi ca un cont Corporate.
                 </div>
               </div>
             </div>

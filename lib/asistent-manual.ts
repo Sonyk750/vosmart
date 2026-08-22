@@ -39,8 +39,9 @@ Aici ai totul pe secțiuni:
 
 ═══ CONT & ACCES ═══
 Înregistrare cont corporate → /corporate (trial: 1 dosar / 5 documente gratuit)
-Autentificare → /corporate/login
+Autentificare (toate conturile: corporate, colegi, echipa VoSmart) → /login
 Verificarea emailului se face printr-un link primit pe email după înregistrare.
+Parolă uitată: pe /login scrii adresa de email și apeși „Am uitat parola" — primești pe email un cod de 8 caractere, valabil 30 de minute, cu care îți pui parola nouă (minim 8 caractere) fără să pleci din pagină.
 
 ═══ ALTELE ═══
 Site public / prezentare → /
@@ -84,12 +85,12 @@ Lista conturilor corporate: pachet, zile rămase din abonament, nr. dosare, rapo
 - Clienții noi cu status „pending" se aprobă din overview („Aprobă client") ca să se poată loga.
 
 COLEGI (doar rol admin) → /admin?t=cenzori
-Creezi conturi pentru colegi/cenzori (nume, funcție, email, telefon, parolă). Colegii se loghează la /corporate/login și au drepturi de cont corporate. Rolul „cenzor" vede panoul intern, dar tab-ul Colegi e doar pentru „admin".
+Creezi conturi pentru colegi/cenzori (nume, funcție, email, telefon, parolă). Colegii se loghează la /login și au drepturi de cont corporate. Rolul „cenzor" vede panoul intern, dar tab-ul Colegi e doar pentru „admin".
 
 ALTE PAGINI INTERNE:
 Conturi trial → /admin/conturi-trial
 Detaliu client → /admin/client/[id]
-Autentificare internă → /admin/login
+Autentificare → /login (aceeași pagină pentru toți; rolul decide unde ajungi)
 
 Reguli pentru contextul intern:
 - Verdictul de audit rămâne responsabilitatea cenzorului uman; AI-ul doar propune un draft și semnalează probleme — omul verifică și aprobă.

@@ -280,7 +280,7 @@ export default function HelpPage() {
           </a>
           <nav className="flex items-center gap-4 text-sm">
             <a href="/" className="text-slate-400 hover:text-white transition">← Înapoi la site</a>
-            <a href="/corporate/login" className="rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-4 py-2 text-emerald-300 font-medium hover:bg-emerald-500/20 transition">
+            <a href="/login" className="rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-4 py-2 text-emerald-300 font-medium hover:bg-emerald-500/20 transition">
               Intră în cont
             </a>
           </nav>

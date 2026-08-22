@@ -78,7 +78,7 @@ export default function CheckoutPage() {
                 Contul dumneavoastră VoSmart Corporate — <span className="text-white font-semibold">{pkg.name}</span> — va fi activat în câteva minute.
               </p>
               <p className="text-sm text-slate-400 mb-8">Veți primi un email de confirmare la adresa înregistrată.</p>
-              <a href="/corporate/login"
+              <a href="/login"
                 className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-8 py-3.5 font-semibold transition hover:bg-violet-500 shadow-[0_0_25px_rgba(124,58,237,0.35)]">
                 Intră în portal →
               </a>

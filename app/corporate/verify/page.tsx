@@ -13,14 +13,14 @@ function VerifyContent() {
       title: "Cont activat cu succes!",
       text: "Adresa de email a fost confirmată și contul Trial Gratuit este acum activ. Puteți intra în portal și testa platforma.",
       color: "emerald",
-      action: { href: "/corporate/login", label: "Intră în portal →" },
+      action: { href: "/login", label: "Intră în portal →" },
     },
     already: {
       icon: "✓",
       title: "Cont deja activ",
       text: "Adresa de email a fost deja confirmată. Puteți intra direct în portal.",
       color: "cyan",
-      action: { href: "/corporate/login", label: "Intră în portal →" },
+      action: { href: "/login", label: "Intră în portal →" },
     },
     expired: {
       icon: "⏰",

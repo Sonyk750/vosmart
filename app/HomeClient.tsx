@@ -212,11 +212,10 @@ export default function HomeClient() {
               <a href="/platforma-ai-cenzorat" className="transition hover:text-violet-300">Platformă AI</a>
               <a href="#pachete" className="transition hover:text-violet-300">Pachete</a>
               <a href="#servicii" className="transition hover:text-violet-300">Servicii</a>
-              <a href="/corporate/login" className="transition hover:text-emerald-200 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-emerald-300 font-medium">Corporate</a>
+              <a href="/login" className="transition hover:text-emerald-200 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-emerald-300 font-medium">Autentificare</a>
               <a href="/blog" className="transition hover:text-emerald-300">Blog</a>
               <a href="/help" className="transition hover:text-cyan-300">Ajutor</a>
               <a href="#contact" className="transition hover:text-violet-300">Contact</a>
-              <a href="/admin/login" className="transition hover:text-violet-200 rounded-lg border border-violet-500/40 bg-violet-500/10 px-3 py-1.5 text-violet-300 font-medium">Admin</a>
             </nav>
             <a href="#contact" className="hidden rounded-xl bg-violet-600 px-5 py-2.5 text-sm font-semibold shadow-[0_0_25px_rgba(124,58,237,0.4)] transition hover:bg-violet-500 hover:shadow-[0_0_35px_rgba(124,58,237,0.6)] md:inline-flex">Solicită ofertă</a>
             <a href="#contact" className="inline-flex rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold md:hidden">Contact</a>
@@ -226,8 +225,7 @@ export default function HomeClient() {
             <a href="#pachete" className="hover:text-white">Pachete</a>
             <a href="#servicii" className="hover:text-white">Servicii</a>
             <a href="/help" className="hover:text-cyan-300 text-cyan-400">Ajutor</a>
-            <a href="/corporate/login" className="hover:text-emerald-200 text-emerald-300 border border-emerald-500/30 rounded-lg px-2 py-0.5">Corporate</a>
-            <a href="/admin/login" className="hover:text-violet-200 text-violet-300 border border-violet-500/30 rounded-lg px-2 py-0.5">Admin</a>
+            <a href="/login" className="hover:text-emerald-200 text-emerald-300 border border-emerald-500/30 rounded-lg px-2 py-0.5">Autentificare</a>
           </nav>
         </header>
 
@@ -520,9 +518,9 @@ export default function HomeClient() {
             </div>
 
             <div className="text-center">
-              <a href="/corporate/login"
+              <a href="/login"
                 className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-8 py-4 font-semibold transition hover:bg-emerald-500 shadow-[0_0_30px_rgba(52,211,153,0.40)] hover:shadow-[0_0_50px_rgba(52,211,153,0.60)]">
-                Accesează portalul corporate →
+                Intră în cont →
               </a>
               <p className="mt-3 text-xs text-slate-500">Acces disponibil după activarea contului. <a href="#contact" className="text-emerald-400 hover:text-emerald-300">Contactează-ne</a> pentru înregistrare.</p>
             </div>
