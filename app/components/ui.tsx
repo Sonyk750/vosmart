@@ -17,41 +17,10 @@ import React from "react";
 
 /* ------------------------------------------------------------ PICTOGRAME */
 
-type IconProps = { className?: string };
-const svg = (d: React.ReactNode, extra?: Record<string, unknown>) =>
-  function Icon({ className = "h-4 w-4" }: IconProps) {
-    return (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7}
-        strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden {...extra}>
-        {d}
-      </svg>
-    );
-  };
-
-export const Ic = {
-  dosar: svg(<><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /></>),
-  fisier: svg(<><path d="M14 3v4a1 1 0 0 0 1 1h4" /><path d="M19 8v11a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7z" /></>),
-  raport: svg(<><path d="M14 3v4a1 1 0 0 0 1 1h4" /><path d="M19 8v11a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7z" /><path d="M9 13h6M9 17h4" /></>),
-  sus: svg(<><path d="M12 19V5M5 12l7-7 7 7" /></>),
-  jos: svg(<><path d="M12 5v14M19 12l-7 7-7-7" /></>),
-  stanga: svg(<><path d="M15 18l-6-6 6-6" /></>),
-  dreapta: svg(<><path d="M9 6l6 6-6 6" /></>),
-  bifa: svg(<><path d="M20 6L9 17l-5-5" /></>),
-  x: svg(<><path d="M18 6L6 18M6 6l12 12" /></>),
-  plus: svg(<><path d="M12 5v14M5 12h14" /></>),
-  alerta: svg(<><path d="M12 9v4M12 17h.01" /><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" /></>),
-  info: svg(<><circle cx="12" cy="12" r="9" /><path d="M12 16v-4M12 8h.01" /></>),
-  scut: svg(<><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></>),
-  ceas: svg(<><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></>),
-  cauta: svg(<><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></>),
-  descarca: svg(<><path d="M12 3v12M7 11l5 5 5-5" /><path d="M5 21h14" /></>),
-  cos: svg(<><path d="M4 7h16M10 11v6M14 11v6" /><path d="M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13" /><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2" /></>),
-  semnatura: svg(<><path d="M3 17c3 0 4-10 7-10s2 8 4 8 2-3 4-3 2 2 3 2" /><path d="M3 21h18" /></>),
-  cheie: svg(<><circle cx="8" cy="15" r="4" /><path d="m10.8 12.2 8.2-8.2M17 6l2 2M14 9l2 2" /></>),
-  iesire: svg(<><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><path d="M16 17l5-5-5-5M21 12H9" /></>),
-  balanta: svg(<><path d="M12 3v18M5 7h14M7 21h10" /><path d="M5 7 2 14h6zM19 7l-3 7h6z" /></>),
-  scanteie: svg(<><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M18 6l-2.5 2.5M8.5 15.5 6 18" /></>),
-};
+// Pictogramele stau in `icoane.tsx`, un modul neutru: un obiect exportat de aici,
+// dintr-un fisier `"use client"`, nu poate fi citit pe proprietati de o
+// componenta de server. Vezi explicatia din capul acelui fisier.
+import { Ic } from "./icoane";
 
 /* ---------------------------------------------------------------- TONURI */
 

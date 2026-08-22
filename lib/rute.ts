@@ -8,7 +8,9 @@ export function acasaDupaRol(role: string | null | undefined): string {
   switch (role) {
     case "admin":
     case "cenzor":
-      return "/admin";
+      // Spatiul de lucru al firmei. Panoul vechi, /admin, ramane accesibil
+      // pentru partile care nu s-au mutat inca aici.
+      return "/panou";
     case "corporate":
       return "/corporate/dashboard";
     default:

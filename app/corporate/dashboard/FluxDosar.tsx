@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { Bara, Buton, Card, CardCap, Ic, InelScor, Rotitor, Ton } from "@/app/components/ui";
+import { Bara, Buton, Card, CardCap, InelScor, Rotitor, Ton } from "@/app/components/ui";
+import { Ic } from "@/app/components/icoane";
 
 /**
  * Ce se intampla cu dosarul, in timp real.

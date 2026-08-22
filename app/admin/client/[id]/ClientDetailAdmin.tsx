@@ -1,9 +1,8 @@
 "use client";
 import Image from "next/image";
 import Link from "next/link";
-import {
-  Card, CardCap, dataRo, Eticheta, Gol, Ic, InelScor, Statistica, Ton,
-} from "@/app/components/ui";
+import { Card, CardCap, dataRo, Eticheta, Gol, InelScor, Statistica, Ton } from "@/app/components/ui";
+import { Ic } from "@/app/components/icoane";
 
 /**
  * Fisa unei asociatii, pentru cenzor.

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { RUTA_LOGIN } from "@/lib/rute";
 
-const PROTECTED_PREFIXES = ["/admin", "/corporate/dashboard"];
+const PROTECTED_PREFIXES = ["/panou", "/admin", "/corporate/dashboard"];
 // Rutele vechi de login au ramas ca redirectari catre /login; portarul nu are
 // ce cauta pe ele, altfel ar trimite omul in cerc.
 const PUBLIC_AUTH_PATHS = [RUTA_LOGIN, "/admin/login", "/corporate/login"];
@@ -27,5 +27,5 @@ export function proxy(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin/:path*", "/corporate/dashboard/:path*"],
+  matcher: ["/panou/:path*", "/admin/:path*", "/corporate/dashboard/:path*"],
 };

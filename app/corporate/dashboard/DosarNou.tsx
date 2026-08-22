@@ -2,7 +2,8 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import JSZip from "jszip";
 import { TIPURI, ghicesteTip, lipsuri, tip as tipDupaCheie } from "@/lib/cenzorat/documente";
-import { Buton, Camp, Card, CardCap, claseCamp, Eticheta, Ic, Rotitor } from "@/app/components/ui";
+import { Buton, Camp, Card, CardCap, claseCamp, Eticheta, Rotitor } from "@/app/components/ui";
+import { Ic } from "@/app/components/icoane";
 
 /**
  * Trimiterea unui dosar la verificare.

@@ -1,8 +1,9 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
 import {
-  Buton, Card, CardCap, dataRo, Eticheta, Gol, Ic, InelScor, Paginare, Rotitor, Schelet, Ton,
+  Buton, Card, CardCap, dataRo, Eticheta, Gol, InelScor, Paginare, Rotitor, Schelet, Ton,
 } from "@/app/components/ui";
+import { Ic } from "@/app/components/icoane";
 import FluxDosar from "./FluxDosar";
 
 /**

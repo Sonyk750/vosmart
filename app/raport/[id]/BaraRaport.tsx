@@ -1,5 +1,6 @@
 "use client";
-import { Buton, Eticheta, Ic } from "@/app/components/ui";
+import { Buton, Eticheta } from "@/app/components/ui";
+import { Ic } from "@/app/components/icoane";
 
 /**
  * Bara de deasupra raportului. Nu se tipareste — de aceea `print:hidden`.
