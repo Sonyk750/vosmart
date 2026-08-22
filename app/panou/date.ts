@@ -12,21 +12,21 @@ import type { Numaratori } from "./Cadru";
 type Utilizator = { id: string; role: string };
 
 /**
- * Ce vede fiecare. Proprietarul vede toate contractele; cenzorul, doar cele care
- * i-au fost alocate — aceeasi regula ca in `lib/acces.ts`, scrisa aici ca filtru
- * de interogare.
+ * Ce vede fiecare.
+ *
+ * Proprietarul vede toate contractele. Cenzorul le vede pe cele care i-au fost
+ * repartizate — deocamdata niciunul nu e repartizat, fiindca nu exista inca
+ * conturi de cenzor; cand vor exista, filtrul e deja aici si nu se mai umbla
+ * prin ecrane.
  */
 function filtruContracte(user: Utilizator) {
-  if (user.role === "cenzor") {
-    return { allocations: { some: { cenzorId: user.id } } };
-  }
-  // Spatiul de lucru al proprietarului nu e un contract cu un client: e propriul
-  // lui teren de incercare. N-are ce cauta in numaratoarea de contracte.
-  return { user: { role: { not: "admin" } } };
+  if (user.role === "cenzor") return { cenzorId: user.id };
+  return {};
 }
 
 function filtruDosare(user: Utilizator) {
-  return { association: filtruContracte(user) };
+  if (user.role === "cenzor") return { contract: { cenzorId: user.id } };
+  return {};
 }
 
 export async function numaratoriMeniu(user: Utilizator): Promise<Numaratori> {
@@ -74,12 +74,15 @@ export async function sumarPanou(user: Utilizator): Promise<SumarPanou> {
     contracte, dosareLunaCurenta, rapoarteAi, rapoarteExpert,
     deVerificat, laExpert, esuate, dupaEtapa,
   ] = await Promise.all([
-    prisma.association.count({ where: contracteUnde }),
+    prisma.contract.count({ where: { ...contracteUnde, status: "activ" } }),
     prisma.document.count({ where: lunaAsta }),
-    // Raportul AI exista din momentul in care verificarea a produs date.
-    prisma.report.count({ where: { association: contracteUnde, data: { not: undefined } } }),
+    // Raportul AI e gata cand verificarea automata s-a incheiat, adica atunci
+    // cand dosarul a ajuns la revizuire. Numaram dosarele, nu randurile din
+    // `Report` cu `data` completat: un filtru pe camp Json nu compara ce pare ca
+    // compara si ar fi intors linistit toate randurile.
+    prisma.document.count({ where: { ...dosare, etapa: { in: ["revizuire", "semnat"] } } }),
     // Raportul expertului e cel semnat de om.
-    prisma.report.count({ where: { association: contracteUnde, semnatLa: { not: null } } }),
+    prisma.report.count({ where: { semnatLa: { not: null } } }),
     prisma.document.count({ where: { ...dosare, etapa: { in: ["intrare", "extragere"] }, stareEtapa: { not: "esuata" } } }),
     prisma.document.count({ where: { ...dosare, etapa: "revizuire" } }),
     prisma.document.count({ where: { ...dosare, stareEtapa: "esuata" } }),

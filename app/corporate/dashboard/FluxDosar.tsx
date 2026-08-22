@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { Bara, Buton, Card, CardCap, InelScor, Rotitor, Ton } from "@/app/components/ui";
+import { Bara, Buton, Card, CardCap, InelScor, Rotitor } from "@/app/components/ui";
+import { Ton } from "@/app/components/baza";
 import { Ic } from "@/app/components/icoane";
 
 /**

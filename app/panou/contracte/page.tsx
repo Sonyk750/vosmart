@@ -1,17 +1,20 @@
-import InConstructie from "../InConstructie";
+import { redirect } from "next/navigation";
+import { requireAdmin } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import ContracteClient from "./ContracteClient";
 
-export default function PaginaContracte() {
-  return (
-    <InConstructie
-      titlu="Contracte"
-      descriere="Registrul asociațiilor și firmelor cu care ai contract de cenzorat. De aici pornește tot: fără contract nu există lună, documente sau raport."
-      pasi={[
-        "Adaugi un contract introducând CUI-ul — denumirea, adresa și datele de la Registrul Comerțului se completează singure.",
-        "Completezi persoana desemnată prin contract: ea e singura care va putea descărca rapoartele semnate din contul ei.",
-        "Stabilești termenul lunar până la care asociația trebuie să trimită documentele.",
-        "Deschizi un contract și vezi toate lunile lui, fiecare cu documentele, inventarul, raportul AI și raportul semnat.",
-      ]}
-      urmatorul={{ text: "Vezi fluxul lunii", cale: "/panou/flux" }}
-    />
-  );
+/**
+ * Registrul de contracte.
+ *
+ * Numarul se numara pe server, ca ecranul sa stie din prima randare daca e gol
+ * sau nu. Fara asta, la primul contract omul ar vedea o clipa lista goala si
+ * abia apoi formularul — o palpaire exact in momentul in care nu stie inca ce
+ * face aplicatia.
+ */
+export default async function PaginaContracte() {
+  const user = await requireAdmin();
+  if (!user) redirect("/login?next=/panou/contracte");
+
+  const cate = await prisma.contract.count();
+  return <ContracteClient initialCount={cate} />;
 }

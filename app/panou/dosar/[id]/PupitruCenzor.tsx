@@ -1,9 +1,8 @@
 "use client";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import {
-  Buton, Camp, Card, CardCap, claseCamp, dataRo, Eticheta, Gol, InelScor, lei, Rotitor, Ton,
-} from "@/app/components/ui";
+import { Buton, Camp, Card, CardCap, Eticheta, Gol, InelScor, Rotitor } from "@/app/components/ui";
+import { claseCamp, dataRo, lei, Ton } from "@/app/components/baza";
 import { Ic } from "@/app/components/icoane";
 import { SEVERITATI, Severitate } from "@/lib/cenzorat/tipuri";
 import { eticheta as etichetaTip } from "@/lib/cenzorat/documente";

@@ -5,8 +5,8 @@ import Link from "next/link";
 import Image from "next/image";
 import CardPaymentForm from "@/app/components/CardPaymentForm";
 import { CORPORATE_PACKAGES, CorporatePackage } from "@/lib/billing";
-import {
-  Buton, Card, CardCap, dataRo, Eticheta, Gol, Paginare, Schelet, Statistica, Ton } from "@/app/components/ui";
+import { Buton, Card, CardCap, Eticheta, Gol, Paginare, Schelet, Statistica } from "@/app/components/ui";
+import { dataRo, Ton } from "@/app/components/baza";
 import { Ic } from "@/app/components/icoane";
 import DosarNou from "./DosarNou";
 import ListaDosare from "./ListaDosare";

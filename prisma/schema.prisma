@@ -19,7 +19,64 @@ model User {
   association      Association?
   sessions         Session[]
   allocatedClients CenzorAllocation[] @relation("CenzorAllocations")
+  contracte        Contract[]         @relation("ContracteCenzor")
   corporateAccount CorporateAccount?  @relation("CorporateOwner")
+}
+
+/// Contractul de cenzorat cu o asociatie sau o firma.
+///
+/// E coloana vertebrala a aplicatiei: nu exista luna, documente sau raport fara
+/// un contract sub ele. Pana acum rolul asta il tinea `Association`, care insa
+/// nu stia nimic despre contract — nici numar, nici data, nici cine are voie sa
+/// descarce rapoartele. Iar numele mintea: o asociatie nu e un contract, poate
+/// avea mai multe de-a lungul anilor.
+model Contract {
+  id        String    @id @default(cuid())
+  numar     String?
+  dataSemnarii  DateTime?
+  /// Gol inseamna „pe durata nedeterminata", nu „expirat".
+  dataIncetarii DateTime?
+
+  // --- Beneficiarul, asa cum apare in contract ---
+  denumire  String
+  cui       String
+  regCom    String?
+  adresa    String?
+  localitate String?
+  telefon   String?
+  email     String?
+  /// Presedintele sau administratorul care semneaza din partea asociatiei.
+  reprezentant String?
+
+  // --- Persoana desemnata prin contract ---
+  // Singura care va putea descarca rapoartele semnate din contul ei. Fara ea,
+  // raportul ramane la noi: nu are cine sa-l ridice.
+  persoanaNume    String?
+  persoanaFunctie String?
+  persoanaEmail   String?
+  persoanaTelefon String?
+
+  /// Ziua din luna pana la care asociatia trebuie sa trimita documentele.
+  ziTermen  Int      @default(15)
+
+  status    String   @default("activ") // activ | suspendat | incheiat
+  observatii String?
+
+  /// Cenzorul din VoSmart care raspunde de contract.
+  ///
+  /// Gol acum, si e in regula: deocamdata contractele sunt lucrate de
+  /// proprietar. Coloana sta pregatita pentru cand exista conturi de cenzor si
+  /// se face repartizarea — ca sa nu fie nevoie de o migrare atunci.
+  cenzorId  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  cenzor    User?      @relation("ContracteCenzor", fields: [cenzorId], references: [id], onDelete: SetNull)
+  documents Document[]
+
+  @@index([cui])
+  @@index([status])
 }
 
 model Session {
@@ -154,10 +211,20 @@ model Document {
   inceputLa   DateTime?
   terminatLa  DateTime?
 
+  /// Contractul sub care sta dosarul lunii. Aici se aduna documentele primite,
+  /// inventarul lor, raportul AI si raportul semnat.
+  ///
+  /// Optional cat timp mai exista dosare legate doar de vechea `Association`;
+  /// dosarele noi vin toate cu contract.
+  contractId  String?
+
   association Association @relation(fields: [associationId], references: [id], onDelete: Cascade)
+  contract    Contract?   @relation(fields: [contractId], references: [id], onDelete: Cascade)
   files       DocumentFile[]
   constatari  Constatare[]
   evenimente  EvenimentFlux[]
+
+  @@index([contractId, year, month])
 }
 
 /// O constatare de cenzorat: ce s-a gasit, cat de grav e, pe ce se sprijina.

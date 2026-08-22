@@ -24,7 +24,10 @@ import { Ic } from "./icoane";
 
 /* ---------------------------------------------------------------- TONURI */
 
-export type Ton = "neutru" | "brand" | "ok" | "warn" | "risk" | "bad" | "info";
+// Tipurile, clasele si formatarea stau in `baza.ts`, modul neutru: dintr-un
+// fisier `"use client"` nu se poate chema o functie de catre o componenta de
+// server. Aici raman doar componente.
+import { TON_TEXT, type Ton } from "./baza";
 
 const TON_CLASE: Record<Ton, string> = {
   neutru: "border-line-strong bg-surface-3 text-muted",
@@ -34,11 +37,6 @@ const TON_CLASE: Record<Ton, string> = {
   risk: "border-risk/30 bg-risk-dim text-risk",
   bad: "border-bad/30 bg-bad-dim text-bad",
   info: "border-info/30 bg-info-dim text-info",
-};
-
-export const TON_TEXT: Record<Ton, string> = {
-  neutru: "text-muted", brand: "text-brand-soft", ok: "text-ok",
-  warn: "text-warn", risk: "text-risk", bad: "text-bad", info: "text-info",
 };
 
 /* ----------------------------------------------------------------- CARD */
@@ -253,9 +251,6 @@ export function Camp({ eticheta, obligatoriu, ajutor, children }: { eticheta: st
   );
 }
 
-export const claseCamp =
-  "w-full rounded-[var(--radius-field)] border border-line-strong bg-surface-1 px-3 py-2.5 text-[13.5px] text-ink placeholder:text-faint outline-none transition-colors focus:border-brand/60 focus:bg-surface-2";
-
 /* --------------------------------------------------------------- DIVERSE */
 
 export function Statistica({ valoare, eticheta, ton = "neutru", pictograma }: { valoare: React.ReactNode; eticheta: string; ton?: Ton; pictograma?: React.ReactNode }) {
@@ -274,12 +269,3 @@ export function Schelet({ className = "" }: { className?: string }) {
   return <div className={`shimmer rounded-lg bg-surface-3 ${className}`} />;
 }
 
-export function lei(n: number | null | undefined): string {
-  if (n === null || n === undefined || !Number.isFinite(n)) return "—";
-  return new Intl.NumberFormat("ro-RO", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n) + " lei";
-}
-
-export function dataRo(d: string | Date | null | undefined): string {
-  if (!d) return "—";
-  return new Date(d).toLocaleDateString("ro-RO", { day: "2-digit", month: "short", year: "numeric" });
-}
