@@ -12,6 +12,14 @@ export async function POST(req: NextRequest) {
     const { email, password } = await req.json();
     if (!email || !password) return NextResponse.json({ error: "Email și parola sunt obligatorii" }, { status: 400 });
 
+    // A doua limită, pe adresă. Cea pe IP apără serverul, asta apără un anume
+    // cont: cine încearcă parole dintr-un botnet are IP nou la fiecare cerere,
+    // dar adresa atacată rămâne aceeași.
+    const rlEmail = rateLimit(`login-email:${String(email).toLowerCase()}`, 10, 10 * 60_000);
+    if (!rlEmail.ok) {
+      return NextResponse.json({ error: `Prea multe încercări pentru acest cont. Reîncearcă în ${rlEmail.retryAfter}s.` }, { status: 429 });
+    }
+
     const user = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
     if (!user) return NextResponse.json({ error: "Email sau parolă incorectă" }, { status: 401 });
 

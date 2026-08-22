@@ -37,6 +37,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Introdu adresa de email." }, { status: 400 });
   }
 
+  // Limita pe adresa, nu doar pe IP: altfel cineva cu IP-uri multe putea trimite
+  // zeci de emailuri de resetare in cutia postala a altcuiva. Raspunsul ramane
+  // acelasi ca la reusita, ca sa nu spuna nici asta daca adresa are cont.
+  const rlEmail = rateLimit(`parola-uitata-email:${email.toLowerCase()}`, 3, 60 * 60 * 1000);
+  if (!rlEmail.ok) {
+    return NextResponse.json({ ok: true, minute: MINUTE_VALABILITATE });
+  }
+
   try {
     const rezultat = await creeazaCodResetare(email);
     if (rezultat && emailConfigured()) {

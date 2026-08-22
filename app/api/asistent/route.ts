@@ -54,20 +54,34 @@ async function isOnTopic(client: Anthropic, question: string): Promise<boolean> 
 }
 
 // Limită anti-abuz pentru vizitatorii anonimi de pe site (fără cont): 15
-// mesaje / oră / IP, ca să protejăm costul. Utilizatorii autentificați (clienți
-// corporate din panou) nu sunt limitați.
+// mesaje / oră / IP, ca să protejăm costul.
 const ANON_LIMIT = 15;
 const ANON_WINDOW_MS = 60 * 60 * 1000;
 
+// Plafonul conturilor logate: mai larg decât cel anonim, dar există.
+const USER_LIMIT = 60;
+const USER_WINDOW_MS = 60 * 60 * 1000;
+
 export async function POST(req: NextRequest) {
   // Asistentul e disponibil și public (pe site vosmart.ro), și în panoul corporate.
-  // Anonimii sunt limitați pe IP; utilizatorii logați trec fără limită.
+  // Anonimii sunt limitați pe IP, conturile pe id — fiecare răspuns costă.
   const user = await getSession();
   if (!user) {
     const rl = rateLimit(`asistent:${clientIp(req)}`, ANON_LIMIT, ANON_WINDOW_MS);
     if (!rl.ok) {
       return new Response(
         JSON.stringify({ error: `Ai atins limita de întrebări. Încearcă din nou peste ~${Math.ceil(rl.retryAfter / 60)} min sau creează-ți un cont.` }),
+        { status: 429 },
+      );
+    }
+  } else {
+    // Si conturile au plafon. „Utilizator logat" include trialul gratuit, pe care
+    // si-l face oricine in doua minute — iar fiecare raspuns costa bani pe cheia
+    // Anthropic. Plafonul e larg: un om care lucreaza in panou nu-l atinge.
+    const rl = rateLimit(`asistent-user:${user.id}`, USER_LIMIT, USER_WINDOW_MS);
+    if (!rl.ok) {
+      return new Response(
+        JSON.stringify({ error: `Ai atins limita de întrebări pentru ora aceasta. Încearcă din nou peste ~${Math.ceil(rl.retryAfter / 60)} min.` }),
         { status: 429 },
       );
     }
