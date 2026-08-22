@@ -1,5 +1,6 @@
 "use client";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import {
   Buton, Camp, Card, CardCap, claseCamp, dataRo, Eticheta, Gol, InelScor, lei, Rotitor, Ton,
 } from "@/app/components/ui";
@@ -158,9 +159,9 @@ export default function PupitruCenzor({ dosarId }: { dosarId: string }) {
       {/* ------------------------------------------------------------ antet */}
       <div className="mb-4 flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">
-          <a href="/admin" className="mb-2 inline-flex items-center gap-1.5 text-[12.5px] text-faint transition-colors hover:text-ink">
-            <Ic.stanga className="h-3.5 w-3.5" /> Panou
-          </a>
+          <Link href="/panou/rapoarte-expert" className="mb-2 inline-flex items-center gap-1.5 text-[12.5px] text-faint transition-colors hover:text-ink">
+            <Ic.stanga className="h-3.5 w-3.5" /> Rapoarte expert
+          </Link>
           <h1 className="text-[21px] font-semibold tracking-tight text-ink">{date.asociatie?.name ?? date.dosar.titlu}</h1>
           <p className="mt-0.5 text-[13px] text-faint">
             {date.dosar.luna} {date.dosar.an}

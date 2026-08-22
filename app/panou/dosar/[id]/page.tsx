@@ -26,9 +26,8 @@ export default async function PaginaDosar({ params }: { params: Promise<{ id: st
   if (!dosar) notFound();
   if (!(await poateVedeaAsociatia(user, dosar.associationId))) notFound();
 
-  return (
-    <main className="min-h-screen bg-app text-ink">
-      <PupitruCenzor dosarId={id} />
-    </main>
-  );
+  // Fara `<main>` si fara fundal aici: le pune cadrul din /panou. Doua elemente
+  // `<main>` unul in altul sunt HTML nevalid, iar un al doilea fundal peste cel
+  // al cadrului se vede la marginile ecranului.
+  return <PupitruCenzor dosarId={id} />;
 }

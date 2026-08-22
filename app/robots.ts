@@ -18,7 +18,7 @@ const aiCrawlers = [
 
 const disallow = [
   "/api/",
-  "/admin/",
+  "/panou/",
   "/login",
   "/corporate/dashboard/",
   "/corporate/checkout/",

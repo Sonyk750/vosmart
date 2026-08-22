@@ -11,8 +11,8 @@ type UtilizatorSesiune = { id: string; role: string };
  *   corporate  — doar asociatiile de sub contul lui de firma;
  *   client     — doar asociatia lui.
  *
- * Exact din rescrierea pe la fiecare ruta a iesit gaura de la /admin/client/[id],
- * unde clauza pentru cenzor lipsea cu totul.
+ * Exact din rescrierea pe la fiecare ruta a iesit o gaura intr-un ecran de
+ * detaliu client, unde clauza pentru cenzor lipsea cu totul.
  */
 export async function poateVedeaAsociatia(
   user: UtilizatorSesiune,

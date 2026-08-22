@@ -213,12 +213,6 @@ export default function Cadru({
                 </span>
               </span>
             </div>
-            {/* Pana se muta si administrarea clientilor si a cenzorilor aici,
-                panoul vechi ramane la o apasare distanta. Ascuns, nu scos. */}
-            <Link href="/admin"
-              className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-[12.5px] text-faint transition-colors hover:bg-surface-3 hover:text-muted">
-              <Ic.cheie className="h-3.5 w-3.5 shrink-0" /> Panou clasic
-            </Link>
             <FormularIesire />
           </>
         )}

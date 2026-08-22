@@ -17,7 +17,7 @@ import { prisma } from "@/lib/prisma";
  *   corporate  — prima asociatie de sub contul de firma;
  *   client     — asociatia lui;
  *   cenzor     — niciuna: cenzorul nu incarca dosare, le revizuieste. Vezi
- *                `poateVedeaAsociatia` si pupitrul din /admin/dosar/[id].
+ *                `poateVedeaAsociatia` si pupitrul din /panou/dosar/[id].
  */
 
 type UtilizatorSesiune = {
