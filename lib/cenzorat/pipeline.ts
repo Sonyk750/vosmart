@@ -9,50 +9,39 @@ import { Constatare, Etapa, ExtrasDosar, StareEtapa } from "./tipuri";
  * Fluxul unui dosar, de la fisiere la proiect de raport.
  *
  * Etapele sunt reale, nu decorative: fiecare isi scrie un rand in
- * `EvenimentFlux`, iar ecranul clientului citeste exact acele randuri. Inainte,
- * bara de progres era un `setInterval` care crestea cu 1% la 560 de milisecunde
- * si se oprea la 90 indiferent ce se intampla pe server — daca analiza cadea,
- * bara arata tot „82% · Finalizare raport".
- *
- * Ce se intampla la o eroare: etapa se marcheaza `esuata`, cu motivul scris pe
- * intelesul omului, si dosarul se opreste acolo. Nu inaintam cu date pe
- * jumatate: un raport de cenzor facut din jumatate de registru e mai rau decat
- * lipsa lui.
+ * `EvenimentFlux`, iar ecranul citeste exact acele randuri. Cand ceva cade,
+ * bara se opreste unde a ajuns si scrie de ce, in loc sa urce mai departe.
  */
 
 export async function noteaza(
-  documentId: string,
+  dosarId: string,
   etapa: Etapa,
   stare: StareEtapa,
   mesaj: string,
 ): Promise<void> {
   try {
     await prisma.$transaction([
-      prisma.evenimentFlux.create({ data: { documentId, etapa, stare, mesaj } }),
-      prisma.document.update({
-        where: { id: documentId },
-        data: {
-          etapa,
-          stareEtapa: stare,
-          ...(stare === "esuata" ? { status: "error", aiSummary: mesaj } : {}),
-        },
+      prisma.evenimentFlux.create({ data: { dosarId, etapa, stare, mesaj } }),
+      prisma.dosar.update({
+        where: { id: dosarId },
+        data: { etapa, stareEtapa: stare, ...(stare === "esuata" ? { rezumat: mesaj } : {}) },
       }),
     ]);
   } catch {
     // Dosarul poate sa nu mai existe: analiza dureaza vreo jumatate de minut, iar
     // butonul de stergere e la indemana omului tot timpul asta. Cand se intampla,
-    // n-avem unde scrie si nici ce salva — dar mai ales n-avem voie sa aruncam de
-    // aici, fiindca `noteaza` e chemata SI din blocul care trateaza erorile: o
-    // exceptie in el ar iesi neprinsa din `after()` si ar umple jurnalul cu o
-    // violare de cheie externa in loc de motivul adevarat.
-    console.warn(`[flux] nu am putut nota „${mesaj}" — dosarul ${documentId} nu mai există`);
+    // n-avem unde scrie — dar mai ales n-avem voie sa aruncam de aici, fiindca
+    // `noteaza` e chemata SI din blocul care trateaza erorile: o exceptie in el
+    // ar iesi neprinsa si ar umple jurnalul cu o violare de cheie externa in loc
+    // de motivul adevarat.
+    console.warn(`[flux] nu am putut nota „${mesaj}" — dosarul ${dosarId} nu mai există`);
   }
 }
 
 /** Aduce continutul fisierelor dosarului din stocare, ca sa poata fi recitite. */
-async function incarcaFisiere(documentId: string): Promise<FisierDeCitit[]> {
-  const randuri = await prisma.documentFile.findMany({
-    where: { documentId },
+async function incarcaFisiere(dosarId: string): Promise<FisierDeCitit[]> {
+  const randuri = await prisma.fisier.findMany({
+    where: { dosarId },
     orderBy: { createdAt: "asc" },
   });
 
@@ -68,8 +57,8 @@ async function incarcaFisiere(documentId: string): Promise<FisierDeCitit[]> {
       if (value) bucati.push(value);
     }
     rezultat.push({
-      tip: r.type,
-      numeFisier: r.fileName,
+      tip: r.tip,
+      numeFisier: r.numeFisier,
       mimeType: r.mimeType,
       continut: Buffer.concat(bucati),
     });
@@ -78,7 +67,7 @@ async function incarcaFisiere(documentId: string): Promise<FisierDeCitit[]> {
 }
 
 export type OptiuniFlux = {
-  documentId: string;
+  dosarId: string;
   /**
    * Continutul fisierelor, daca il avem deja in memorie (cazul incarcarii).
    * Lipsa lui inseamna reluare: se citesc din stocare.
@@ -86,67 +75,67 @@ export type OptiuniFlux = {
   fisiere?: FisierDeCitit[];
 };
 
-export async function ruleazaFlux({ documentId, fisiere }: OptiuniFlux): Promise<void> {
-  const doc = await prisma.document.findUnique({
-    where: { id: documentId },
-    include: { association: { select: { name: true, cui: true } } },
+export async function ruleazaFlux({ dosarId, fisiere }: OptiuniFlux): Promise<void> {
+  const dosar = await prisma.dosar.findUnique({
+    where: { id: dosarId },
+    include: { contract: { select: { id: true, denumire: true, cui: true } } },
   });
-  if (!doc) return;
+  if (!dosar) return;
 
   const inceput = Date.now();
-  await prisma.document.update({ where: { id: documentId }, data: { inceputLa: new Date(), status: "analyzing" } });
+  await prisma.dosar.update({ where: { id: dosarId }, data: { inceputLa: new Date() } });
 
   try {
     /* ---------------------------------------------------------- CITIRE */
-    await noteaza(documentId, "extragere", "in_lucru", "Se deschid documentele din dosar");
+    await noteaza(dosarId, "extragere", "in_lucru", "Se deschid documentele din dosar");
 
-    const deCitit = fisiere ?? (await incarcaFisiere(documentId));
+    const deCitit = fisiere ?? (await incarcaFisiere(dosarId));
     if (deCitit.length === 0) {
-      await noteaza(documentId, "extragere", "esuata", "Dosarul nu conține niciun fișier care să poată fi citit.");
+      await noteaza(dosarId, "extragere", "esuata", "Dosarul nu conține niciun fișier care să poată fi citit.");
       return;
     }
 
     const { extras, tokensIn, tokensOut, netrimise } = await citesteDosar(
       deCitit,
       {
-        denumire: doc.association?.name ?? "",
-        cui: doc.association?.cui ?? "",
-        luna: doc.month ?? "",
-        an: doc.year ?? new Date().getFullYear(),
+        denumire: dosar.contract.denumire,
+        cui: dosar.contract.cui,
+        luna: dosar.luna,
+        an: dosar.an,
       },
-      mesaj => noteaza(documentId, "extragere", "in_lucru", mesaj),
+      mesaj => noteaza(dosarId, "extragere", "in_lucru", mesaj),
     );
 
     const incredere = increderaDate(extras);
-    await prisma.document.update({
-      where: { id: documentId },
-      data: { extras: extras as never, incredere: incredere.procent, aiTokensIn: tokensIn, aiTokensOut: tokensOut },
+    await prisma.dosar.update({
+      where: { id: dosarId },
+      data: { extras: extras as never, incredere: incredere.procent, tokensIn, tokensOut },
     });
     await noteaza(
-      documentId,
+      dosarId,
       "extragere",
       "gata",
       `${deCitit.length - netrimise.length} documente citite · ${incredere.gasite} din ${incredere.total} indicatori găsiți`,
     );
 
     /* ----------------------------------------------------- VERIFICĂRI */
-    await noteaza(documentId, "verificare", "in_lucru", "Se aplică regulile de cenzorat");
+    await noteaza(dosarId, "verificare", "in_lucru", "Se aplică regulile de cenzorat");
 
     const constatari = aplicaReguli({
       extras,
-      cuiDeclarat: doc.association?.cui ?? null,
-      denumireDeclarata: doc.association?.name ?? null,
+      cuiDeclarat: dosar.contract.cui,
+      denumireDeclarata: dosar.contract.denumire,
       tipuriPrimite: deCitit.map(f => f.tip),
     });
 
     // Constatarile se rescriu de la zero la fiecare rulare: o reluare nu trebuie
     // sa lase in urma constatari dintr-o citire veche. Cele adaugate de cenzor
     // raman — nu sunt ale noastre ca sa le stergem.
-    await prisma.constatare.deleteMany({ where: { documentId, sursa: { not: "cenzor" } } });
+    await prisma.constatare.deleteMany({ where: { dosarId, sursa: { not: "cenzor" } } });
     if (constatari.length > 0) {
       await prisma.constatare.createMany({
         data: constatari.map((c, i) => ({
-          documentId,
+          dosarId,
           cod: c.cod,
           titlu: c.titlu,
           detaliu: c.detaliu,
@@ -161,7 +150,7 @@ export async function ruleazaFlux({ documentId, fisiere }: OptiuniFlux): Promise
     }
 
     await noteaza(
-      documentId,
+      dosarId,
       "verificare",
       "gata",
       constatari.length === 0
@@ -170,91 +159,62 @@ export async function ruleazaFlux({ documentId, fisiere }: OptiuniFlux): Promise
     );
 
     /* --------------------------------------------------------- SINTEZĂ */
-    await noteaza(documentId, "sinteza", "in_lucru", "Se pregătește proiectul de raport");
+    await noteaza(dosarId, "sinteza", "in_lucru", "Se pregătește raportul AI");
 
     const scor = calculeazaScor(constatari);
-    const titluRaport = `Raport de cenzor · ${doc.month ?? ""} ${doc.year ?? ""} — ${doc.association?.name ?? ""}`.replace(/\s+/g, " ").trim();
+    const titlu = `Raport AI · ${dosar.luna} ${dosar.an} — ${dosar.contract.denumire}`;
 
-    await prisma.document.update({
-      where: { id: documentId },
+    await prisma.dosar.update({
+      where: { id: dosarId },
       data: {
-        status: "analyzed",
-        aiScore: scor.valoare,
+        scor: scor.valoare,
         verdict: scor.verdict,
-        // Campurile vechi raman completate, ca ecranele care inca le citesc sa
-        // nu ramana goale in timpul tranzitiei.
-        aiFindings: JSON.stringify(constatari.slice(0, 10).map(c => c.titlu)),
-        aiSummary: `${constatari.length} constatări · încredere date ${incredere.procent}%`,
+        rezumat: `${constatari.length} constatări · încredere date ${incredere.procent}%`,
         terminatLa: new Date(),
       },
     });
 
-    // Un dosar are un singur proiect de raport. La reluare il rescriem, nu mai
-    // adaugam unul — altfel clientul vedea trei rapoarte pentru aceeasi luna.
-    const existent = await prisma.report.findFirst({
-      where: { associationId: doc.associationId, documentId },
-      select: { id: true, status: true },
-    });
+    // Un dosar are un singur raport AI. La reluare se rescrie, nu se mai adauga
+    // unul — altfel clientul vedea trei rapoarte pentru aceeasi luna.
     const dateRaport = {
-      extras,
-      scor,
-      incredere,
-      constatari,
-      perioada: { luna: doc.month, an: doc.year },
+      extras, scor, incredere, constatari,
+      perioada: { luna: dosar.luna, an: dosar.an },
       generatLa: new Date().toISOString(),
     };
+    await prisma.report.upsert({
+      where: { dosarId_tip: { dosarId, tip: "ai" } },
+      update: { titlu, date: dateRaport as never },
+      create: { dosarId, contractId: dosar.contractId, tip: "ai", titlu, date: dateRaport as never },
+    });
 
-    if (existent && existent.status !== "published") {
-      await prisma.report.update({
-        where: { id: existent.id },
-        data: { title: titluRaport, data: dateRaport as never, month: doc.month, year: doc.year },
-      });
-    } else if (!existent) {
-      await prisma.report.create({
-        data: {
-          associationId: doc.associationId,
-          documentId,
-          title: titluRaport,
-          month: doc.month,
-          year: doc.year,
-          data: dateRaport as never,
-          status: "draft",
-        },
-      });
-    }
+    await noteaza(dosarId, "sinteza", "gata", `Scor ${scor.valoare}% · ${scor.verdict}`);
+    await noteaza(dosarId, "revizuire", "asteptare", "Raportul AI așteaptă revizuirea cenzorului");
 
-    await noteaza(documentId, "sinteza", "gata", `Scor ${scor.valoare}% · ${scor.verdict}`);
-    await noteaza(documentId, "revizuire", "asteptare", "Proiectul de raport așteaptă revizuirea cenzorului");
-
-    console.log(`[flux] dosar ${documentId} gata în ${Math.round((Date.now() - inceput) / 1000)}s`);
+    console.log(`[flux] dosar ${dosarId} gata în ${Math.round((Date.now() - inceput) / 1000)}s`);
   } catch (e) {
     // Intai intrebam daca dosarul mai exista. Daca omul l-a sters intre timp,
-    // nu e o defectiune: e o cerere anulata. Fara verificarea asta, jurnalul
-    // arata o violare de cheie externa si pare ca s-a stricat ceva.
-    const inca = await prisma.document.findUnique({ where: { id: documentId }, select: { etapa: true } });
+    // nu e o defectiune: e o cerere anulata.
+    const inca = await prisma.dosar.findUnique({ where: { id: dosarId }, select: { etapa: true } });
     if (!inca) {
-      console.log(`[flux] dosarul ${documentId} a fost șters în timpul analizei — mă opresc`);
+      console.log(`[flux] dosarul ${dosarId} a fost șters în timpul analizei — mă opresc`);
       return;
     }
 
     const brut = e instanceof Error ? e.message : String(e);
     // Raspunsurile de eroare vin uneori ca pagini HTML (504 de la un proxy).
-    // Le curatam, ca mesajul din ecranul clientului sa fie o propozitie, nu markup.
+    // Le curatam, ca mesajul din ecran sa fie o propozitie, nu markup.
     const curat = brut.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 280);
     console.error("[flux] eroare:", curat);
-    await noteaza(
-      documentId,
-      (inca.etapa as Etapa) ?? "extragere",
-      "esuata",
-      `Analiza s-a oprit: ${curat || "eroare necunoscută"}`,
-    );
+    await noteaza(dosarId, (inca.etapa as Etapa) ?? "extragere", "esuata", `Analiza s-a oprit: ${curat || "eroare necunoscută"}`);
   }
 }
 
 /** Constatarile unui dosar, in forma cu care lucreaza scorul si ecranele. */
-export async function constatariDosar(documentId: string): Promise<(Constatare & { id: string; stare: "deschisa" | "acceptata" | "respinsa"; notaCenzor: string | null })[]> {
+export async function constatariDosar(dosarId: string): Promise<
+  (Constatare & { id: string; stare: "deschisa" | "acceptata" | "respinsa"; notaCenzor: string | null })[]
+> {
   const randuri = await prisma.constatare.findMany({
-    where: { documentId },
+    where: { dosarId },
     orderBy: [{ ordine: "asc" }, { createdAt: "asc" }],
   });
   return randuri.map(r => ({

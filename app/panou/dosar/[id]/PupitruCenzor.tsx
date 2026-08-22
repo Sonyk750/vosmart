@@ -33,11 +33,11 @@ type Scor = {
   defalcare: { severitate: Severitate; eticheta: string; numar: number; puncte: number }[];
   luateInCalcul: number; ignorate: number;
 };
-type Fisier = { id: string; fileName: string; label: string; type: string; mimeType: string; size: number };
+type Fisier = { id: string; numeFisier: string; eticheta: string; tip: string; mimeType: string; marime: number };
 
 type Date_ = {
   dosar: { id: string; titlu: string; luna: string | null; an: number | null; etapa: string; stareEtapa: string; incredere: number | null; creatLa: string };
-  asociatie: { name: string; cui: string | null; address: string | null; user: { name: string | null; email: string } } | null;
+  contract: { id: string; denumire: string; cui: string; adresa: string | null; telefon: string | null; email: string | null; reprezentant: string | null } | null;
   extras: Record<string, never> | null;
   fisiere: Fisier[];
   constatari: Constatare[];
@@ -69,37 +69,37 @@ export default function PupitruCenzor({ dosarId }: { dosarId: string }) {
   const [concluzie, setConcluzie] = useState("");
 
   const adu = useCallback(async () => {
-    const r = await fetch(`/api/admin/dosare/${dosarId}`);
+    const r = await fetch(`/api/panou/dosare/${dosarId}`);
     if (!r.ok) { setEroare("Dosarul nu a putut fi încărcat."); return; }
     const d: Date_ = await r.json();
     setDate(d);
-    setFisierDeschis(f => f ?? d.fisiere.find(x => x.type === "lista_plata") ?? d.fisiere[0] ?? null);
+    setFisierDeschis(f => f ?? d.fisiere.find(x => x.tip === "lista_plata") ?? d.fisiere[0] ?? null);
   }, [dosarId]);
 
   useEffect(() => {
     // Starea se aseaza in raspuns, nu in corpul efectului: altfel prima randare
     // e imediat urmata de a doua, inainte sa apuce sa se aseze.
     let activ = true;
-    fetch(`/api/admin/dosare/${dosarId}`)
+    fetch(`/api/panou/dosare/${dosarId}`)
       .then(r => (r.ok ? r.json() : null))
       .then((d: Date_ | null) => {
         if (!activ) return;
         if (!d) { setEroare("Dosarul nu a putut fi încărcat."); return; }
         setDate(d);
-        setFisierDeschis(d.fisiere.find(x => x.type === "lista_plata") ?? d.fisiere[0] ?? null);
+        setFisierDeschis(d.fisiere.find(x => x.tip === "lista_plata") ?? d.fisiere[0] ?? null);
       })
       .catch(() => { if (activ) setEroare("Dosarul nu a putut fi încărcat."); });
     return () => { activ = false; };
   }, [dosarId]);
 
-  const semnat = date?.raport?.status === "published";
+  const semnat = date?.raport?.status === "publicat";
 
   async function schimba(id: string, modificare: Record<string, unknown>) {
     if (semnat) return;
     setLucreaza(id);
     setEroare("");
     try {
-      const r = await fetch(`/api/admin/constatari/${id}`, {
+      const r = await fetch(`/api/panou/constatari/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(modificare),
@@ -118,7 +118,7 @@ export default function PupitruCenzor({ dosarId }: { dosarId: string }) {
     setSemneaza(true);
     setEroare("");
     try {
-      const r = await fetch(`/api/admin/dosare/${dosarId}/semneaza`, {
+      const r = await fetch(`/api/panou/dosare/${dosarId}/semneaza`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ concluzie }),
@@ -161,10 +161,10 @@ export default function PupitruCenzor({ dosarId }: { dosarId: string }) {
           <Link href="/panou/rapoarte-expert" className="mb-2 inline-flex items-center gap-1.5 text-[12.5px] text-faint transition-colors hover:text-ink">
             <Ic.stanga className="h-3.5 w-3.5" /> Rapoarte expert
           </Link>
-          <h1 className="text-[21px] font-semibold tracking-tight text-ink">{date.asociatie?.name ?? date.dosar.titlu}</h1>
+          <h1 className="text-[21px] font-semibold tracking-tight text-ink">{date.contract?.denumire ?? date.dosar.titlu}</h1>
           <p className="mt-0.5 text-[13px] text-faint">
             {date.dosar.luna} {date.dosar.an}
-            {date.asociatie?.cui && ` · CUI ${date.asociatie.cui}`}
+            {date.contract?.cui && ` · CUI ${date.contract.cui}`}
             {` · dosar primit ${dataRo(date.dosar.creatLa)}`}
           </p>
         </div>
@@ -223,12 +223,12 @@ export default function PupitruCenzor({ dosarId }: { dosarId: string }) {
                 <button
                   key={f.id}
                   onClick={() => setFisierDeschis(f)}
-                  title={f.fileName}
+                  title={f.numeFisier}
                   className={`shrink-0 rounded-lg px-2.5 py-1.5 text-[12px] font-medium transition-colors ${
                     fisierDeschis?.id === f.id ? "bg-brand text-white" : "text-muted hover:bg-surface-3 hover:text-ink"
                   }`}
                 >
-                  {f.label || etichetaTip(f.type)}
+                  {f.eticheta || etichetaTip(f.tip)}
                 </button>
               ))}
             </div>
@@ -237,8 +237,8 @@ export default function PupitruCenzor({ dosarId }: { dosarId: string }) {
               <div className="bg-paper-2">
                 <iframe
                   key={fisierDeschis.id}
-                  src={`/api/dashboard/documents/${dosarId}/fisiere/${fisierDeschis.id}?inline=1`}
-                  title={fisierDeschis.fileName}
+                  src={`/api/panou/fisiere/${fisierDeschis.id}?inline=1`}
+                  title={fisierDeschis.numeFisier}
                   className="h-[68vh] w-full border-0 bg-paper"
                 />
               </div>
@@ -249,10 +249,10 @@ export default function PupitruCenzor({ dosarId }: { dosarId: string }) {
             {fisierDeschis && (
               <div className="flex items-center justify-between gap-3 border-t border-line px-4 py-2.5">
                 <p className="truncate text-[12px] text-faint">
-                  {fisierDeschis.fileName} · {(fisierDeschis.size / 1024).toFixed(0)} KB
+                  {fisierDeschis.numeFisier} · {(fisierDeschis.marime / 1024).toFixed(0)} KB
                 </p>
                 <a
-                  href={`/api/dashboard/documents/${dosarId}/fisiere/${fisierDeschis.id}`}
+                  href={`/api/panou/fisiere/${fisierDeschis.id}`}
                   className="inline-flex shrink-0 items-center gap-1.5 text-[12px] text-muted transition-colors hover:text-ink"
                 >
                   <Ic.descarca className="h-3.5 w-3.5" /> Descarcă
@@ -535,7 +535,7 @@ function ConstatareNoua({
     setSalveaza(true);
     setEroare("");
     try {
-      const r = await fetch(`/api/admin/dosare/${dosarId}/constatari`, {
+      const r = await fetch(`/api/panou/dosare/${dosarId}/constatari`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ titlu, detaliu, severitate, temei, recomandare }),

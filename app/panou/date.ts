@@ -33,9 +33,9 @@ export async function numaratoriMeniu(user: Utilizator): Promise<Numaratori> {
   const dosare = filtruDosare(user);
   const [deVerificat, laExpert] = await Promise.all([
     // Documente primite si inventariate, pentru care nu s-a rulat inca verificarea.
-    prisma.document.count({ where: { ...dosare, etapa: { in: ["intrare", "extragere"] }, stareEtapa: { not: "esuata" } } }),
+    prisma.dosar.count({ where: { ...dosare, etapa: { in: ["intrare", "extragere"] }, stareEtapa: { not: "esuata" } } }),
     // Verificarea automata s-a terminat; asteapta omul.
-    prisma.document.count({ where: { ...dosare, etapa: "revizuire" } }),
+    prisma.dosar.count({ where: { ...dosare, etapa: "revizuire" } }),
   ]);
   return { deVerificat, laExpert };
 }
@@ -68,31 +68,31 @@ export async function sumarPanou(user: Utilizator): Promise<SumarPanou> {
   const contracteUnde = filtruContracte(user);
   const dosare = filtruDosare(user);
   const { luna, an, eticheta } = lunaDeLucru();
-  const lunaAsta = { ...dosare, month: luna, year: an };
+  const lunaAsta = { ...dosare, luna, an };
 
   const [
     contracte, dosareLunaCurenta, rapoarteAi, rapoarteExpert,
     deVerificat, laExpert, esuate, dupaEtapa,
   ] = await Promise.all([
     prisma.contract.count({ where: { ...contracteUnde, status: "activ" } }),
-    prisma.document.count({ where: lunaAsta }),
+    prisma.dosar.count({ where: lunaAsta }),
     // Raportul AI e gata cand verificarea automata s-a incheiat, adica atunci
     // cand dosarul a ajuns la revizuire. Numaram dosarele, nu randurile din
     // `Report` cu `data` completat: un filtru pe camp Json nu compara ce pare ca
     // compara si ar fi intors linistit toate randurile.
-    prisma.document.count({ where: { ...dosare, etapa: { in: ["revizuire", "semnat"] } } }),
+    prisma.dosar.count({ where: { ...dosare, etapa: { in: ["revizuire", "semnat"] } } }),
     // Raportul expertului e cel semnat de om.
     prisma.report.count({ where: { semnatLa: { not: null } } }),
-    prisma.document.count({ where: { ...dosare, etapa: { in: ["intrare", "extragere"] }, stareEtapa: { not: "esuata" } } }),
-    prisma.document.count({ where: { ...dosare, etapa: "revizuire" } }),
-    prisma.document.count({ where: { ...dosare, stareEtapa: "esuata" } }),
-    prisma.document.groupBy({ by: ["etapa"], where: lunaAsta, _count: { _all: true } }),
+    prisma.dosar.count({ where: { ...dosare, etapa: { in: ["intrare", "extragere"] }, stareEtapa: { not: "esuata" } } }),
+    prisma.dosar.count({ where: { ...dosare, etapa: "revizuire" } }),
+    prisma.dosar.count({ where: { ...dosare, stareEtapa: "esuata" } }),
+    prisma.dosar.groupBy({ by: ["etapa"], where: lunaAsta, _count: { _all: true } }),
   ]);
 
   // Coloanele fluxului, in ordinea in care se intampla lucrurile. „Fara
   // documente" nu se numara din dosare — se scade: sunt contractele care n-au
   // trimis nimic pentru luna asta.
-  const dupaCheie = new Map(dupaEtapa.map(g => [g.etapa, g._count._all]));
+  const dupaCheie = new Map<string, number>(dupaEtapa.map(g => [g.etapa, g._count._all]));
   const primite = (dupaCheie.get("intrare") ?? 0) + (dupaCheie.get("extragere") ?? 0);
   const verificate = (dupaCheie.get("verificare") ?? 0) + (dupaCheie.get("sinteza") ?? 0);
 

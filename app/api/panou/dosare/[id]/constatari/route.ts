@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { poateVedeaAsociatia } from "@/lib/acces";
+import { poateVedeaContractul } from "@/lib/acces";
 import { constatariDosar } from "@/lib/cenzorat/pipeline";
 import { calculeazaScor } from "@/lib/cenzorat/scor";
 import { SEVERITATI } from "@/lib/cenzorat/tipuri";
@@ -21,16 +21,16 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   const { id } = await params;
 
-  const dosar = await prisma.document.findUnique({
+  const dosar = await prisma.dosar.findUnique({
     where: { id },
-    select: { associationId: true, _count: { select: { constatari: true } } },
+    select: { contractId: true, _count: { select: { constatari: true } } },
   });
   if (!dosar) return NextResponse.json({ error: "Dosar negăsit" }, { status: 404 });
-  if (!(await poateVedeaAsociatia(user, dosar.associationId))) {
+  if (!(await poateVedeaContractul(user, dosar.contractId))) {
     return NextResponse.json({ error: "Neautorizat" }, { status: 403 });
   }
 
-  const semnat = await prisma.report.findFirst({ where: { documentId: id, status: "published" }, select: { id: true } });
+  const semnat = await prisma.report.findFirst({ where: { dosarId: id, tip: "expert", status: "publicat" }, select: { id: true } });
   if (semnat) {
     return NextResponse.json({ error: "Raportul a fost deja semnat și nu mai poate fi modificat." }, { status: 409 });
   }
@@ -45,7 +45,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   await prisma.constatare.create({
     data: {
-      documentId: id,
+      dosarId: id,
       cod: `CENZOR-${dosar._count.constatari + 1}`,
       titlu: titlu.slice(0, 200),
       detaliu: detaliu.slice(0, 4000),
@@ -62,7 +62,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   const constatari = await constatariDosar(id);
   const scor = calculeazaScor(constatari);
-  await prisma.document.update({ where: { id }, data: { aiScore: scor.valoare, verdict: scor.verdict } });
+  await prisma.dosar.update({ where: { id }, data: { scor: scor.valoare, verdict: scor.verdict } });
 
   return NextResponse.json({ scor, constatari });
 }

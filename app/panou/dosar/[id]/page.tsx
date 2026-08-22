@@ -2,7 +2,7 @@ import { redirect, notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { requireAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { poateVedeaAsociatia } from "@/lib/acces";
+import { poateVedeaContractul } from "@/lib/acces";
 import PupitruCenzor from "./PupitruCenzor";
 
 export const metadata: Metadata = { robots: { index: false, follow: false, nocache: true } };
@@ -19,12 +19,12 @@ export default async function PaginaDosar({ params }: { params: Promise<{ id: st
   if (!user) redirect("/login");
 
   const { id } = await params;
-  const dosar = await prisma.document.findUnique({
+  const dosar = await prisma.dosar.findUnique({
     where: { id },
-    select: { associationId: true },
+    select: { contractId: true },
   });
   if (!dosar) notFound();
-  if (!(await poateVedeaAsociatia(user, dosar.associationId))) notFound();
+  if (!(await poateVedeaContractul(user, dosar.contractId))) notFound();
 
   // Fara `<main>` si fara fundal aici: le pune cadrul din /panou. Doua elemente
   // `<main>` unul in altul sunt HTML nevalid, iar un al doilea fundal peste cel

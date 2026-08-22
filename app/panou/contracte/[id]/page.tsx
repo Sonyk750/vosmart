@@ -28,9 +28,9 @@ export default async function PaginaContract({ params }: { params: Promise<{ id:
   const c = await prisma.contract.findUnique({
     where: { id },
     include: {
-      documents: {
-        orderBy: [{ year: "desc" }, { createdAt: "desc" }],
-        select: { id: true, month: true, year: true, etapa: true, stareEtapa: true, aiScore: true, verdict: true },
+      dosare: {
+        orderBy: [{ an: "desc" }, { createdAt: "desc" }],
+        select: { id: true, luna: true, an: true, etapa: true, stareEtapa: true, scor: true, verdict: true },
       },
     },
   });
@@ -122,7 +122,7 @@ export default async function PaginaContract({ params }: { params: Promise<{ id:
 
         <Card className="lg:col-span-2">
           <CardCap titlu="Dosare lunare" sub="Fiecare lună, cu documentele și rapoartele ei." />
-          {c.documents.length === 0 ? (
+          {c.dosare.length === 0 ? (
             <Gol
               pictograma={<Ic.calendar className="h-5 w-5" />}
               titlu="Nicio lună începută"
@@ -130,11 +130,11 @@ export default async function PaginaContract({ params }: { params: Promise<{ id:
             />
           ) : (
             <ul className="divide-y divide-line">
-              {c.documents.map(d => (
+              {c.dosare.map(d => (
                 <li key={d.id} className="flex items-center gap-4 px-5 py-3">
-                  <span className="text-[13px] text-ink">{d.month} {d.year}</span>
+                  <span className="text-[13px] text-ink">{d.luna} {d.an}</span>
                   <span className="flex-1 text-[12px] text-faint">{d.etapa}</span>
-                  {d.aiScore !== null && <span className="tnum text-[13px] text-muted">{d.aiScore}%</span>}
+                  {d.scor !== null && <span className="tnum text-[13px] text-muted">{d.scor}%</span>}
                   <Link href={`/panou/dosar/${d.id}`} className="text-faint transition-colors hover:text-ink">
                     <Ic.dreapta className="h-4 w-4" />
                   </Link>

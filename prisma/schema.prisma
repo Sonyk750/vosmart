@@ -6,77 +6,24 @@ datasource db {
   provider = "postgresql"
 }
 
+/// Cine intra in aplicatie.
+///
+/// Roluri: `admin` — proprietarul VoSmart, fara restrictii; `cenzor` — coleg din
+/// firma, vede contractele repartizate lui; `client` — persoana desemnata prin
+/// contract, care isi descarca rapoartele semnate.
 model User {
   id        String   @id @default(cuid())
   name      String?
   email     String   @unique
   password  String
-  role      String   @default("client") // client | cenzor | admin | corporate
-  status    String   @default("active") // pending | active | rejected
+  role      String   @default("client") // admin | cenzor | client
+  status    String   @default("active") // active | suspended
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  association      Association?
-  sessions         Session[]
-  allocatedClients CenzorAllocation[] @relation("CenzorAllocations")
-  contracte        Contract[]         @relation("ContracteCenzor")
-  corporateAccount CorporateAccount?  @relation("CorporateOwner")
-}
-
-/// Contractul de cenzorat cu o asociatie sau o firma.
-///
-/// E coloana vertebrala a aplicatiei: nu exista luna, documente sau raport fara
-/// un contract sub ele. Pana acum rolul asta il tinea `Association`, care insa
-/// nu stia nimic despre contract — nici numar, nici data, nici cine are voie sa
-/// descarce rapoartele. Iar numele mintea: o asociatie nu e un contract, poate
-/// avea mai multe de-a lungul anilor.
-model Contract {
-  id        String    @id @default(cuid())
-  numar     String?
-  dataSemnarii  DateTime?
-  /// Gol inseamna „pe durata nedeterminata", nu „expirat".
-  dataIncetarii DateTime?
-
-  // --- Beneficiarul, asa cum apare in contract ---
-  denumire  String
-  cui       String
-  regCom    String?
-  adresa    String?
-  localitate String?
-  telefon   String?
-  email     String?
-  /// Presedintele sau administratorul care semneaza din partea asociatiei.
-  reprezentant String?
-
-  // --- Persoana desemnata prin contract ---
-  // Singura care va putea descarca rapoartele semnate din contul ei. Fara ea,
-  // raportul ramane la noi: nu are cine sa-l ridice.
-  persoanaNume    String?
-  persoanaFunctie String?
-  persoanaEmail   String?
-  persoanaTelefon String?
-
-  /// Ziua din luna pana la care asociatia trebuie sa trimita documentele.
-  ziTermen  Int      @default(15)
-
-  status    String   @default("activ") // activ | suspendat | incheiat
-  observatii String?
-
-  /// Cenzorul din VoSmart care raspunde de contract.
-  ///
-  /// Gol acum, si e in regula: deocamdata contractele sunt lucrate de
-  /// proprietar. Coloana sta pregatita pentru cand exista conturi de cenzor si
-  /// se face repartizarea — ca sa nu fie nevoie de o migrare atunci.
-  cenzorId  String?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  cenzor    User?      @relation("ContracteCenzor", fields: [cenzorId], references: [id], onDelete: SetNull)
-  documents Document[]
-
-  @@index([cui])
-  @@index([status])
+  sessions  Session[]
+  /// Contractele de care raspunde, daca e cenzor.
+  contracte Contract[] @relation("ContracteCenzor")
 }
 
 model Session {
@@ -89,8 +36,8 @@ model Session {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-// Codurile de resetare a parolei. In tabela sta doar amprenta sha256 a codului,
-// nu codul: cine citeste tabela nu poate intra pe niciun cont. Vezi lib/parola-uitata.ts.
+/// Codurile de resetare a parolei. In tabela sta doar amprenta sha256 a codului,
+/// nu codul: cine citeste tabela nu poate intra pe niciun cont.
 model CodResetareParola {
   id        String   @id @default(cuid())
   email     String
@@ -102,138 +49,127 @@ model CodResetareParola {
   @@index([email])
 }
 
-model CorporateAccount {
-  id           String    @id @default(cuid())
-  userId       String    @unique
-  companyName  String
-  cui          String?
+/// Contractul de cenzorat dintre VoSmart si o asociatie sau o firma.
+///
+/// Coloana vertebrala: nu exista luna, documente sau raport fara un contract sub
+/// ele. Contractele sunt ale firmei — le adauga proprietarul si, pana la
+/// repartizare, tot el le lucreaza.
+model Contract {
+  id            String    @id @default(cuid())
+  numar         String?
+  dataSemnarii  DateTime?
+  /// Gol inseamna „pe durata nedeterminata", nu „expirat".
+  dataIncetarii DateTime?
+
+  // --- Beneficiarul, asa cum apare in contract ---
+  denumire     String
+  cui          String
   regCom       String?
-  address      String?
-  phone        String?
-  logoUrl      String?
-  package      String    @default("starter") // starter | business | professional | enterprise
-  status       String    @default("pending") // pending | active | suspended
-  maxAssoc     Int       @default(5)
-  activatedAt  DateTime?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  adresa       String?
+  localitate   String?
+  telefon      String?
+  email        String?
+  /// Presedintele sau administratorul care semneaza din partea asociatiei.
+  reprezentant String?
 
-  stripeCustomerId     String?   @unique
-  stripeSubscriptionId String?   @unique
-  subscriptionStatus   String?   // active | incomplete | past_due | canceled | unpaid | trialing
-  currentPeriodEnd     DateTime?
+  // --- Persoana desemnata prin contract ---
+  // Singura care va putea descarca rapoartele semnate din contul ei. Fara ea,
+  // raportul ramane la noi: nu are cine sa-l ridice.
+  persoanaNume    String?
+  persoanaFunctie String?
+  persoanaEmail   String?
+  persoanaTelefon String?
 
-  user         User          @relation("CorporateOwner", fields: [userId], references: [id], onDelete: Cascade)
-  associations Association[]
+  /// Ziua din luna pana la care asociatia trebuie sa trimita documentele.
+  ziTermen   Int     @default(15)
+
+  status     String  @default("activ") // activ | suspendat | incheiat
+  observatii String?
+
+  /// Cenzorul din VoSmart care raspunde de contract. Gol = il lucreaza proprietarul.
+  cenzorId  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  cenzor  User?      @relation("ContracteCenzor", fields: [cenzorId], references: [id], onDelete: SetNull)
+  dosare  Dosar[]
+  reports Report[]
+
+  @@index([cui])
+  @@index([status])
 }
 
-model Association {
-  id                String   @id @default(cuid())
-  userId            String   @unique
-  name              String
-  cui               String?
-  address           String?
-  phone             String?
-  package           String   @default("smart")
-  corporateId       String?
-  maxDocuments      Int      @default(30)
-  filesUploadedCount Int     @default(0)
-  createdAt         DateTime @default(now())
+/// Dosarul unei luni, sub un contract.
+///
+/// Aici se aduna, la un loc, tot ce tine de luna aceea: documentele primite,
+/// inventarul lor citit de AI, raportul AI si raportul semnat de cenzor.
+/// Se numea `Document`, ceea ce nu se potrivea: nu e un fisier, e un dosar cu
+/// mai multe fisiere in el.
+model Dosar {
+  id         String  @id @default(cuid())
+  contractId String
+  /// Luna verificata, cu litere mici: „august".
+  luna       String
+  an         Int
+  titlu      String?
 
-  stripeCustomerId     String?   @unique
-  stripeSubscriptionId String?   @unique
-  subscriptionStatus   String?   // active | incomplete | past_due | canceled | unpaid | trialing
-  currentPeriodEnd     DateTime?
-
-  user              User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  corporate         CorporateAccount? @relation(fields: [corporateId], references: [id])
-  documents         Document[]
-  reports           Report[]
-  allocations       CenzorAllocation[]
-  documentAddonPurchases DocumentAddonPurchase[]
-}
-
-model DocumentAddonPurchase {
-  id                    String    @id @default(cuid())
-  associationId         String
-  stripePaymentIntentId String    @unique
-  amount                Int       // bani, ex. 2500 = 25.00 RON
-  currency              String    @default("ron")
-  documentsAdded        Int
-  status                String    @default("pending") // pending | completed | failed
-  createdAt             DateTime  @default(now())
-  completedAt           DateTime?
-
-  association Association @relation(fields: [associationId], references: [id], onDelete: Cascade)
-
-  @@index([associationId])
-}
-
-model CenzorAllocation {
-  id            String   @id @default(cuid())
-  cenzorId      String
-  associationId String
-  createdAt     DateTime @default(now())
-
-  cenzor      User        @relation("CenzorAllocations", fields: [cenzorId], references: [id], onDelete: Cascade)
-  association Association @relation(fields: [associationId], references: [id], onDelete: Cascade)
-
-  @@unique([cenzorId, associationId])
-}
-
-model Document {
-  id            String   @id @default(cuid())
-  associationId String
-  title         String
-  type          String   @default("uploaded_by_client")
-  fileName      String
-  fileUrl       String
-  month         String?
-  year          Int?
-  status        String   @default("uploaded")
-  aiScore       Float?
-  aiFindings    String?
-  aiSummary     String?
-  aiTokensIn    Int?
-  aiTokensOut   Int?
-  createdAt     DateTime @default(now())
-
-  // --- Fluxul de cenzorat. Vezi lib/cenzorat/pipeline.ts ---
-  // `status` de mai sus ramane cum era, ca sa nu se strice ecranele vechi;
-  // etapa de mai jos e cea care spune unde chiar se afla dosarul.
-  etapa       String    @default("intrare") // intrare | extragere | verificare | sinteza | revizuire | semnat
-  stareEtapa  String    @default("asteptare") // asteptare | in_lucru | gata | esuata
+  // --- Fluxul de verificare. Vezi lib/cenzorat/pipeline.ts ---
+  etapa      String    @default("intrare")    // intrare | extragere | verificare | sinteza | revizuire | semnat
+  stareEtapa String    @default("asteptare")  // asteptare | in_lucru | gata | esuata
   /// Cifrele citite din documente (ExtrasDosar). Din ele se calculeaza tot restul.
-  extras      Json?
+  extras     Json?
   /// Cat la suta din datele asteptate s-au gasit efectiv in documente.
-  incredere   Int?
-  verdict     String?
-  inceputLa   DateTime?
-  terminatLa  DateTime?
+  incredere  Int?
+  scor       Float?
+  verdict    String?
+  rezumat    String?
+  tokensIn   Int?
+  tokensOut  Int?
+  inceputLa  DateTime?
+  terminatLa DateTime?
 
-  /// Contractul sub care sta dosarul lunii. Aici se aduna documentele primite,
-  /// inventarul lor, raportul AI si raportul semnat.
-  ///
-  /// Optional cat timp mai exista dosare legate doar de vechea `Association`;
-  /// dosarele noi vin toate cu contract.
-  contractId  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  association Association @relation(fields: [associationId], references: [id], onDelete: Cascade)
-  contract    Contract?   @relation(fields: [contractId], references: [id], onDelete: Cascade)
-  files       DocumentFile[]
-  constatari  Constatare[]
-  evenimente  EvenimentFlux[]
+  contract   Contract        @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  fisiere    Fisier[]
+  constatari Constatare[]
+  evenimente EvenimentFlux[]
+  reports    Report[]
 
-  @@index([contractId, year, month])
+  /// O singura luna per contract: al doilea dosar pe august ar insemna doua
+  /// adevaruri despre aceeasi perioada.
+  @@unique([contractId, an, luna])
+  @@index([etapa])
+}
+
+/// Un fisier din dosar, asa cum sta el in Vercel Blob (store PRIVAT).
+///
+/// In baza tinem doar adresa; continutul nu se serveste niciodata direct, ci
+/// prin ruta de descarcare, care verifica intai a cui e dosarul.
+model Fisier {
+  id       String @id @default(cuid())
+  dosarId  String
+  tip      String // lista_plata | explicatii_lista | registru_casa | facturi | ...
+  eticheta String
+  /// Numele original, asa cum l-a trimis omul.
+  numeFisier String
+  /// Adresa din Blob; fara token nu se poate citi.
+  blobUrl  String
+  mimeType String
+  marime   Int
+  createdAt DateTime @default(now())
+
+  dosar Dosar @relation(fields: [dosarId], references: [id], onDelete: Cascade)
+
+  @@index([dosarId])
 }
 
 /// O constatare de cenzorat: ce s-a gasit, cat de grav e, pe ce se sprijina.
-/// Inainte, „constatarile" erau un sir JSON cu titluri de sectiune dintr-un text
-/// generat de AI. Aici fiecare are severitate, sursa, probe si o stare pe care
-/// cenzorul o schimba la revizuire — iar scorul se recalculeaza din ele.
 model Constatare {
   id          String   @id @default(cuid())
-  documentId  String
+  dosarId     String
   /// Cod stabil (ex. CASA-PLAFON), ca aceeasi problema sa poata fi urmarita de la o luna la alta.
   cod         String
   titlu       String
@@ -241,7 +177,7 @@ model Constatare {
   severitate  String   // critica | ridicata | medie | scazuta | info
   sursa       String   // regula | ai | cenzor
   temei       String?
-  /// Cifrele pe care se sprijina constatarea, ca sa nu fie nevoie de redeschiderea PDF-ului.
+  /// Cifrele pe care se sprijina, ca sa nu fie nevoie de redeschiderea PDF-ului.
   probe       Json?
   recomandare String?
   stare       String   @default("deschisa") // deschisa | acceptata | respinsa
@@ -250,73 +186,59 @@ model Constatare {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  dosar Dosar @relation(fields: [dosarId], references: [id], onDelete: Cascade)
 
-  @@index([documentId])
+  @@index([dosarId])
 }
 
-/// Jurnalul fluxului. Bara de progres din ecranul clientului se alimenteaza de
-/// aici, nu dintr-un contor care creste singur la fiecare 560 de milisecunde.
+/// Jurnalul fluxului. Bara de progres se alimenteaza de aici, nu dintr-un
+/// contor care creste singur in browser.
 model EvenimentFlux {
-  id         String   @id @default(cuid())
-  documentId String
-  etapa      String
-  stare      String   // in_lucru | gata | esuata
-  mesaj      String
-  createdAt  DateTime @default(now())
+  id        String   @id @default(cuid())
+  dosarId   String
+  etapa     String
+  stare     String // in_lucru | gata | esuata
+  mesaj     String
+  createdAt DateTime @default(now())
 
-  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  dosar Dosar @relation(fields: [dosarId], references: [id], onDelete: Cascade)
 
-  @@index([documentId, createdAt])
+  @@index([dosarId, createdAt])
 }
 
-// Fisierele unui dosar, asa cum stau ele in Vercel Blob (store PRIVAT). In baza
-// tinem doar adresa; continutul nu se serveste niciodata direct, ci prin ruta de
-// descarcare, care verifica intai daca dosarul e al celui care cere. Vezi
-// lib/stocare.ts si app/api/dashboard/documents/[id]/fisiere/[fileId].
-model DocumentFile {
-  id         String   @id @default(cuid())
-  documentId String
-  type       String   // lista_plata | explicatii_lista | distributia_facturilor | facturi | extras_cont
-  label      String
-  fileName   String   // numele original, asa cum l-a trimis omul
-  blobUrl    String   // adresa din Blob; fara token nu se poate citi
-  mimeType   String
-  size       Int
-  createdAt  DateTime @default(now())
-
-  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
-
-  @@index([documentId])
-}
-
+/// Un raport din dosarul lunii.
+///
+/// Sunt doua feluri, si stau amandoua aici: `ai` — ce a constatat verificarea
+/// automata; `expert` — ce a intocmit si a semnat cenzorul. Al doilea il are pe
+/// primul in fata cand se scrie, dar nu il inlocuieste: raman amandoua in dosar.
 model Report {
-  id            String    @id @default(cuid())
-  associationId String
-  title         String
-  month         String?
-  year          Int?
-  fileUrl       String?
-  aiDraft       String?
-  status        String    @default("draft")
-  approvedBy    String?
-  approvedAt    DateTime?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id         String @id @default(cuid())
+  dosarId    String
+  contractId String
+  tip        String @default("ai") // ai | expert
 
-  /// Raportul in forma structurata (date + constatari + scor), din care se
-  /// genereaza si ecranul, si PDF-ul. `aiDraft` ramane pentru rapoartele vechi.
-  data       Json?
-  documentId String?
-  semnatDe   String?
-  semnatLa   DateTime?
+  titlu   String
+  /// Raportul in forma structurata: date, constatari, scor.
+  date    Json?
+  status  String @default("draft") // draft | publicat
 
-  association Association @relation(fields: [associationId], references: [id], onDelete: Cascade)
+  semnatDe String?
+  semnatLa DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  dosar    Dosar    @relation(fields: [dosarId], references: [id], onDelete: Cascade)
+  contract Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+
+  /// Un singur raport de fiecare fel intr-un dosar.
+  @@unique([dosarId, tip])
+  @@index([contractId])
 }
 
-// Cache Q&A pentru asistentul de ajutor: întrebările standalone (fără context)
-// se rețin normalizate; la o întrebare identică se servește răspunsul din DB,
-// fără apel la Claude. `ver` = hash-ul manualului; la schimbare, se recalculează.
+/// Cache Q&A pentru asistentul de ajutor: intrebarile fara context se retin
+/// normalizate; la o intrebare identica se serveste raspunsul din baza, fara
+/// apel la model. `ver` = amprenta manualului; la schimbare, se recalculeaza.
 model AsistentCache {
   id           String   @id @default(cuid())
   questionNorm String   @unique

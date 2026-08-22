@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { poateVedeaAsociatia } from "@/lib/acces";
+import { poateVedeaContractul } from "@/lib/acces";
 import { constatariDosar } from "@/lib/cenzorat/pipeline";
 import { calculeazaScor } from "@/lib/cenzorat/scor";
 import { ExtrasDosar } from "@/lib/cenzorat/tipuri";
@@ -22,41 +22,39 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 
   const { id } = await params;
 
-  const dosar = await prisma.document.findUnique({
+  const dosar = await prisma.dosar.findUnique({
     where: { id },
-    select: {
-      id: true, title: true, month: true, year: true, status: true,
-      etapa: true, stareEtapa: true, aiScore: true, verdict: true, incredere: true,
-      extras: true, createdAt: true, terminatLa: true, associationId: true,
-      association: { select: { id: true, name: true, cui: true, address: true, phone: true, user: { select: { name: true, email: true } } } },
-      files: { select: { id: true, fileName: true, label: true, type: true, mimeType: true, size: true }, orderBy: { createdAt: "asc" } },
+    include: {
+      contract: { select: { id: true, denumire: true, cui: true, adresa: true, telefon: true, email: true, reprezentant: true } },
+      fisiere: { select: { id: true, numeFisier: true, eticheta: true, tip: true, mimeType: true, marime: true }, orderBy: { createdAt: "asc" } },
+      reports: { where: { tip: "expert" }, select: { id: true, status: true, semnatDe: true, semnatLa: true } },
     },
   });
   if (!dosar) return NextResponse.json({ error: "Dosar negăsit" }, { status: 404 });
 
-  if (!(await poateVedeaAsociatia(user, dosar.associationId))) {
+  if (!(await poateVedeaContractul(user, dosar.contractId))) {
     return NextResponse.json({ error: "Neautorizat" }, { status: 403 });
   }
 
   const constatari = await constatariDosar(id);
-  const raport = await prisma.report.findFirst({
-    where: { documentId: id },
-    select: { id: true, status: true, semnatDe: true, semnatLa: true },
-  });
 
   return NextResponse.json({
     dosar: {
-      id: dosar.id, titlu: dosar.title, luna: dosar.month, an: dosar.year,
+      id: dosar.id,
+      titlu: dosar.titlu ?? `${dosar.luna} ${dosar.an}`,
+      luna: dosar.luna, an: dosar.an,
       etapa: dosar.etapa, stareEtapa: dosar.stareEtapa,
       incredere: dosar.incredere, creatLa: dosar.createdAt, terminatLa: dosar.terminatLa,
     },
-    asociatie: dosar.association,
+    contract: dosar.contract,
     extras: (dosar.extras as ExtrasDosar | null) ?? null,
-    fisiere: dosar.files,
+    fisiere: dosar.fisiere,
     constatari,
     // Scorul se recalculeaza din starea de acum a constatarilor, nu se ia din
     // coloana salvata: cenzorul poate sa fi respins ceva de la ultima citire.
     scor: calculeazaScor(constatari),
-    raport,
+    // Raportul expertului, daca exista deja unul: cand e semnat, ecranul se
+    // inchide la modificari.
+    raport: dosar.reports[0] ?? null,
   });
 }

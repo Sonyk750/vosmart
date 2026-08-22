@@ -20,9 +20,6 @@ const disallow = [
   "/api/",
   "/panou/",
   "/login",
-  "/corporate/dashboard/",
-  "/corporate/checkout/",
-  "/corporate/verify/",
 ]
 
 export default function robots(): MetadataRoute.Robots {

@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { poateVedeaAsociatia } from "@/lib/acces";
+import { poateVedeaContractul } from "@/lib/acces";
 import { constatariDosar } from "@/lib/cenzorat/pipeline";
 import { calculeazaScor } from "@/lib/cenzorat/scor";
 import { increderaDate } from "@/lib/cenzorat/reguli";
 import { ExtrasDosar } from "@/lib/cenzorat/tipuri";
 
 /**
- * Semnarea raportului.
+ * Semnarea raportului de expert.
  *
  * Momentul in care proiectul devine document. Ce se intampla aici:
  *  - constatarile ramase „deschise" se considera acceptate — cenzorul le-a
@@ -16,10 +16,8 @@ import { ExtrasDosar } from "@/lib/cenzorat/tipuri";
  *  - se ingheata datele: raportul pastreaza o copie a constatarilor si a
  *    cifrelor de la momentul semnarii, ca sa nu se schimbe sub semnatura daca
  *    dosarul se reia mai tarziu;
- *  - abia acum raportul devine vizibil clientului.
- *
- * Fara pasul asta, un dosar nerevizuit ajungea la asociatie ca „raport" — exact
- * lucrul pe care un cenzor il pune la semnatura lui.
+ *  - raportul AI ramane in dosar, alaturi. Nu e inlocuit: unul spune ce a
+ *    constatat masina, celalalt ce a constatat si a semnat omul.
  */
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -28,20 +26,20 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   const { id } = await params;
 
-  const dosar = await prisma.document.findUnique({
+  const dosar = await prisma.dosar.findUnique({
     where: { id },
-    select: {
-      associationId: true, month: true, year: true, extras: true, incredere: true,
-      association: { select: { name: true, cui: true, address: true } },
-    },
+    include: { contract: { select: { id: true, denumire: true, cui: true, adresa: true } } },
   });
   if (!dosar) return NextResponse.json({ error: "Dosar negăsit" }, { status: 404 });
-  if (!(await poateVedeaAsociatia(user, dosar.associationId))) {
+  if (!(await poateVedeaContractul(user, dosar.contractId))) {
     return NextResponse.json({ error: "Neautorizat" }, { status: 403 });
   }
 
-  const existent = await prisma.report.findFirst({ where: { documentId: id }, select: { id: true, status: true } });
-  if (existent?.status === "published") {
+  const existent = await prisma.report.findUnique({
+    where: { dosarId_tip: { dosarId: id, tip: "expert" } },
+    select: { id: true, status: true },
+  });
+  if (existent?.status === "publicat") {
     return NextResponse.json({ error: "Raportul este deja semnat." }, { status: 409 });
   }
 
@@ -51,7 +49,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   // „Deschisă" la semnare inseamna „acceptata": cenzorul a trecut prin ea si a
   // lasat-o in picioare.
   await prisma.constatare.updateMany({
-    where: { documentId: id, stare: "deschisa" },
+    where: { dosarId: id, stare: "deschisa" },
     data: { stare: "acceptata" },
   });
 
@@ -61,16 +59,16 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   const semnatar = user.name || user.email;
   const acum = new Date();
-  const titlu = `Raport de cenzor · ${dosar.month ?? ""} ${dosar.year ?? ""} — ${dosar.association?.name ?? ""}`.replace(/\s+/g, " ").trim();
+  const titlu = `Raport de cenzor · ${dosar.luna} ${dosar.an} — ${dosar.contract.denumire}`;
 
   const dateRaport = {
     versiune: 2,
     asociatie: {
-      denumire: dosar.association?.name ?? null,
-      cui: dosar.association?.cui ?? null,
-      adresa: dosar.association?.address ?? null,
+      denumire: dosar.contract.denumire,
+      cui: dosar.contract.cui,
+      adresa: dosar.contract.adresa,
     },
-    perioada: { luna: dosar.month, an: dosar.year },
+    perioada: { luna: dosar.luna, an: dosar.an },
     extras,
     incredere: extras ? increderaDate(extras) : { procent: dosar.incredere ?? 0, gasite: 0, total: 0 },
     scor,
@@ -80,30 +78,23 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     semnatLa: acum.toISOString(),
   };
 
-  const raport = existent
-    ? await prisma.report.update({
-        where: { id: existent.id },
-        data: {
-          title: titlu, data: dateRaport as never, status: "published",
-          semnatDe: semnatar, semnatLa: acum, approvedBy: user.id, approvedAt: acum,
-        },
-      })
-    : await prisma.report.create({
-        data: {
-          associationId: dosar.associationId, documentId: id, title: titlu,
-          month: dosar.month, year: dosar.year, data: dateRaport as never,
-          status: "published", semnatDe: semnatar, semnatLa: acum,
-          approvedBy: user.id, approvedAt: acum,
-        },
-      });
+  const raport = await prisma.report.upsert({
+    where: { dosarId_tip: { dosarId: id, tip: "expert" } },
+    update: { titlu, date: dateRaport as never, status: "publicat", semnatDe: semnatar, semnatLa: acum },
+    create: {
+      dosarId: id, contractId: dosar.contractId, tip: "expert",
+      titlu, date: dateRaport as never, status: "publicat", semnatDe: semnatar, semnatLa: acum,
+    },
+    select: { id: true },
+  });
 
   await prisma.$transaction([
-    prisma.document.update({
+    prisma.dosar.update({
       where: { id },
-      data: { etapa: "semnat", stareEtapa: "gata", status: "published", aiScore: scor.valoare, verdict: scor.verdict },
+      data: { etapa: "semnat", stareEtapa: "gata", scor: scor.valoare, verdict: scor.verdict },
     }),
     prisma.evenimentFlux.create({
-      data: { documentId: id, etapa: "semnat", stare: "gata", mesaj: `Raport semnat de ${semnatar}` },
+      data: { dosarId: id, etapa: "semnat", stare: "gata", mesaj: `Raport semnat de ${semnatar}` },
     }),
   ]);
 

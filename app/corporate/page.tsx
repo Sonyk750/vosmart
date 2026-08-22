@@ -4,7 +4,7 @@ import { Ecosistem } from "@/app/components/Ecosistem";
 import { useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { useCuiAutofill } from "@/app/hooks/useCuiAutofill";
+import FormularOferta from "@/app/components/FormularOferta";
 
 const PACKAGES = [
   {
@@ -72,65 +72,8 @@ function PackageFromUrl({ onPackage }: { onPackage: (pkg: string) => void }) {
 
 export default function CorporatePage() {
   const [selectedPackage, setSelectedPackage] = useState("business");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState(false);
-  const [isTrial, setIsTrial] = useState(false);
-  const [emailError, setEmailError] = useState<string[]>([]);
-
-  // Register
-  const [companyName, setCompanyName] = useState("");
-  const [cui, setCui] = useState("");
-  const [regCom, setRegCom] = useState("");
-  const [city, setCity] = useState("");
-  const [street, setStreet] = useState("");
-  const [phone, setPhone] = useState("");
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-
-  const cuiStatus = useCuiAutofill(cui, data => {
-    setCompanyName(data.denumire);
-    if (data.oras || data.strada) {
-      setCity(data.oras);
-      setStreet(data.strada);
-    } else {
-      setStreet(data.adresa);
-    }
-    if (data.telefon && !phone) setPhone(data.telefon);
-  });
-
-  async function handleRegister(e: React.FormEvent) {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
-    try {
-      const res = await fetch("/api/corporate/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ companyName, cui, regCom, address: [street, city].filter(Boolean).join(", "), phone, name, email, password, package: selectedPackage }),
-      });
-      const data = await res.json();
-      if (!res.ok) { setError(data.error || "Eroare"); return; }
-
-      if (data.isTrial) {
-        setIsTrial(true);
-        setSuccess(true);
-        if (data.emailErrors?.length) setEmailError(data.emailErrors);
-        return;
-      }
-
-      // Plan plătit: serverul a creat o sesiune Stripe Checkout — mergem direct
-      // la pagina de plată găzduită de Stripe. Același link e trimis și pe email.
-      if (data.checkoutUrl) {
-        window.location.href = data.checkoutUrl;
-        return;
-      }
-
-      setSuccess(true);
-    } catch { setError("Eroare de conexiune"); }
-    finally { setLoading(false); }
-  }
+  // Starea de inregistrare a plecat odata cu pilnia: pachetul ales serveste
+  // acum doar la a spune ce ofera ceri, in mesajul care ajunge pe email.
 
   return (
     <main className="min-h-screen bg-[#050814] text-white">
@@ -261,155 +204,22 @@ export default function CorporatePage() {
       {/* Formular */}
       <section className="px-5 pb-20 sm:px-6">
         <div className="mx-auto max-w-lg">
-          {success ? (
-            isTrial ? (
-              <div className="rounded-3xl border border-amber-500/30 bg-amber-500/10 p-10 text-center">
-                <div className="text-5xl mb-4">✉️</div>
-                <h3 className="text-xl font-bold text-amber-300 mb-2">Verificați emailul!</h3>
-                <p className="text-slate-300 text-sm mb-2">
-                  Am trimis un email cu link de activare la adresa înregistrată.
-                  <strong className="text-white"> Trebuie să confirmați emailul</strong> pentru a activa contul Trial.
-                </p>
-                <p className="text-xs text-slate-500 mb-6">
-                  Linkul este valabil 48 de ore. Verificați și folderul Spam dacă nu găsiți emailul.
-                </p>
-                <div className="rounded-xl border border-white/10 bg-black/20 p-4 text-left text-sm text-slate-400 space-y-2 mb-6">
-                  <p className="font-semibold text-white text-xs uppercase tracking-wider mb-2">Ce urmează:</p>
-                  <p>1. Căutați emailul de la <span className="text-amber-300">VoSmart</span> cu subiectul „Confirmați adresa de email"</p>
-                  <p>2. Apăsați butonul de activare din email</p>
-                  <p>3. Veți fi redirecționat spre portal și puteți intra cu datele create</p>
-                </div>
-                {emailError.length > 0 && (
-                  <div className="mt-4 rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-left">
-                    <p className="text-sm font-semibold text-red-300 mb-1">⚠️ Emailul de verificare nu a putut fi trimis</p>
-                    {emailError.map((e, i) => <p key={i} className="text-xs text-red-400">{e}</p>)}
-                    <p className="text-xs text-slate-400 mt-2">Contactați <a href="mailto:office@vosmart.ro" className="text-violet-400">office@vosmart.ro</a> pentru activare manuală.</p>
-                  </div>
-                )}
-                <div className="mt-4 pt-4 border-t border-white/5">
-                  <p className="text-xs text-slate-500 mb-3">Vrei un plan complet fără limitări trial?</p>
-                  <div className="flex flex-wrap gap-2 justify-center">
-                    {PACKAGES.map(p => (
-                      <a key={p.key} href={`/corporate#pachet-${p.key}`}
-                        className="text-xs rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-slate-300 hover:bg-white/10 transition">
-                        {p.name} — {p.price} lei
-                      </a>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="rounded-3xl border border-emerald-500/30 bg-emerald-500/10 p-10 text-center">
-                <div className="text-5xl mb-4">✅</div>
-                <h3 className="text-xl font-bold text-emerald-300 mb-2">Cerere înregistrată!</h3>
-                <p className="text-slate-300 text-sm mb-4">
-                  Contul tău corporate este în așteptare. Te vom contacta în maxim 24 ore pentru activare și detalii de plată.
-                </p>
-                <p className="text-xs text-slate-500">Pachet ales: <strong className="text-white">{PACKAGES.find(p => p.key === selectedPackage)?.name}</strong> — {PACKAGES.find(p => p.key === selectedPackage)?.priceLabel}</p>
-              </div>
-            )
-          ) : (
-            <>
-              {/* Inregistrare aici, autentificarea in singurul loc unde se face: /login */}
-              <div className="flex rounded-xl border border-white/10 bg-white/[0.03] p-1 mb-6">
-                <span className="flex-1 rounded-lg bg-violet-600 py-2.5 text-center text-sm font-semibold text-white shadow-[0_0_20px_rgba(124,58,237,0.4)]">
-                  Înregistrare
-                </span>
-                <a href="/login"
-                  className="flex-1 rounded-lg py-2.5 text-center text-sm font-semibold text-slate-400 transition hover:text-white">
-                  Autentificare
-                </a>
-              </div>
-
-              <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-8">
-                {error && <div className="mb-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">{error}</div>}
-
-                <form onSubmit={handleRegister} className="space-y-4">
-                  <h3 className="text-lg font-semibold mb-1">
-                    {selectedPackage === "trial" ? "Activează contul Trial Gratuit" : "Înregistrare firmă de cenzorat"}
-                  </h3>
-                  <div className={`flex items-center gap-3 rounded-xl border px-4 py-3 mb-2 ${
-                    selectedPackage === "trial"
-                      ? "border-amber-500/30 bg-amber-500/10"
-                      : "border-white/10 bg-black/10"
-                  }`}>
-                    <span className="text-xs text-slate-400">Pachet ales:</span>
-                    <span className={`text-sm font-semibold ${selectedPackage === "trial" ? "text-amber-300" : "text-violet-300"}`}>
-                      {selectedPackage === "trial"
-                        ? "Trial Gratuit — 0 lei"
-                        : `${PACKAGES.find(p => p.key === selectedPackage)?.name} — ${PACKAGES.find(p => p.key === selectedPackage)?.priceLabel}`}
-                    </span>
-                  </div>
-
-                  <div className="border-b border-white/5 pb-4">
-                    <p className="text-xs text-slate-400 uppercase tracking-wider mb-3">Date firmă</p>
-                    <div className="space-y-3">
-                      <input type="text" required value={companyName} onChange={e => setCompanyName(e.target.value)}
-                        placeholder="Numele firmei de cenzorat *" className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-violet-500 transition" />
-                      <div>
-                        <input type="text" value={cui} onChange={e => setCui(e.target.value)}
-                          placeholder="CUI / Cod fiscal" className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-violet-500 transition" />
-                        {cuiStatus === "loading" && <p className="mt-1.5 text-xs text-slate-500">Se caută firma după CUI...</p>}
-                        {cuiStatus === "found" && <p className="mt-1.5 text-xs text-emerald-400">Date completate automat din ANAF</p>}
-                        {cuiStatus === "notfound" && <p className="mt-1.5 text-xs text-slate-500">Firma nu a fost găsită în ANAF — completează manual</p>}
-                      </div>
-                      {selectedPackage !== "trial" && (
-                        <input type="text" value={regCom} onChange={e => setRegCom(e.target.value)}
-                          placeholder="Nr. Reg. Com. (ex: J40/1234/2020)"
-                          className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-violet-500 transition" />
-                      )}
-                      <input type="text" value={city} onChange={e => setCity(e.target.value)}
-                        placeholder="Oraș" className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-violet-500 transition" />
-                      <input type="text" value={street} onChange={e => setStreet(e.target.value)}
-                        placeholder="Stradă și număr" className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-violet-500 transition" />
-                      <input type="text" value={phone} onChange={e => setPhone(e.target.value)}
-                        placeholder="Telefon" className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-violet-500 transition" />
-                    </div>
-                  </div>
-
-                  {selectedPackage !== "trial" && (
-                    <div className="border-b border-white/5 pb-4">
-                      <p className="text-xs text-slate-400 uppercase tracking-wider mb-1">Date facturare</p>
-                      <p className="text-xs text-slate-600 mb-3">Folosite pe factura emisă după confirmare plată</p>
-                      <div className="rounded-xl border border-violet-500/15 bg-violet-500/5 px-4 py-3 text-xs text-slate-400 space-y-1">
-                        <p>✓ <strong className="text-slate-300">Firmă:</strong> {companyName || "—"}</p>
-                        {cui && <p>✓ <strong className="text-slate-300">CUI:</strong> {cui}</p>}
-                        {regCom && <p>✓ <strong className="text-slate-300">Reg. Com.:</strong> {regCom}</p>}
-                        {(city || street) && <p>✓ <strong className="text-slate-300">Adresă:</strong> {[street, city].filter(Boolean).join(", ")}</p>}
-                      </div>
-                    </div>
-                  )}
-
-                  <div>
-                    <p className="text-xs text-slate-400 uppercase tracking-wider mb-3">Date cont</p>
-                    <div className="space-y-3">
-                      <input type="text" required value={name} onChange={e => setName(e.target.value)}
-                        placeholder="Numele dvs. *" className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-violet-500 transition" />
-                      <input type="email" required value={email} onChange={e => setEmail(e.target.value)}
-                        placeholder="Email *" className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-violet-500 transition" />
-                      <input type="password" required minLength={8} value={password} onChange={e => setPassword(e.target.value)}
-                        placeholder="Parolă (minim 8 caractere) *" className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-violet-500 transition" />
-                    </div>
-                  </div>
-
-                  <button type="submit" disabled={loading}
-                    className={`w-full rounded-xl px-6 py-4 font-semibold transition disabled:opacity-50 ${
-                      selectedPackage === "trial"
-                        ? "bg-amber-500 hover:bg-amber-400 text-black shadow-[0_0_25px_rgba(245,158,11,0.35)]"
-                        : "bg-violet-600 hover:bg-violet-500 shadow-[0_0_25px_rgba(124,58,237,0.35)]"
-                    }`}>
-                    {loading
-                      ? "Se procesează..."
-                      : selectedPackage === "trial"
-                        ? "Activează Trial Gratuit →"
-                        : selectedPackage === "enterprise"
-                          ? "Trimite cererea →"
-                          : "Continuă spre plată →"}
-                  </button>
-                </form>
-              </div>
-            </>
-          )}
+          {/* Nu mai exista inscriere de sine statatoare: contractele de cenzorat se
+              semneaza intre noi si asociatie, nu se cumpara dintr-un formular. Ce
+              ramane aici e o cerere de oferta, care ajunge pe email. */}
+          <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-8">
+            <h3 className="text-lg font-semibold">Cere o ofertă</h3>
+            <p className="mt-1.5 text-sm leading-relaxed text-slate-400">
+              Spune-ne câte asociații ai în portofoliu și îți răspundem cu o ofertă și cu pașii
+              pentru contract. Pachetul ales acum:{" "}
+              <strong className="text-white">{PACKAGES.find(p => p.key === selectedPackage)?.name ?? "Business"}</strong>.
+            </p>
+            <FormularOferta pachet={PACKAGES.find(p => p.key === selectedPackage)?.name ?? "Business"} />
+            <p className="mt-5 border-t border-white/10 pt-4 text-center text-sm text-slate-400">
+              Ai deja cont?{" "}
+              <a href="/login" className="font-semibold text-violet-300 transition hover:text-violet-200">Autentifică-te</a>
+            </p>
+          </div>
         </div>
       </section>
 

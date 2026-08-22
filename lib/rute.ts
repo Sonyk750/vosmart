@@ -8,15 +8,13 @@ export function acasaDupaRol(role: string | null | undefined): string {
   switch (role) {
     case "admin":
     case "cenzor":
-      // Spatiul de lucru al firmei — singurul. Panoul vechi, /admin, a fost sters
-      // cu totul; nu mai exista un al doilea loc din care se lucreaza.
+      // Spatiul de lucru al firmei — singurul.
       return "/panou";
-    case "corporate":
-      return "/corporate/dashboard";
     default:
-      // Rolul „client" (asociatie) n-are inca portal propriu — il lasam in zona
-      // de cont, nu intr-o pagina care l-ar arunca inapoi la login.
-      return "/corporate";
+      // Persoana desemnata prin contract isi vede rapoartele semnate. Ecranul
+      // ei nu e inca scris; pana atunci o lasam pe pagina de prezentare, nu
+      // intr-una care ar arunca-o inapoi la login.
+      return "/";
   }
 }
 

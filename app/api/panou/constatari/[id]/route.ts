@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { poateVedeaAsociatia } from "@/lib/acces";
+import { poateVedeaContractul } from "@/lib/acces";
 import { constatariDosar } from "@/lib/cenzorat/pipeline";
 import { calculeazaScor } from "@/lib/cenzorat/scor";
 import { SEVERITATI, Severitate } from "@/lib/cenzorat/tipuri";
@@ -26,16 +26,16 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   const constatare = await prisma.constatare.findUnique({
     where: { id },
-    select: { documentId: true, document: { select: { associationId: true } } },
+    select: { dosarId: true, dosar: { select: { contractId: true } } },
   });
   if (!constatare) return NextResponse.json({ error: "Constatare negăsită" }, { status: 404 });
 
-  if (!(await poateVedeaAsociatia(user, constatare.document.associationId))) {
+  if (!(await poateVedeaContractul(user, constatare.dosar.contractId))) {
     return NextResponse.json({ error: "Neautorizat" }, { status: 403 });
   }
 
   const semnat = await prisma.report.findFirst({
-    where: { documentId: constatare.documentId, status: "published" },
+    where: { dosarId: constatare.dosarId, tip: "expert", status: "publicat" },
     select: { id: true },
   });
   if (semnat) {
@@ -63,14 +63,14 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   await prisma.constatare.update({ where: { id }, data: date });
 
-  const constatari = await constatariDosar(constatare.documentId);
+  const constatari = await constatariDosar(constatare.dosarId);
   const scor = calculeazaScor(constatari);
 
   // Scorul dosarului tine pasul cu deciziile cenzorului, ca lista de dosare sa
   // nu arate alt numar decat pupitrul de revizuire.
-  await prisma.document.update({
-    where: { id: constatare.documentId },
-    data: { aiScore: scor.valoare, verdict: scor.verdict },
+  await prisma.dosar.update({
+    where: { id: constatare.dosarId },
+    data: { scor: scor.valoare, verdict: scor.verdict },
   });
 
   return NextResponse.json({ scor, constatari });
@@ -83,10 +83,10 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
   const { id } = await params;
   const constatare = await prisma.constatare.findUnique({
     where: { id },
-    select: { sursa: true, documentId: true, document: { select: { associationId: true } } },
+    select: { sursa: true, dosarId: true, dosar: { select: { contractId: true } } },
   });
   if (!constatare) return NextResponse.json({ error: "Constatare negăsită" }, { status: 404 });
-  if (!(await poateVedeaAsociatia(user, constatare.document.associationId))) {
+  if (!(await poateVedeaContractul(user, constatare.dosar.contractId))) {
     return NextResponse.json({ error: "Neautorizat" }, { status: 403 });
   }
 
@@ -98,6 +98,6 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
   }
 
   await prisma.constatare.delete({ where: { id } });
-  const constatari = await constatariDosar(constatare.documentId);
+  const constatari = await constatariDosar(constatare.dosarId);
   return NextResponse.json({ scor: calculeazaScor(constatari), constatari });
 }

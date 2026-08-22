@@ -8,7 +8,7 @@ export async function getSession() {
 
   const session = await prisma.session.findUnique({
     where: { token },
-    include: { user: { include: { association: true } } },
+    include: { user: true },
   });
 
   if (!session) return null;
