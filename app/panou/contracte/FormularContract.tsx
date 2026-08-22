@@ -31,13 +31,31 @@ const GOL: Camp2 = {
   observatii: "",
 };
 
+/** Datele unui contract existent, aduse in forma casutelor de formular. */
+export type ContractDeEditat = { id: string } & Partial<Record<keyof typeof GOL, string | number | null>>;
+
+function dinContract(x: ContractDeEditat | undefined): Camp2 {
+  if (!x) return GOL;
+  const c: Camp2 = { ...GOL };
+  for (const cheie of Object.keys(GOL)) {
+    const v = x[cheie as keyof typeof GOL];
+    if (v === null || v === undefined) { c[cheie] = ""; continue; }
+    // Datele vin ca ISO din baza; casuta de data vrea doar „AAAA-LL-ZZ".
+    c[cheie] = cheie.startsWith("data") ? String(v).slice(0, 10) : String(v);
+  }
+  return c;
+}
+
 export default function FormularContract({
-  peSalvat, peRenunt,
+  peSalvat, peRenunt, deEditat,
 }: {
   peSalvat: () => void;
   peRenunt?: () => void;
+  /** Cand e dat, formularul modifica in loc sa adauge. */
+  deEditat?: ContractDeEditat;
 }) {
-  const [c, setC] = useState<Camp2>(GOL);
+  const editare = Boolean(deEditat);
+  const [c, setC] = useState<Camp2>(() => dinContract(deEditat));
   const [salveaza, setSalveaza] = useState(false);
   const [eroare, setEroare] = useState("");
   const [duplicat, setDuplicat] = useState(false);
@@ -66,15 +84,18 @@ export default function FormularContract({
     setSalveaza(true);
     setEroare("");
     try {
-      const r = await fetch("/api/panou/contracte", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...c, ziTermen: Number(c.ziTermen), confirmDuplicat }),
-      });
+      const r = await fetch(
+        editare ? `/api/panou/contracte/${deEditat!.id}` : "/api/panou/contracte",
+        {
+          method: editare ? "PATCH" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...c, ziTermen: Number(c.ziTermen), confirmDuplicat }),
+        },
+      );
       const d = await r.json();
       if (r.status === 409) { setDuplicat(true); setEroare(d.error); return; }
       if (!r.ok) throw new Error(d.error || "Contractul nu a putut fi salvat.");
-      setC(GOL);
+      if (!editare) setC(GOL);
       peSalvat();
     } catch (e) {
       setEroare(e instanceof Error ? e.message : "Contractul nu a putut fi salvat.");
@@ -86,8 +107,10 @@ export default function FormularContract({
   return (
     <Card className="overflow-hidden">
       <CardCap
-        titlu="Contract nou"
-        sub="Introdu CUI-ul și restul datelor firmei vin singure de la ANAF."
+        titlu={editare ? "Editează contractul" : "Contract nou"}
+        sub={editare
+          ? "Modifică ce s-a schimbat; restul rămâne cum a fost."
+          : "Introdu CUI-ul și restul datelor firmei vin singure de la ANAF."}
         actiune={peRenunt && <Buton fel="fantoma" marime="mic" onClick={peRenunt}>Renunță</Buton>}
       />
 
@@ -103,7 +126,7 @@ export default function FormularContract({
               <div className="relative">
                 <input
                   value={c.cui} onChange={pune("cui")} inputMode="numeric"
-                  placeholder="ex. 45123789" autoFocus
+                  placeholder="ex. 45123789" autoFocus={!editare}
                   className={`${claseCamp} pr-9`}
                 />
                 <span className="absolute right-3 top-1/2 -translate-y-1/2">
@@ -226,7 +249,8 @@ export default function FormularContract({
       <div className="flex flex-wrap items-center gap-3 border-t border-line bg-surface-1 px-5 py-3.5">
         <Buton fel="principal" incarca={salveaza} disabled={!poateSalva}
           onClick={() => salveazaContractul(false)}>
-          <Ic.plus className="h-4 w-4" /> Salvează contractul
+          {editare ? <Ic.bifa className="h-4 w-4" /> : <Ic.plus className="h-4 w-4" />}
+          {editare ? "Salvează modificările" : "Salvează contractul"}
         </Buton>
         {!poateSalva && (
           <span className="text-[12.5px] text-faint">Denumirea și CUI-ul sunt obligatorii.</span>

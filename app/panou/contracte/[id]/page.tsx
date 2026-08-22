@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { Card, CardCap, Eticheta, Gol } from "@/app/components/ui";
 import { dataRo, Ton } from "@/app/components/baza";
 import { Ic } from "@/app/components/icoane";
+import ActiuniContract from "../ActiuniContract";
 
 /**
  * Un contract, deschis.
@@ -74,6 +75,21 @@ export default async function PaginaContract({ params }: { params: Promise<{ id:
         </div>
         <Eticheta ton={st.ton}>{st.text}</Eticheta>
       </header>
+
+      <ActiuniContract
+        contract={{
+          id: c.id, status: c.status,
+          cui: c.cui, denumire: c.denumire, regCom: c.regCom, adresa: c.adresa,
+          localitate: c.localitate, telefon: c.telefon, email: c.email,
+          reprezentant: c.reprezentant, numar: c.numar,
+          dataSemnarii: c.dataSemnarii?.toISOString() ?? null,
+          dataIncetarii: c.dataIncetarii?.toISOString() ?? null,
+          ziTermen: c.ziTermen,
+          persoanaNume: c.persoanaNume, persoanaFunctie: c.persoanaFunctie,
+          persoanaEmail: c.persoanaEmail, persoanaTelefon: c.persoanaTelefon,
+          observatii: c.observatii,
+        }}
+      />
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>

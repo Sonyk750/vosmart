@@ -37,6 +37,23 @@ export default function ContracteClient({ initialCount }: { initialCount: number
   const [incarca, setIncarca] = useState(true);
   const [formularDeschis, setFormularDeschis] = useState(initialCount === 0);
   const [reincarca, setReincarca] = useState(0);
+  const [deEditat, setDeEditat] = useState<Contract | null>(null);
+  const [deReziliat, setDeReziliat] = useState<Contract | null>(null);
+  const [lucrez, setLucrez] = useState<string | null>(null);
+
+  async function schimbaStarea(id: string, status: string) {
+    setLucrez(id);
+    try {
+      const r = await fetch(`/api/panou/contracte/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+      if (r.ok) { setDeReziliat(null); setReincarca(v => v + 1); }
+    } finally {
+      setLucrez(null);
+    }
+  }
 
   useEffect(() => {
     let activ = true;
@@ -74,7 +91,44 @@ export default function ContracteClient({ initialCount }: { initialCount: number
         )}
       </header>
 
-      {formularDeschis && (
+      {deEditat && (
+        <div className="mb-5">
+          <FormularContract
+            deEditat={{
+              id: deEditat.id, cui: deEditat.cui, denumire: deEditat.denumire,
+              adresa: deEditat.adresa, localitate: deEditat.localitate,
+              telefon: deEditat.telefon, email: deEditat.email,
+              reprezentant: deEditat.reprezentant, numar: deEditat.numar,
+              dataSemnarii: deEditat.dataSemnarii, dataIncetarii: deEditat.dataIncetarii,
+              ziTermen: deEditat.ziTermen, persoanaNume: deEditat.persoanaNume,
+              persoanaEmail: deEditat.persoanaEmail,
+            }}
+            peRenunt={() => setDeEditat(null)}
+            peSalvat={() => { setDeEditat(null); setReincarca(v => v + 1); }}
+          />
+        </div>
+      )}
+
+      {deReziliat && (
+        <Card className="mb-5 border-warn/30 bg-warn-dim/40 px-5 py-4">
+          <p className="text-[13.5px] text-ink">
+            Reziliezi contractul cu <strong>{deReziliat.denumire}</strong>?
+          </p>
+          <p className="mt-1.5 max-w-2xl text-[12.5px] leading-relaxed text-muted">
+            Trece în starea „încheiat” și iese din fluxul lunar. Dosarele și rapoartele semnate
+            rămân la locul lor — asociația are dreptul la ele și după încheierea colaborării.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Buton fel="pericol" marime="mic" incarca={lucrez === deReziliat.id}
+              onClick={() => schimbaStarea(deReziliat.id, "incheiat")}>
+              Confirm rezilierea
+            </Buton>
+            <Buton fel="fantoma" marime="mic" onClick={() => setDeReziliat(null)}>Renunță</Buton>
+          </div>
+        </Card>
+      )}
+
+      {formularDeschis && !deEditat && (
         <div className="mb-5">
           <FormularContract
             peSalvat={() => {
@@ -158,11 +212,33 @@ export default function ContracteClient({ initialCount }: { initialCount: number
                       <p className="text-[11px] text-faint">termen lunar</p>
                     </div>
 
-                    <Link href={`/panou/contracte/${c.id}`}
-                      className="shrink-0 rounded-md p-1.5 text-faint transition-colors hover:bg-surface-3 hover:text-ink"
-                      aria-label={`Deschide ${c.denumire}`}>
-                      <Ic.dreapta className="h-4 w-4" />
-                    </Link>
+                    {/* Cele trei lucruri care se fac cu un contract, la vedere pe
+                        rand. „Info" duce in pagina lui, unde stau si dosarele. */}
+                    <div className="flex shrink-0 items-center gap-1.5">
+                      <Link href={`/panou/contracte/${c.id}`}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-line-strong bg-surface-3 px-2.5 py-1.5 text-[12px] font-medium text-ink transition-colors hover:bg-surface-4">
+                        <Ic.info className="h-3.5 w-3.5" /> Info
+                      </Link>
+                      <button
+                        onClick={() => setDeEditat(c)}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-line-strong bg-surface-3 px-2.5 py-1.5 text-[12px] font-medium text-ink transition-colors hover:bg-surface-4">
+                        <Ic.contract className="h-3.5 w-3.5" /> Editează
+                      </button>
+                      {c.status === "incheiat" ? (
+                        <button
+                          onClick={() => schimbaStarea(c.id, "activ")}
+                          disabled={lucrez === c.id}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-ok/30 bg-ok-dim px-2.5 py-1.5 text-[12px] font-medium text-ok transition-colors hover:bg-ok/20 disabled:opacity-45">
+                          <Ic.bifa className="h-3.5 w-3.5" /> Reactivează
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => setDeReziliat(c)}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-bad/30 bg-bad-dim px-2.5 py-1.5 text-[12px] font-medium text-bad transition-colors hover:bg-bad/20">
+                          <Ic.x className="h-3.5 w-3.5" /> Reziliază
+                        </button>
+                      )}
+                    </div>
                   </li>
                 );
               })}
