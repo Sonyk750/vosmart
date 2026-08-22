@@ -47,8 +47,12 @@ export async function POST(req: NextRequest) {
         email: email.toLowerCase(),
         password: await hashPassword(password),
         role: "corporate",
-        // Trial starts pending (needs email verification); paid starts active
-        status: isTrial ? "pending" : "active",
+        // NIMENI nu porneste activ. Trialul se activeaza prin linkul de pe email
+        // (/api/corporate/verify), pachetul platit prin webhookul Stripe, dupa ce
+        // plata chiar intra. Inainte se pornea activ pe loc pentru pachetele
+        // platite — adica oricine isi facea cont "enterprise" si il folosea fara
+        // sa plateasca vreodata, pentru ca Enterprise nici nu trece prin Checkout.
+        status: "pending",
         corporateAccount: {
           create: {
             companyName,

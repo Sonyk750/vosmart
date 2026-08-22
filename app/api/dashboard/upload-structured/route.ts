@@ -58,8 +58,18 @@ export async function POST(req: NextRequest) {
     if (association?.corporateId) {
       const corpAccount = await prisma.corporateAccount.findUnique({
         where: { id: association.corporateId },
-        select: { package: true },
+        select: { package: true, status: true },
       });
+
+      // Ecranul „Cont în așteptare" din panou nu e o incuietoare — e doar un
+      // ecran. Analiza AI costa bani reali la fiecare dosar, deci poarta se pune
+      // aici, in ruta: cont neactivat inseamna zero dosare trimise.
+      if (corpAccount && corpAccount.status !== "active") {
+        return NextResponse.json({
+          error: "Contul firmei nu este activat. Finalizați plata sau așteptați activarea de către VoSmart.",
+        }, { status: 403 });
+      }
+
       if (corpAccount?.package === "trial") {
         const blocked = normalizedTypes.filter((t: string) => !TRIAL_ALLOWED_TYPES.includes(t));
         if (blocked.length > 0) {

@@ -97,6 +97,16 @@ async function syncSubscription(subscription: Stripe.Subscription) {
       },
     });
 
+    // Aici se deschide efectiv usa: pana la plata, utilizatorul e `pending` si
+    // login-ul il refuza (vezi app/api/corporate/register). Contul si omul se
+    // activeaza in acelasi moment, altfel ar ramane unul dintre ele in urma.
+    if (isActivatingNow) {
+      await prisma.user.update({
+        where: { id: corporate.userId },
+        data: { status: "active" },
+      });
+    }
+
     if (isActivatingNow && corporate.user) {
       const pkgInfo = CORPORATE_PACKAGES[corporate.package as CorporatePackage];
       const recipientName = corporate.user.name || corporate.companyName;
