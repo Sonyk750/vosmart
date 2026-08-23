@@ -5,7 +5,7 @@ import { Buton, Camp, Card, CardCap, Eticheta, Gol, InelScor, Rotitor } from "@/
 import { claseCamp, dataRo, lei, Ton } from "@/app/components/baza";
 import { Ic } from "@/app/components/icoane";
 import { SEVERITATI, Severitate } from "@/lib/cenzorat/tipuri";
-import { eticheta as etichetaTip, lipsuri } from "@/lib/cenzorat/documente";
+import { TIPURI, eticheta as etichetaTip, lipsuri } from "@/lib/cenzorat/documente";
 
 /**
  * Pupitrul de revizuire al cenzorului.
@@ -71,6 +71,37 @@ export default function PupitruCenzor({ dosarId }: { dosarId: string }) {
   const [eroare, setEroare] = useState("");
   const [lucreaza, setLucreaza] = useState<string | null>(null);
   const [fisierDeschis, setFisierDeschis] = useState<Fisier | null>(null);
+  const [corecteaza, setCorecteaza] = useState(false);
+  const [ciorna, setCiorna] = useState({ denumire: "", tip: "" });
+  const [salveazaCorectia, setSalveazaCorectia] = useState(false);
+
+  /**
+   * Corectura documentului, chiar sub el.
+   *
+   * Modelul nimereste aproape mereu, dar „aproape" nu ajunge intr-un dosar care
+   * se semneaza — iar aici e locul in care cenzorul chiar se uita la document.
+   * Dupa salvare, `tipSursa` trece pe „om" si nicio recitire nu-l mai atinge.
+   */
+  async function trimiteCorectia() {
+    if (!fisierDeschis || salveazaCorectia) return;
+    setSalveazaCorectia(true);
+    setEroare("");
+    try {
+      const r = await fetch(`/api/panou/fisiere/${fisierDeschis.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(ciorna),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(d.error || "Corectura nu a putut fi salvată.");
+      setCorecteaza(false);
+      await adu();
+    } catch (e) {
+      setEroare(e instanceof Error ? e.message : "Corectura nu a putut fi salvată.");
+    } finally {
+      setSalveazaCorectia(false);
+    }
+  }
 
   /**
    * Inventarul dosarului, pe hartie.
@@ -288,13 +319,57 @@ export default function PupitruCenzor({ dosarId }: { dosarId: string }) {
               <div className="flex items-center justify-between gap-3 border-t border-line px-4 py-2.5">
                 <p className="truncate text-[12px] text-faint">
                   {numeleFisierului(fisierDeschis)} · {fisierDeschis.numeFisier} · {(fisierDeschis.marime / 1024).toFixed(0)} KB
+                  {fisierDeschis.tipSursa === "om" && " · corectat de cenzor"}
                 </p>
+                {!semnat && (
+                  <button
+                    onClick={() => {
+                      setCiorna({ denumire: fisierDeschis.denumireAi ?? "", tip: fisierDeschis.tip });
+                      setCorecteaza(v => !v);
+                    }}
+                    title="Corectează denumirea și tipul"
+                    className="shrink-0 rounded-md p-1 text-faint transition-colors hover:bg-surface-3 hover:text-ink"
+                  >
+                    <Ic.creion className="h-3.5 w-3.5" />
+                  </button>
+                )}
                 <a
                   href={`/api/panou/fisiere/${fisierDeschis.id}`}
                   className="inline-flex shrink-0 items-center gap-1.5 text-[12px] text-muted transition-colors hover:text-ink"
                 >
                   <Ic.descarca className="h-3.5 w-3.5" /> Descarcă
                 </a>
+              </div>
+            )}
+
+            {fisierDeschis && corecteaza && !semnat && (
+              <div className="rise border-t border-line bg-surface-1 px-4 py-3">
+                <div className="grid gap-2.5 sm:grid-cols-[1fr_200px]">
+                  <label className="block">
+                    <span className="mb-1 block text-[11px] font-medium text-muted">Denumirea documentului</span>
+                    <input
+                      value={ciorna.denumire}
+                      onChange={e => setCiorna(c => ({ ...c, denumire: e.target.value }))}
+                      onKeyDown={e => { if (e.key === "Enter") trimiteCorectia(); if (e.key === "Escape") setCorecteaza(false); }}
+                      placeholder="ex. Factură Apa Nova"
+                      autoFocus
+                      className={claseCamp}
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="mb-1 block text-[11px] font-medium text-muted">Tipul</span>
+                    <select value={ciorna.tip} onChange={e => setCiorna(c => ({ ...c, tip: e.target.value }))} className={claseCamp}>
+                      {TIPURI.map(t => <option key={t.cheie} value={t.cheie}>{t.eticheta}</option>)}
+                      <option value="altele">Altele</option>
+                    </select>
+                  </label>
+                </div>
+                <div className="mt-3 flex items-center gap-2">
+                  <Buton fel="principal" marime="mic" incarca={salveazaCorectia} onClick={trimiteCorectia}>
+                    <Ic.bifa className="h-3.5 w-3.5" /> Salvează
+                  </Buton>
+                  <Buton fel="fantoma" marime="mic" onClick={() => setCorecteaza(false)}>Renunță</Buton>
+                </div>
               </div>
             )}
           </Card>

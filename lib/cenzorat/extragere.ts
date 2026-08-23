@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { EXTRAS_GOL, ExtrasDosar } from "./tipuri";
 import { eticheta, tipDeBaza } from "./documente";
+import { citesteOffice, esteOffice, LIMITA_VERIFICARE } from "./office";
 
 /**
  * Citirea documentelor din dosar.
@@ -41,8 +42,19 @@ import { eticheta, tipDeBaza } from "./documente";
  */
 const MODEL = process.env.VOSMART_MODEL_EXTRAGERE || "claude-opus-5";
 
-/** Doar formatele pe care modelul le poate chiar vedea. */
+/** Formatele pe care modelul le poate chiar VEDEA, ca pagina. */
 const MIME_CITIBILE = ["application/pdf", "image/png", "image/jpeg", "image/webp"];
+
+/**
+ * Ce poate intra in verificare, sub orice forma.
+ *
+ * Word si Excel nu se pot arata modelului ca pagina, dar sunt arhive cu XML
+ * inauntru: din ele se scoate textul, cu tot cu cifrele din foaia de calcul.
+ * Pana acum treceau drept „format care nu poate fi citit", ceea ce insemna ca la
+ * o asociatie care isi tine registrul de casa in Excel raportul se dadea FARA
+ * registrul de casa. Vezi `lib/cenzorat/office.ts`.
+ */
+const sePoateCiti = (mimeType: string) => MIME_CITIBILE.includes(mimeType) || esteOffice(mimeType);
 
 export type FisierDeCitit = {
   tip: string;
@@ -367,10 +379,10 @@ export async function citesteDosar(
   const client = new Anthropic();
 
   const netrimise = fisiere
-    .filter(f => !MIME_CITIBILE.includes(f.mimeType))
+    .filter(f => !sePoateCiti(f.mimeType))
     .map(f => ({ tip: f.tip, numeFisier: f.numeFisier, motiv: `format ${f.mimeType} — nu poate fi citit` }));
 
-  const citibile = fisiere.filter(f => MIME_CITIBILE.includes(f.mimeType));
+  const citibile = fisiere.filter(f => sePoateCiti(f.mimeType));
   if (citibile.length === 0) {
     return { extras: { ...EXTRAS_GOL, documenteProblematice: netrimise.map(n => ({ tip: n.tip, problema: n.motiv })) }, tokensIn: 0, tokensOut: 0, netrimise };
   }
@@ -420,6 +432,22 @@ async function citesteTransa(
 
   for (const f of fisiere) {
     continut.push({ type: "text", text: `\n=== ${eticheta(f.tip)} — fișierul „${f.numeFisier}" (tip: ${f.tip}) ===` });
+
+    if (esteOffice(f.mimeType)) {
+      // Foaia de calcul nu se poate ARATA modelului, dar se poate CITI. Celulele
+      // vin ca „A2=1 | B2=2026-06-01 | C2=Încasare cotă | D2=412.50", cu datele
+      // deja traduse din numerele Excel — altfel „46204" ar fi putut trece drept
+      // sumă, iar cifra greșită ar fi ajuns într-un raport semnat.
+      const office = await citesteOffice(f.continut, f.mimeType, LIMITA_VERIFICARE);
+      continut.push({
+        type: "text",
+        text: office
+          ? `Conținutul fișierului, extras din el (nu e o imagine — e textul și celulele lui):\n${office.text}`
+          : "Fișierul nu a putut fi deschis. Tratează documentul acesta ca lipsă.",
+      });
+      continue;
+    }
+
     const data = f.continut.toString("base64");
     if (f.mimeType === "application/pdf") {
       continut.push({ type: "document", source: { type: "base64", media_type: "application/pdf", data } });

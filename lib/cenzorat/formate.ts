@@ -18,7 +18,7 @@ export type Format = {
   /** Antetele MIME pe care le trimit browserele pentru formatul asta. */
   mime: string[];
   eticheta: string;
-  /** Intra in VERIFICAREA automata, adica modelul ii poate citi cifrele din pagina? */
+  /** Intra in VERIFICAREA automata, adica modelul ii poate ajunge la cifre? */
   citibilDeAi: boolean;
   /**
    * Poate fi INVENTARIAT, adica se poate afla din el ce document e?
@@ -37,16 +37,30 @@ export const FORMATE: Format[] = [
   { extensii: [".jpg", ".jpeg"], mime: ["image/jpeg"], eticheta: "JPEG", citibilDeAi: true, inventariabil: true },
   { extensii: [".png"], mime: ["image/png"], eticheta: "PNG", citibilDeAi: true, inventariabil: true },
   { extensii: [".webp"], mime: ["image/webp"], eticheta: "WEBP", citibilDeAi: true, inventariabil: true },
+  // Word si Excel MODERNE sunt arhive cu XML inauntru: din ele se scoate textul,
+  // cu tot cu celulele foii de calcul, deci intra si in inventar, si in
+  // verificare. Vezi `lib/cenzorat/office.ts`.
   {
-    extensii: [".doc", ".docx"],
-    mime: ["application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"],
-    // .docx se inventariaza (e XML zipat); .doc vechi e binar si nu.
-    eticheta: "Word", citibilDeAi: false, inventariabil: true,
+    extensii: [".docx"],
+    mime: ["application/vnd.openxmlformats-officedocument.wordprocessingml.document"],
+    eticheta: "Word", citibilDeAi: true, inventariabil: true,
   },
   {
-    extensii: [".xls", ".xlsx"],
-    mime: ["application/vnd.ms-excel", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"],
-    eticheta: "Excel", citibilDeAi: false, inventariabil: true,
+    extensii: [".xlsx"],
+    mime: ["application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"],
+    eticheta: "Excel", citibilDeAi: true, inventariabil: true,
+  },
+  // Cele DINAINTE de Office 2007 sunt binare (OLE), nu arhive: nu se desfac cu un
+  // zip, deci nu se pot nici citi, nici inventaria. Se pastreaza si se descarca.
+  {
+    extensii: [".doc"],
+    mime: ["application/msword"],
+    eticheta: "Word (vechi)", citibilDeAi: false, inventariabil: false,
+  },
+  {
+    extensii: [".xls"],
+    mime: ["application/vnd.ms-excel"],
+    eticheta: "Excel (vechi)", citibilDeAi: false, inventariabil: false,
   },
   {
     extensii: [".zip"],

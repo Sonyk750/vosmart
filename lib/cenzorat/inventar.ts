@@ -2,6 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { TIPURI, ghicesteTip } from "./documente";
+import { citesteOffice, LIMITA_INVENTAR } from "./office";
 
 /**
  * Inventarul dosarului: ce este FIECARE document, citit din el.
@@ -130,92 +131,12 @@ async function pregatesteBucata(
     };
   }
 
-  const text = await textDinOffice(continut, mimeType);
-  if (text) return { type: "text", text };
+  const office = await citesteOffice(continut, mimeType, LIMITA_INVENTAR);
+  if (office) return { type: "text", text: `Conținutul documentului, extras din fișier:
+${office.text}` };
 
   // Ce ramane: .doc si .xls vechi (format binar, nu XML) si arhivele.
   return null;
-}
-
-/** Partile din care se scoate text, in ordinea in care conteaza. */
-const PARTI_OFFICE = [
-  "word/document.xml",          // Word: corpul documentului
-  "xl/sharedStrings.xml",       // Excel: textele foii, inclusiv anteturile
-  "xl/worksheets/sheet1.xml",   // Excel: prima foaie, cand textele sunt in linie
-];
-
-const OOXML = [
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-];
-
-/** Cate caractere trimitem dintr-un Office. Antetul e la inceput; restul e balast. */
-const TAIETURA = 6000;
-
-function faraEtichete(xml: string): string {
-  return xml
-    .replace(/<[^>]+>/g, " ")
-    .replace(/&(amp|lt|gt|quot|apos|#39);/g, m =>
-      ({ "&amp;": "&", "&lt;": "<", "&gt;": ">", "&quot;": '"', "&apos;": "'", "&#39;": "'" }[m] ?? " "))
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-/**
- * Textul dintr-un Word sau Excel.
- *
- * Un .docx/.xlsx nu e un format binar: e o arhiva ZIP cu XML inauntru, si o
- * desfacem cu ce avem deja in casa (JSZip, folosit si la arhivele incarcate).
- * Nu ne trebuie niciun serviciu si nicio biblioteca noua.
- *
- * Se ia intai TITLUL din proprietatile documentului — `docProps/core.xml`, campul
- * pe care Word si Excel il completeaza singure. De cele mai multe ori acolo scrie
- * exact ce e documentul („Registru de casă - iunie 2026"), si atunci modelul nici
- * n-are ce sa confunde. Dupa el merge inceputul continutului, ca sprijin.
- *
- * `.doc` si `.xls` vechi NU intra aici: alea chiar sunt binare (OLE), si nu se
- * desfac cu un zip. Pentru ele ramane ghicitul din numele fisierului, si randul
- * din ecran o spune deschis.
- */
-async function textDinOffice(continut: Buffer, mimeType: string): Promise<string | null> {
-  if (!OOXML.includes(mimeType)) return null;
-
-  try {
-    const { default: JSZip } = await import("jszip");
-    const arhiva = await JSZip.loadAsync(continut);
-    const bucati: string[] = [];
-
-    const proprietati = arhiva.file("docProps/core.xml");
-    if (proprietati) {
-      const xml = await proprietati.async("string");
-      const titlu = /<dc:title>([^<]*)<\/dc:title>/.exec(xml)?.[1]?.trim();
-      const subiect = /<dc:subject>([^<]*)<\/dc:subject>/.exec(xml)?.[1]?.trim();
-      const autor = /<dc:creator>([^<]*)<\/dc:creator>/.exec(xml)?.[1]?.trim();
-      if (titlu) bucati.push(`Titlul documentului: ${titlu}`);
-      if (subiect) bucati.push(`Subiect: ${subiect}`);
-      if (autor) bucati.push(`Întocmit cu / de: ${autor}`);
-    }
-
-    // Numele foilor dintr-un Excel spun adesea la fel de mult ca antetul.
-    const registru = arhiva.file("xl/workbook.xml");
-    if (registru) {
-      const foi = [...(await registru.async("string")).matchAll(/<sheet[^>]*name="([^"]+)"/g)].map(m => m[1]);
-      if (foi.length) bucati.push(`Foi: ${foi.join(", ")}`);
-    }
-
-    for (const cale of PARTI_OFFICE) {
-      const parte = arhiva.file(cale);
-      if (!parte) continue;
-      const text = faraEtichete(await parte.async("string"));
-      if (text) bucati.push(text);
-    }
-
-    const tot = bucati.join("\n").slice(0, TAIETURA);
-    return tot.length > 20 ? `Conținutul documentului, extras din fișier:\n${tot}` : null;
-  } catch (e) {
-    console.warn("[inventar] nu am putut deschide fișierul Office:", e);
-    return null;
-  }
 }
 
 async function citesteUnul(
