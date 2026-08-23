@@ -1,13 +1,12 @@
-import { requireAdmin } from "@/lib/auth";
 import DosareClient from "./DosareClient";
 
 /**
- * Dosarele lunare ale contractului.
+ * Dosarul, ca loc de lucru: documentele intr-o parte, constatarile in cealalta,
+ * si la final raportul semnat de cenzor.
  *
- * Poarta si contractele vin din `layout.tsx`; aici doar aflam numele celui care
- * lucreaza, fiindca el se scrie pe inventarul tiparit, sub semnatura.
+ * Poarta si contractele vin din `layout.tsx`. Incarcarea si administrarea
+ * lunilor NU sunt aici — sunt la „Încarcă documente", unde le e locul.
  */
-export default async function PaginaDosare() {
-  const user = await requireAdmin();
-  return <DosareClient intocmitDe={user?.name || user?.email || "VoSmart"} />;
+export default function PaginaDosare() {
+  return <DosareClient />;
 }

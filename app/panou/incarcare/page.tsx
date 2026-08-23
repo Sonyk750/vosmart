@@ -1,3 +1,4 @@
+import { requireAdmin } from "@/lib/auth";
 import { lunaDeLucru, numarLuna } from "@/lib/luni";
 import IncarcareClient from "./IncarcareClient";
 
@@ -26,5 +27,8 @@ export default async function PaginaIncarcare({
   const luna = cerut.luna && numarLuna(cerut.luna) ? cerut.luna : implicit.luna;
   const an = Number(cerut.an) >= 2015 ? Number(cerut.an) : implicit.an;
 
-  return <IncarcareClient implicit={{ luna, an }} />;
+  // Cine intocmeste inventarul se scrie pe hartie, sub semnatura.
+  const user = await requireAdmin();
+
+  return <IncarcareClient implicit={{ luna, an }} intocmitDe={user?.name || user?.email || "VoSmart"} />;
 }
