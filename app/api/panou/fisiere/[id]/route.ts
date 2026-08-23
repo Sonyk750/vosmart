@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSession } from "@/lib/auth";
+import { getSession, requireAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { poateVedeaContractul } from "@/lib/acces";
-import { citesteFisier } from "@/lib/stocare";
+import { citesteFisier, stergeFisiere } from "@/lib/stocare";
 
 export const runtime = "nodejs";
 
@@ -69,4 +69,60 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
         : {}),
     },
   });
+}
+
+/**
+ * Scoaterea unui document din dosar.
+ *
+ * Se intampla des si e legitim: a intrat de doua ori aceeasi lista de plata, sau
+ * s-a incarcat scanarea altei luni. Sterge doar cine poate lucra dosarul —
+ * proprietarul sau cenzorul caruia i-a fost repartizat contractul.
+ *
+ * Randul din baza pleaca primul, fisierul din Blob dupa el: daca stergerea din
+ * Blob esueaza, ramane un fisier orfan pe care nu-l mai gaseste nimeni — supărător,
+ * dar nevatamator. Invers ar fi fost rau: un rand care arata un document ce nu
+ * mai exista.
+ */
+export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const user = await requireAdmin();
+  if (!user) return NextResponse.json({ error: "Neautorizat" }, { status: 401 });
+
+  const { id } = await params;
+
+  const fisier = await prisma.fisier.findUnique({
+    where: { id },
+    select: {
+      numeFisier: true,
+      blobUrl: true,
+      dosarId: true,
+      dosar: { select: { contractId: true, etapa: true, luna: true, an: true } },
+    },
+  });
+  if (!fisier) return NextResponse.json({ error: "Fișier negăsit" }, { status: 404 });
+
+  if (!(await poateVedeaContractul(user, fisier.dosar.contractId))) {
+    return NextResponse.json({ error: "Neautorizat" }, { status: 403 });
+  }
+
+  // Un dosar cu raport semnat e o fotografie a ceea ce s-a verificat. Daca s-ar
+  // putea scoate documente din el, semnatura ar ramane pe altceva decat s-a semnat.
+  if (fisier.dosar.etapa === "semnat") {
+    return NextResponse.json(
+      { error: `Dosarul pe ${fisier.dosar.luna} ${fisier.dosar.an} are raport semnat. Documentele din el nu se mai pot șterge.` },
+      { status: 409 },
+    );
+  }
+
+  await prisma.fisier.delete({ where: { id } });
+  await prisma.evenimentFlux.create({
+    data: {
+      dosarId: fisier.dosarId,
+      etapa: "intrare",
+      stare: "gata",
+      mesaj: `Document scos din dosar: ${fisier.numeFisier}`,
+    },
+  });
+  await stergeFisiere([fisier.blobUrl]);
+
+  return NextResponse.json({ sters: true });
 }

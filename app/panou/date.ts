@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { lunaDeLucru } from "@/lib/luni";
 import type { Numaratori } from "./Cadru";
 
 /**
@@ -53,16 +54,9 @@ export type SumarPanou = {
   lunaCurenta: string;
 };
 
-const LUNI = [
-  "ianuarie", "februarie", "martie", "aprilie", "mai", "iunie",
-  "iulie", "august", "septembrie", "octombrie", "noiembrie", "decembrie",
-];
-
-/** Luna la care se lucreaza acum: cea incheiata, nu cea in curs. */
-export function lunaDeLucru(acum = new Date()): { luna: string; an: number; eticheta: string } {
-  const d = new Date(acum.getFullYear(), acum.getMonth() - 1, 1);
-  return { luna: LUNI[d.getMonth()], an: d.getFullYear(), eticheta: `${LUNI[d.getMonth()]} ${d.getFullYear()}` };
-}
+// Lunile si „luna de lucru" stau in `lib/luni.ts`, modul neutru: de acolo le pot
+// citi si ecranele de client, care n-au voie sa atinga Prisma.
+export { lunaDeLucru };
 
 export async function sumarPanou(user: Utilizator): Promise<SumarPanou> {
   const contracteUnde = filtruContracte(user);

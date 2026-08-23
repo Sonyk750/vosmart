@@ -212,10 +212,10 @@ export default function HomeClient() {
               <a href="/platforma-ai-cenzorat" className="transition hover:text-violet-300">Platformă AI</a>
               <a href="#pachete" className="transition hover:text-violet-300">Pachete</a>
               <a href="#servicii" className="transition hover:text-violet-300">Servicii</a>
-              <a href="/login" className="transition hover:text-emerald-200 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-emerald-300 font-medium">Autentificare</a>
               <a href="/blog" className="transition hover:text-emerald-300">Blog</a>
               <a href="/help" className="transition hover:text-cyan-300">Ajutor</a>
               <a href="#contact" className="transition hover:text-violet-300">Contact</a>
+              <a href="/login" className="transition hover:text-emerald-200 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-emerald-300 font-medium">Autentificare</a>
             </nav>
             <a href="#contact" className="hidden rounded-xl bg-violet-600 px-5 py-2.5 text-sm font-semibold shadow-[0_0_25px_rgba(124,58,237,0.4)] transition hover:bg-violet-500 hover:shadow-[0_0_35px_rgba(124,58,237,0.6)] md:inline-flex">Solicită ofertă</a>
             <a href="#contact" className="inline-flex rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold md:hidden">Contact</a>

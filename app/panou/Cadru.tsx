@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { Ic } from "@/app/components/icoane";
+import { ProviderContract, SelectorContract, type ContractScurt } from "./ContractContext";
 
 /**
  * Latimea meniului, tinuta in `localStorage`.
@@ -78,7 +79,7 @@ const GRUPURI: Grup[] = [
   {
     titlu: "Lucru",
     intrari: [
-      { cale: "/panou", eticheta: "Panou", pictograma: Ic.panou },
+      { cale: "/panou", eticheta: "Dashboard", pictograma: Ic.panou },
       { cale: "/panou/flux", eticheta: "Flux lunar", pictograma: Ic.flux },
       { cale: "/panou/incarcare", eticheta: "Încarcă documente", pictograma: Ic.sus },
     ],
@@ -100,10 +101,12 @@ const GRUPURI: Grup[] = [
 ];
 
 export default function Cadru({
-  utilizator, numaratori, children,
+  utilizator, numaratori, contracte, children,
 }: {
   utilizator: { nume: string; email: string; rol: string };
   numaratori: Numaratori;
+  /** Contractele pe care le poate lucra omul asta. Vezi `ContractContext`. */
+  contracte: ContractScurt[];
   children: React.ReactNode;
 }) {
   const cale = usePathname();
@@ -221,17 +224,7 @@ export default function Cadru({
   );
 
   return (
-    <>
-      {/* Bara de sus, doar pe ecrane mici */}
-      <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-line bg-app/90 px-3 py-2.5 backdrop-blur-xl lg:hidden">
-        <button onClick={() => setSertarDeschis(true)} aria-label="Deschide meniul"
-          className="rounded-md p-1.5 text-muted transition-colors hover:bg-surface-3 hover:text-ink">
-          <Ic.meniu className="h-5 w-5" />
-        </button>
-        <Image src="/logo-vosmart.png" alt="VoSmart" width={56} height={24}
-          className="h-auto" style={{ mixBlendMode: "screen", width: "54px" }} />
-      </header>
-
+    <ProviderContract contracte={contracte}>
       {/* Sertarul de pe telefon */}
       {sertarDeschis && (
         <div className="fixed inset-0 z-50 lg:hidden">
@@ -256,9 +249,21 @@ export default function Cadru({
           fiecare pagina: altfel fiecare ecran nou ar trebui sa-si aminteasca
           singur cat de lat e meniul, si primul care uita iese strambat. */}
       <div className={`transition-[padding] duration-200 ${restrans ? "lg:pl-[60px]" : "lg:pl-[240px]"}`}>
-        <main className="min-h-screen">{children}</main>
+        {/* Bara de sus. Contractul ales sta AICI, nu in fiecare ecran: se alege
+            o data si ramane ales peste tot, si nu mai apar doua casute care
+            spun lucruri diferite despre aceeasi intrebare. */}
+        <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-line bg-app/85 px-3 py-2.5 backdrop-blur-xl sm:px-6">
+          <button onClick={() => setSertarDeschis(true)} aria-label="Deschide meniul"
+            className="shrink-0 rounded-md p-1.5 text-muted transition-colors hover:bg-surface-3 hover:text-ink lg:hidden">
+            <Ic.meniu className="h-5 w-5" />
+          </button>
+          <Image src="/logo-vosmart.png" alt="VoSmart" width={56} height={24}
+            className="h-auto shrink-0 lg:hidden" style={{ mixBlendMode: "screen", width: "54px" }} />
+          <SelectorContract />
+        </header>
+        <main className="min-h-[calc(100vh-53px)]">{children}</main>
       </div>
-    </>
+    </ProviderContract>
   );
 }
 
