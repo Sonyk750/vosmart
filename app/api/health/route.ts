@@ -46,6 +46,7 @@ export async function GET(req: NextRequest) {
     NEXT_PUBLIC_APP_URL: present(process.env.NEXT_PUBLIC_APP_URL),
     DATABASE_URL: present(process.env.DATABASE_URL),
     NEXTAUTH_SECRET: present(process.env.NEXTAUTH_SECRET),
+    BLOB_READ_WRITE_TOKEN: present(process.env.BLOB_READ_WRITE_TOKEN),
   };
 
   const missing = Object.entries(required)
@@ -75,7 +76,33 @@ export async function GET(req: NextRequest) {
       DATABASE_URL: present(process.env.DATABASE_URL),
       NEXTAUTH_SECRET: present(process.env.NEXTAUTH_SECRET),
     },
+    // Fara tokenul de Blob nu se poate primi niciun document; fara `sharp`,
+    // scanarile intra in dosar asa cum au venit — de cinci ori mai grele.
+    // Amandoua se vad doar in productie, pe runtime-ul de acolo, deci se
+    // intreaba de aici.
+    documente: {
+      BLOB_READ_WRITE_TOKEN: present(process.env.BLOB_READ_WRITE_TOKEN),
+    },
   };
+
+  // `sharp` are binare native, iar ele se aleg dupa platforma la instalare. Aici
+  // se afla daca cel de Linux a ajuns cu adevarat in functie sau daca recodarea
+  // cade tacut inapoi pe „pastreaza originalul".
+  let recodare: string;
+  try {
+    const { default: sharp } = await import("sharp");
+    const proba = await sharp({
+      create: { width: 3000, height: 2000, channels: 3, background: "#8899aa" },
+    }).jpeg({ quality: 82, mozjpeg: true }).toBuffer();
+    const dupa = await sharp(proba).rotate()
+      .resize({ width: 2400, height: 2400, fit: "inside", withoutEnlargement: true })
+      .flatten({ background: "#ffffff" })
+      .jpeg({ quality: 82, mozjpeg: true, progressive: true }).toBuffer();
+    const m = await sharp(dupa).metadata();
+    recodare = `ok — sharp ${sharp.versions.sharp}, libvips ${sharp.versions.vips}, probă 3000x2000 → ${m.width}x${m.height}`;
+  } catch (e) {
+    recodare = `FAIL — ${(e as Error)?.message || "eroare necunoscuta"}. Scanările se vor păstra neredimensionate.`;
+  }
 
   // Test optional al conexiunii SMTP (login real), time-boxed ca sa nu atarne.
   let smtpVerify: string | undefined;
@@ -104,6 +131,7 @@ export async function GET(req: NextRequest) {
     ok: missing.length === 0,
     missing,
     details,
+    recodare,
     ...(smtpVerify ? { smtpVerify } : {}),
     hint: missing.length
       ? "Seteaza variabilele lipsa in Vercel -> Settings -> Environment Variables (Production) si redeploy."
