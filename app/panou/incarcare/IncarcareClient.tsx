@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { lipsuri, eticheta as etichetaTip } from "@/lib/cenzorat/documente";
 import {
@@ -101,6 +101,48 @@ function cantitate(fisiere: FisierDinDosar[]) {
   return { primit, pastrat, strans: primit - pastrat };
 }
 
+/**
+ * Fisierele dintr-un „drop", inclusiv cand s-a tras un FOLDER.
+ *
+ * `dataTransfer.files` e gol la un folder: acolo vine o intrare de director, iar
+ * continutul se citeste recursiv prin `webkitGetAsEntry`. Conteaza fiindca
+ * dosarul unei luni sta, la administrator, intr-un folder — iar altfel omul
+ * ramane sa aleaga douazeci de fisiere cu mana.
+ */
+async function fisiereDinDrop(dt: DataTransfer): Promise<File[]> {
+  const intrari = Array.from(dt.items)
+    .map(i => (typeof i.webkitGetAsEntry === "function" ? i.webkitGetAsEntry() : null))
+    .filter((i): i is FileSystemEntry => Boolean(i));
+
+  // Browser fara API-ul de intrari: macar fisierele simple.
+  if (intrari.length === 0) return Array.from(dt.files);
+
+  const gasite: File[] = [];
+
+  async function coboara(intrare: FileSystemEntry) {
+    if (intrare.isFile) {
+      const f = await new Promise<File | null>(gata =>
+        (intrare as FileSystemFileEntry).file(gata, () => gata(null)));
+      if (f) gasite.push(f);
+      return;
+    }
+    if (!intrare.isDirectory) return;
+
+    // `readEntries` intoarce cel mult o suta de intrari odata; se cheama pana
+    // raspunde gol. Fara bucla, un folder cu 150 de facturi ar pierde 50.
+    const cititor = (intrare as FileSystemDirectoryEntry).createReader();
+    for (;;) {
+      const lot = await new Promise<FileSystemEntry[]>(gata =>
+        cititor.readEntries(gata, () => gata([])));
+      if (lot.length === 0) break;
+      for (const x of lot) await coboara(x);
+    }
+  }
+
+  for (const i of intrari) await coboara(i);
+  return gasite;
+}
+
 /** Unde a ajuns dosarul, in cuvinte si in culoare. */
 function stareDosar(d: Dosar): { text: string; ton: Ton; inLucru: boolean; procent: number } {
   const procent = ((INDEX_ETAPA[d.etapa] ?? 0) + 1) / ETAPE.length * 100;
@@ -143,6 +185,7 @@ export default function IncarcareClient({ implicit }: { implicit: { luna: string
   const [lista, setLista] = useState<{ cheie: string; dosare: Dosar[] } | null>(null);
   const [reincarca, setReincarca] = useState(0);
   const intrare = useRef<HTMLInputElement>(null);
+  const intrareFolder = useRef<HTMLInputElement>(null);
 
   const contractId = ales?.id ?? "";
   // Memorat, nu doar derivat: un `[]` nou la fiecare randare ar face `useMemo`-ul
@@ -191,7 +234,10 @@ export default function IncarcareClient({ implicit }: { implicit: { luna: string
 
   /* --------------------------------------------------- primirea fisierelor */
 
-  const adauga = useCallback(async (primite: File[]) => {
+  // Functie simpla, nu `useCallback`: are nevoie de luna, anul si contractul de
+  // ACUM. Memorata cu lista goala de dependinte, ar fi trimis documentele in luna
+  // aleasa la prima randare, oricat le-ai fi schimbat pe urma.
+  async function adauga(primite: File[]) {
     setEroare("");
     setIzbanda("");
     const noi: FisierAles[] = [];
@@ -230,21 +276,24 @@ export default function IncarcareClient({ implicit }: { implicit: { luna: string
     }
 
     if (refuzate.length > 0) setEroare(`Nu s-au putut prelua: ${refuzate.join(", ")}. Se primesc ${FORMATE_TEXT}.`);
-    if (noi.length > 0) setFisiere(p => [...p, ...noi]);
-  }, []);
+    if (noi.length > 0) {
+      setFisiere(p => [...p, ...noi]);
+      // Pleaca imediat, fara al doilea buton. Confirmarea era o inventie a mea, si
+      // una scumpa: la douazeci de fisiere butonul ajungea sub lista, iar omul
+      // ramanea uitandu-se la niste nume de fisier fara inteles, convins ca
+      // aplicatia nu face nimic. Ce e gresit se scoate din dosar dupa aceea.
+      void trimiteTeanc(noi);
+    }
+  }
 
   const scoate = (id: string) => setFisiere(p => p.filter(f => f.id !== id));
 
   const octeti = fisiere.reduce((s, f) => s + f.fisier.size, 0);
-  // Ce nu poate fi micsorat in browser si tot nu incape intr-o cerere: un PDF
-  // mare. Se spune pe nume, nu se lasa sa cada intr-o eroare generica.
-  const preaGrele = fisiere.filter(
-    f => f.fisier.size > LIMITA_FISIER_MB * 1024 * 1024 && !f.fisier.type.startsWith("image/"),
-  );
   const necitibile = fisiere.filter(f => !formatul(f.fisier.name)?.citibilDeAi);
   const nedeschise = fisiere.filter(f => !formatul(f.fisier.name)?.inventariabil);
+  const cazute = fisiere.filter(f => f.stare === "esuat");
+  const intrateTot = fisiere.filter(f => f.stare === "gata").length;
   const inchisaLuna = dosarulLunii?.etapa === "semnat";
-  const potTrimite = Boolean(contractId) && fisiere.length > 0 && preaGrele.length === 0 && !inchisaLuna;
 
   /* ------------------------------------------------------------- acțiuni */
 
@@ -290,13 +339,24 @@ export default function IncarcareClient({ implicit }: { implicit: { luna: string
    * Fisier cu fisier inseamna si ca o factura stricata nu mai darama tot teancul:
    * ea ramane rosie in lista, restul intra in dosar.
    */
-  async function incarcaInDosar() {
-    if (!potTrimite || trimite) return;
+  async function trimiteTeanc(teanc: FisierAles[]) {
+    if (!contractId || teanc.length === 0 || inchisaLuna) return;
     setTrimite(true);
     setEroare("");
     setIzbanda("");
 
-    const deTrimis = fisiere.filter(f => f.stare !== "gata");
+    // Ce nu incape intr-o cerere cade din start, fara drum degeaba pana la server.
+    const deTrimis = teanc.filter(f => {
+      const greu = f.fisier.size > LIMITA_FISIER_MB * 1024 * 1024 && !f.fisier.type.startsWith("image/");
+      if (greu) {
+        setFisiere(p => p.map(x => (x.id === f.id
+          ? { ...x, stare: "esuat", motiv: `${kb(f.fisier.size)} — peste limita de ${LIMITA_FISIER_MB} MB pe fișier` }
+          : x)));
+      }
+      return !greu;
+    });
+    if (deTrimis.length === 0) { setTrimite(false); return; }
+
     let intrate = 0, primiti = 0, pastrati = 0, cost = 0, terminate = 0;
     let dosarId: string | null = null;
     const cazute: string[] = [];
@@ -464,7 +524,11 @@ export default function IncarcareClient({ implicit }: { implicit: { luna: string
         className={`mt-5 overflow-hidden transition-colors ${peste ? "border-brand bg-brand-dim/40" : ""}`}
         onDragOver={e => { e.preventDefault(); setPeste(true); }}
         onDragLeave={() => setPeste(false)}
-        onDrop={e => { e.preventDefault(); setPeste(false); adauga(Array.from(e.dataTransfer.files)); }}
+        onDrop={async e => {
+          e.preventDefault();
+          setPeste(false);
+          adauga(await fisiereDinDrop(e.dataTransfer));
+        }}
       >
         <div className="flex flex-wrap items-end gap-4 px-5 py-4">
           <label className="block">
@@ -492,11 +556,29 @@ export default function IncarcareClient({ implicit }: { implicit: { luna: string
             ref={intrare} type="file" multiple hidden accept={ACCEPT}
             onChange={e => { adauga(Array.from(e.target.files ?? [])); e.target.value = ""; }}
           />
-          <Buton fel="principal" marime="mare" disabled={inchisaLuna} incarca={desface}
-            onClick={() => intrare.current?.click()}>
-            {!desface && <Ic.sus className="h-4 w-4" />}
-            {desface ? "Se desface arhiva…" : "Încarcă documente"}
-          </Buton>
+          {/* A doua intrare, pentru un folder intreg. `webkitdirectory` nu e in
+              tipurile React, asa ca se pune pe elementul brut, prin ref. */}
+          <input
+            ref={el => {
+              intrareFolder.current = el;
+              if (el) { el.setAttribute("webkitdirectory", ""); el.setAttribute("directory", ""); }
+            }}
+            type="file" multiple hidden
+            onChange={e => { adauga(Array.from(e.target.files ?? [])); e.target.value = ""; }}
+          />
+
+          <div className="flex flex-wrap items-center gap-2">
+            <Buton fel="principal" marime="mare" disabled={inchisaLuna || trimite} incarca={desface}
+              onClick={() => intrare.current?.click()}>
+              {!desface && <Ic.sus className="h-4 w-4" />}
+              {desface ? "Se desface arhiva…" : "Încarcă documente"}
+            </Buton>
+            <Buton fel="moale" marime="mare" disabled={inchisaLuna || trimite}
+              onClick={() => intrareFolder.current?.click()}>
+              <Ic.dosar className="h-4 w-4" />
+              Un folder întreg
+            </Buton>
+          </div>
         </div>
 
         <div className="border-t border-line bg-surface-1 px-5 py-2.5">
@@ -507,9 +589,11 @@ export default function IncarcareClient({ implicit }: { implicit: { luna: string
               </span>
             ) : (
               <>
-                Unul sau mai multe deodată — sau trage-le direct aici. {FORMATE_TEXT}. Nu alege tu
-                ce sunt: fiecare document e deschis și citit, iar în inventar apare cu numele lui
-                („Factură Apa Nova”), nu cu cel al fișierului. Arhiva ZIP o deschidem noi.
+                Documentele pleacă în clipa în care le alegi — nu mai e nimic de confirmat. Fiecare
+                e deschis și citit, iar în listă apare cu numele lui („Factură Apa Nova”), nu cu cel
+                al fișierului. {FORMATE_TEXT}. Ca să le iei pe toate: apasă „Un folder întreg”, sau
+                trage folderul aici, sau — în fereastra de alegere — dă un clic pe primul fișier și
+                abia apoi Ctrl+A.
               </>
             )}
           </p>
@@ -565,16 +649,22 @@ export default function IncarcareClient({ implicit }: { implicit: { luna: string
             </ul>
 
             <div className="flex flex-wrap items-center gap-3 border-t border-line bg-surface-1 px-5 py-3">
-              <Buton fel="principal" incarca={trimite} disabled={!potTrimite} onClick={incarcaInDosar}>
-                {!trimite && <Ic.jos className="h-4 w-4" />}
-                {trimite
-                  ? `Se încarcă… ${progres.gata} din ${progres.total}`
-                  : `Adaugă în dosarul pe ${numeLunaAleasa} ${an}`}
-              </Buton>
-              {preaGrele.length > 0 && (
-                <span className="flex items-center gap-1.5 text-[12.5px] text-bad">
-                  <Ic.alerta className="h-3.5 w-3.5" />
-                  {preaGrele.length} {preaGrele.length === 1 ? "fișier depășește" : "fișiere depășesc"} {LIMITA_FISIER_MB} MB — scoate-le din listă
+              {cazute.length > 0 && (
+                <Buton fel="moale" incarca={trimite} onClick={() => trimiteTeanc(cazute)}>
+                  <Ic.sus className="h-4 w-4" />
+                  Încearcă din nou {cazute.length} {cazute.length === 1 ? "document" : "documente"}
+                </Buton>
+              )}
+              {trimite && (
+                <span className="tnum flex items-center gap-2 text-[12.5px] text-muted">
+                  <Rotitor className="h-3.5 w-3.5" />
+                  Se încarcă și se citesc — {progres.gata} din {progres.total}
+                </span>
+              )}
+              {!trimite && cazute.length === 0 && intrateTot > 0 && (
+                <span className="flex items-center gap-1.5 text-[12.5px] text-ok">
+                  <Ic.bifa className="h-3.5 w-3.5" />
+                  Toate au intrat în dosar
                 </span>
               )}
               {necitibile.length > 0 && (
