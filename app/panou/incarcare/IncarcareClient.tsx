@@ -128,6 +128,7 @@ export default function IncarcareClient({ implicit }: { implicit: { luna: string
   const [peste, setPeste] = useState(false);
   const [desface, setDesface] = useState(false);
   const [trimite, setTrimite] = useState(false);
+  const [progres, setProgres] = useState({ gata: 0, total: 0 });
 
   const [eroare, setEroare] = useState("");
   const [izbanda, setIzbanda] = useState("");
@@ -296,10 +297,12 @@ export default function IncarcareClient({ implicit }: { implicit: { luna: string
     setIzbanda("");
 
     const deTrimis = fisiere.filter(f => f.stare !== "gata");
-    let intrate = 0, primiti = 0, pastrati = 0, cost = 0;
+    let intrate = 0, primiti = 0, pastrati = 0, cost = 0, terminate = 0;
+    let dosarId: string | null = null;
     const cazute: string[] = [];
+    setProgres({ gata: 0, total: deTrimis.length });
 
-    for (const f of deTrimis) {
+    async function trimiteUnul(f: FisierAles) {
       setFisiere(p => p.map(x => (x.id === f.id ? { ...x, stare: "trimite", motiv: undefined } : x)));
       try {
         const bucata = await micsoreaza(f.fisier);
@@ -323,6 +326,7 @@ export default function IncarcareClient({ implicit }: { implicit: { luna: string
           );
         }
 
+        dosarId = d.dosarId ?? dosarId;
         intrate += d.primite ?? 1;
         primiti += d.octetiPrimiti ?? 0;
         pastrati += d.octetiPastrati ?? 0;
@@ -334,7 +338,24 @@ export default function IncarcareClient({ implicit }: { implicit: { luna: string
         setFisiere(p => p.map(x => (x.id === f.id
           ? { ...x, stare: "esuat", motiv: e instanceof Error ? e.message : "nu a putut fi trimis" }
           : x)));
+      } finally {
+        terminate++;
+        setProgres({ gata: terminate, total: deTrimis.length });
       }
+    }
+
+    // Primul pleaca SINGUR: el deschide dosarul lunii. Daca ar pleca patru
+    // deodata pe o luna care nu exista inca, toate patru ar incerca sa o creeze
+    // si s-ar lovi de cheia unica „un contract, o luna".
+    if (deTrimis.length > 0) await trimiteUnul(deTrimis[0]);
+
+    // Restul, cate patru odata. Treizeci de documente trimise unul dupa altul,
+    // fiecare cu citirea lui, tineau minute intregi — destul cat sa para ca s-a
+    // blocat. Patru deodata scurteaza asteptarea de vreo patru ori, si raman
+    // destul de putine cat sa nu incarcam serverul cu tot teancul dintr-o data.
+    const rest = deTrimis.slice(1);
+    for (let i = 0; i < rest.length; i += 4) {
+      await Promise.all(rest.slice(i, i + 4).map(trimiteUnul));
     }
 
     if (intrate > 0) {
@@ -344,7 +365,10 @@ export default function IncarcareClient({ implicit }: { implicit: { luna: string
         + (strans > 256 * 1024 ? ` ${kb(primiti)} primite → ${kb(pastrati)} pe server.` : "")
         + (cost > 0 ? ` Citirea documentelor: $${cost.toFixed(3)}.` : ""),
       );
-      setDeschis(null);
+      // Dosarul se deschide singur, cu inventarul in el. Inainte il inchideam,
+      // si omul ramanea fara raspuns la singura intrebare pe care o avea dupa
+      // incarcare: „bun, si ce sunt documentele astea?".
+      if (dosarId) { setDeschis(dosarId); setModSters(false); }
       setReincarca(n => n + 1);
     }
     if (cazute.length > 0) {
@@ -543,7 +567,9 @@ export default function IncarcareClient({ implicit }: { implicit: { luna: string
             <div className="flex flex-wrap items-center gap-3 border-t border-line bg-surface-1 px-5 py-3">
               <Buton fel="principal" incarca={trimite} disabled={!potTrimite} onClick={incarcaInDosar}>
                 {!trimite && <Ic.jos className="h-4 w-4" />}
-                {trimite ? "Se încarcă…" : `Adaugă în dosarul pe ${numeLunaAleasa} ${an}`}
+                {trimite
+                  ? `Se încarcă… ${progres.gata} din ${progres.total}`
+                  : `Adaugă în dosarul pe ${numeLunaAleasa} ${an}`}
               </Buton>
               {preaGrele.length > 0 && (
                 <span className="flex items-center gap-1.5 text-[12.5px] text-bad">

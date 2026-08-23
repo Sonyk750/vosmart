@@ -205,19 +205,35 @@ export async function POST(req: NextRequest) {
 
   /* ------------------------------------------------ dosarul lunii, gasit */
 
-  const dosar = await prisma.dosar.upsert({
-    where: { contractId_an_luna: { contractId: contract.id, an: tinta.an, luna: tinta.luna } },
-    update: {},
-    create: {
-      contractId: contract.id,
-      luna: tinta.luna,
-      an: tinta.an,
-      titlu: `${contract.denumire} — ${tinta.luna} ${tinta.an}`,
-      etapa: "intrare",
-      stareEtapa: "asteptare",
-    },
-    select: { id: true, etapa: true, _count: { select: { fisiere: true } } },
-  });
+  const cheie = { contractId_an_luna: { contractId: contract.id, an: tinta.an, luna: tinta.luna } };
+  const campuriDosar = { id: true, etapa: true, _count: { select: { fisiere: true } } };
+
+  // Ecranul trimite documentele in paralel, deci doua cereri pot cadea pe aceeasi
+  // luna inainte ca ea sa existe. `upsert` nu e atomic fata de o alta conexiune:
+  // amandoua vad „nu exista" si amandoua incearca sa creeze, iar a doua se loveste
+  // de cheia unica „un contract, o luna". Atunci dosarul exista deja — il luam.
+  let dosar;
+  try {
+    dosar = await prisma.dosar.upsert({
+      where: cheie,
+      update: {},
+      create: {
+        contractId: contract.id,
+        luna: tinta.luna,
+        an: tinta.an,
+        titlu: `${contract.denumire} — ${tinta.luna} ${tinta.an}`,
+        etapa: "intrare",
+        stareEtapa: "asteptare",
+      },
+      select: campuriDosar,
+    });
+  } catch {
+    const gasit = await prisma.dosar.findUnique({ where: cheie, select: campuriDosar });
+    if (!gasit) {
+      return NextResponse.json({ error: "Dosarul lunii nu a putut fi deschis." }, { status: 500 });
+    }
+    dosar = gasit;
+  }
 
   // Un dosar semnat e inchis: raportul cenzorului s-a dat deja pe documentele de
   // atunci. Ce vine dupa nu se strecoara sub semnatura lui.
