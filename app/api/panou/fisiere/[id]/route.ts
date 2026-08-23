@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { poateVedeaContractul } from "@/lib/acces";
 import { citesteFisier, stergeFisiere } from "@/lib/stocare";
 import { numeDupaMime } from "@/lib/cenzorat/optimizare";
+import { TIPURI, eticheta as etichetaTip } from "@/lib/cenzorat/documente";
 
 export const runtime = "nodejs";
 
@@ -135,4 +136,66 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
   await stergeFisiere([fisier.blobUrl]);
 
   return NextResponse.json({ sters: true });
+}
+
+/**
+ * Corectarea unui document din inventar.
+ *
+ * Modelul citeste bine aproape mereu, dar „aproape" nu ajunge intr-un dosar care
+ * se semneaza. Cenzorul poate schimba tipul si denumirea, iar `tipSursa` trece pe
+ * „om" — de acolo incolo nicio recitire nu i le mai suprascrie.
+ *
+ * Ce se schimba aici se schimba si in inventarul tiparit: el se face din aceleasi
+ * randuri.
+ */
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const user = await requireAdmin();
+  if (!user) return NextResponse.json({ error: "Neautorizat" }, { status: 401 });
+
+  const { id } = await params;
+
+  const fisier = await prisma.fisier.findUnique({
+    where: { id },
+    select: { dosar: { select: { contractId: true, etapa: true, luna: true, an: true } } },
+  });
+  if (!fisier) return NextResponse.json({ error: "Fișier negăsit" }, { status: 404 });
+
+  if (!(await poateVedeaContractul(user, fisier.dosar.contractId))) {
+    return NextResponse.json({ error: "Neautorizat" }, { status: 403 });
+  }
+  if (fisier.dosar.etapa === "semnat") {
+    return NextResponse.json(
+      { error: `Dosarul pe ${fisier.dosar.luna} ${fisier.dosar.an} are raport semnat. Inventarul lui nu se mai poate schimba.` },
+      { status: 409 },
+    );
+  }
+
+  const trup = await req.json().catch(() => ({}));
+  const date: { tip?: string; eticheta?: string; tipSursa?: string; denumireAi?: string | null } = {};
+
+  if (typeof trup.tip === "string") {
+    const cunoscut = trup.tip === "altele" || TIPURI.some(t => t.cheie === trup.tip);
+    if (!cunoscut) return NextResponse.json({ error: "Tipul acesta nu există în listă." }, { status: 400 });
+    date.tip = trup.tip;
+    date.eticheta = etichetaTip(trup.tip);
+    // Pusa cu mana, alegerea nu se mai pierde la o recitire.
+    date.tipSursa = "om";
+  }
+
+  if (typeof trup.denumire === "string") {
+    const curat = trup.denumire.trim().replace(/\s+/g, " ").slice(0, 120);
+    date.denumireAi = curat || null;
+  }
+
+  if (Object.keys(date).length === 0) {
+    return NextResponse.json({ error: "Nu s-a trimis nimic de schimbat." }, { status: 400 });
+  }
+
+  const salvat = await prisma.fisier.update({
+    where: { id },
+    data: date,
+    select: { id: true, tip: true, eticheta: true, denumireAi: true, tipSursa: true },
+  });
+
+  return NextResponse.json({ fisier: salvat });
 }

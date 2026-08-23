@@ -40,6 +40,7 @@ export const Ic = {
   bifa: svg(<><path d="M20 6L9 17l-5-5" /></>),
   x: svg(<><path d="M18 6L6 18M6 6l12 12" /></>),
   plus: svg(<><path d="M12 5v14M5 12h14" /></>),
+  creion: svg(<><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z" /></>),
   alerta: svg(<><path d="M12 9v4M12 17h.01" /><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" /></>),
   info: svg(<><circle cx="12" cy="12" r="9" /><path d="M12 16v-4M12 8h.01" /></>),
   scut: svg(<><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></>),

@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { lipsuri, eticheta as etichetaTip } from "@/lib/cenzorat/documente";
+import { TIPURI, lipsuri, eticheta as etichetaTip } from "@/lib/cenzorat/documente";
 import {
   ACCEPT, FORMATE_TEXT, LIMITA_FISIER_MB,
   esteAcceptat, esteArhiva, formatul, mimeDupaNume, sePoateDesface,
@@ -777,6 +777,7 @@ export default function IncarcareClient({
                   setModSters(sters);
                 }}
                 peAdauga={() => adaugaLa(d)}
+                peCorectat={() => setReincarca(n => n + 1)}
                 pePornire={() => porneste(d)}
                 peStergere={stergeDocument}
               />
@@ -791,7 +792,7 @@ export default function IncarcareClient({
 /* ------------------------------------------------------------- UN RÂND */
 
 function RandLuna({
-  dosar, deschis, modSters, lucreaza, peComuta, peAdauga, pePornire, peStergere, peInventar,
+  dosar, deschis, modSters, lucreaza, peComuta, peAdauga, pePornire, peStergere, peInventar, peCorectat,
 }: {
   dosar: Dosar;
   /** Scoate inventarul lunii pe hartie. */
@@ -803,6 +804,8 @@ function RandLuna({
   peAdauga: () => void;
   pePornire: () => void;
   peStergere: (f: FisierDinDosar) => void;
+  /** Dupa o corectie, lista se aduce din nou de la server. */
+  peCorectat: () => void;
 }) {
   const [meniu, setMeniu] = useState(false);
   const stare = stareDosar(dosar);
@@ -947,61 +950,14 @@ function RandLuna({
                 )}
                 <ul className="divide-y divide-line">
                   {dosar.fisiere.map(f => (
-                    <li key={f.id} className="flex flex-wrap items-center gap-3 px-5 py-2.5">
-                      <Ic.fisier className="h-4 w-4 shrink-0 text-faint" />
-                      <div className="min-w-0 flex-1">
-                        {/* Ce a citit modelul e numele principal. Tipul si numele
-                            fisierului stau dedesubt: felul documentului si de unde
-                            a venit, amandoua utile, dar niciunul nu e „cum se
-                            cheama documentul asta". */}
-                        <p className="truncate text-[13px] text-ink">
-                          {f.denumireAi || f.eticheta || etichetaTip(f.tip)}
-                        </p>
-                        <p className="truncate text-[11.5px] text-faint">
-                          {f.denumireAi && <span>{etichetaTip(f.tip)} · </span>}
-                          {f.numeFisier} · {f.optimizat && f.marimeOriginala
-                            ? `${kb(f.marimeOriginala)} → ${kb(f.marime)}`
-                            : kb(f.marime)}
-                          {!formatul(f.numeFisier)?.citibilDeAi && " · nu intră în verificarea automată"}
-                        </p>
-                        {f.tipSursa === "nume" && (
-                          <p className="text-[11px] text-warn/80">
-                            nu a putut fi citit — tipul e ghicit din numele fișierului
-                          </p>
-                        )}
-                        {f.amprenta && (
-                          <p className="truncate font-mono text-[10px] text-faint/70"
-                            title={`sha256 al fișierului original: ${f.amprenta}`}>
-                            {f.optimizat ? "recodat · " : ""}amprentă {f.amprenta.slice(0, 16)}…
-                          </p>
-                        )}
-                      </div>
-                      <a
-                        href={`/api/panou/fisiere/${f.id}?inline=1`}
-                        target="_blank" rel="noreferrer"
-                        title="Deschide documentul"
-                        className="shrink-0 rounded-md p-1.5 text-faint transition-colors hover:bg-surface-3 hover:text-ink"
-                      >
-                        <Ic.cauta className="h-3.5 w-3.5" />
-                      </a>
-                      <a
-                        href={`/api/panou/fisiere/${f.id}`}
-                        title="Descarcă documentul"
-                        className="shrink-0 rounded-md p-1.5 text-faint transition-colors hover:bg-surface-3 hover:text-ink"
-                      >
-                        <Ic.descarca className="h-3.5 w-3.5" />
-                      </a>
-                      {!semnat && (
-                        <button
-                          onClick={() => peStergere(f)}
-                          disabled={lucreaza === f.id}
-                          title={`Scoate ${f.numeFisier} din dosar`}
-                          className="shrink-0 rounded-md p-1.5 text-faint transition-colors hover:bg-bad-dim hover:text-bad disabled:opacity-40"
-                        >
-                          {lucreaza === f.id ? <Rotitor className="h-3.5 w-3.5" /> : <Ic.cos className="h-3.5 w-3.5" />}
-                        </button>
-                      )}
-                    </li>
+                    <RandDocument
+                      key={f.id}
+                      fisier={f}
+                      blocat={semnat}
+                      lucreaza={lucreaza === f.id}
+                      peStergere={() => peStergere(f)}
+                      peCorectat={peCorectat}
+                    />
                   ))}
                 </ul>
               </>
@@ -1047,5 +1003,161 @@ function Cifra({ eticheta, valoare }: { eticheta: string; valoare: string }) {
       <span className="block text-[10px] uppercase tracking-wider text-faint">{eticheta}</span>
       <span className="tnum block text-[13.5px] font-medium text-ink">{valoare}</span>
     </span>
+  );
+}
+
+
+/* --------------------------------------------------- UN DOCUMENT DIN DOSAR */
+
+/**
+ * Un rand de inventar, cu doua fete: cum se citeste si cum se corecteaza.
+ *
+ * Modelul nimereste aproape mereu, dar „aproape" nu ajunge intr-un dosar care se
+ * semneaza. Cenzorul schimba denumirea si tipul aici, in acelasi loc in care le
+ * vede — nu intr-un alt ecran, cu documentul pierdut din ochi. Din clipa aceea
+ * randul e al lui: `tipSursa` trece pe „om" si nicio recitire nu-l mai atinge.
+ */
+function RandDocument({
+  fisier, blocat, lucreaza, peStergere, peCorectat,
+}: {
+  fisier: FisierDinDosar;
+  /** Dosar semnat: se poate citi, nu se mai poate schimba. */
+  blocat: boolean;
+  lucreaza: boolean;
+  peStergere: () => void;
+  peCorectat: () => void;
+}) {
+  const [corecteaza, setCorecteaza] = useState(false);
+  const [denumire, setDenumire] = useState(fisier.denumireAi ?? "");
+  const [tip, setTip] = useState(fisier.tip);
+  const [salveaza, setSalveaza] = useState(false);
+  const [eroare, setEroare] = useState("");
+
+  const format = formatul(fisier.numeFisier);
+
+  async function salveazaCorectia() {
+    if (salveaza) return;
+    setSalveaza(true);
+    setEroare("");
+    try {
+      const r = await fetch(`/api/panou/fisiere/${fisier.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tip, denumire }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(d.error || "Corectura nu a putut fi salvată.");
+      setCorecteaza(false);
+      peCorectat();
+    } catch (e) {
+      setEroare(e instanceof Error ? e.message : "Corectura nu a putut fi salvată.");
+    } finally {
+      setSalveaza(false);
+    }
+  }
+
+  if (corecteaza) {
+    return (
+      <li className="rise bg-surface-1 px-5 py-3">
+        <p className="mb-2.5 truncate text-[11.5px] text-faint">{fisier.numeFisier}</p>
+        <div className="grid gap-2.5 sm:grid-cols-[1fr_220px]">
+          <label className="block">
+            <span className="mb-1 block text-[11px] font-medium text-muted">Denumirea documentului</span>
+            <input
+              value={denumire}
+              onChange={e => setDenumire(e.target.value)}
+              onKeyDown={e => { if (e.key === "Enter") salveazaCorectia(); if (e.key === "Escape") setCorecteaza(false); }}
+              placeholder="ex. Factură Apa Nova"
+              autoFocus
+              className={claseCamp}
+            />
+          </label>
+          <label className="block">
+            <span className="mb-1 block text-[11px] font-medium text-muted">Tipul</span>
+            <select value={tip} onChange={e => setTip(e.target.value)} className={claseCamp}>
+              {TIPURI.map(t => <option key={t.cheie} value={t.cheie}>{t.eticheta}</option>)}
+              <option value="altele">Altele</option>
+            </select>
+          </label>
+        </div>
+        {eroare && <p className="mt-2 text-[12px] text-bad">{eroare}</p>}
+        <div className="mt-3 flex items-center gap-2">
+          <Buton fel="principal" marime="mic" incarca={salveaza} onClick={salveazaCorectia}>
+            <Ic.bifa className="h-3.5 w-3.5" /> Salvează
+          </Buton>
+          <Buton fel="fantoma" marime="mic" onClick={() => setCorecteaza(false)}>Renunță</Buton>
+        </div>
+      </li>
+    );
+  }
+
+  return (
+    <li className="flex flex-wrap items-center gap-3 px-5 py-2.5">
+      <Ic.fisier className="h-4 w-4 shrink-0 text-faint" />
+      <div className="min-w-0 flex-1">
+        {/* Ce a citit modelul e numele principal. Tipul si numele fisierului stau
+            dedesubt: felul documentului si de unde a venit, amandoua utile, dar
+            niciunul nu e „cum se cheama documentul asta". */}
+        <p className="truncate text-[13px] text-ink">
+          {fisier.denumireAi || fisier.eticheta || etichetaTip(fisier.tip)}
+        </p>
+        <p className="truncate text-[11.5px] text-faint">
+          {fisier.denumireAi && <span>{etichetaTip(fisier.tip)} · </span>}
+          {fisier.numeFisier} · {fisier.optimizat && fisier.marimeOriginala
+            ? `${kb(fisier.marimeOriginala)} → ${kb(fisier.marime)}`
+            : kb(fisier.marime)}
+          {!format?.citibilDeAi && " · nu intră în verificarea automată"}
+        </p>
+        {fisier.tipSursa === "nume" && (
+          <p className="text-[11px] text-warn/80">
+            nu a putut fi citit — tipul e ghicit din numele fișierului
+          </p>
+        )}
+        {fisier.tipSursa === "om" && (
+          <p className="text-[11px] text-ok/80">corectat de cenzor</p>
+        )}
+        {fisier.amprenta && (
+          <p className="truncate font-mono text-[10px] text-faint/70"
+            title={`sha256 al fișierului original: ${fisier.amprenta}`}>
+            {fisier.optimizat ? "recodat · " : ""}amprentă {fisier.amprenta.slice(0, 16)}…
+          </p>
+        )}
+      </div>
+
+      {!blocat && (
+        <button
+          onClick={() => { setDenumire(fisier.denumireAi ?? ""); setTip(fisier.tip); setCorecteaza(true); }}
+          title="Corectează denumirea și tipul"
+          className="shrink-0 rounded-md p-1.5 text-faint transition-colors hover:bg-surface-3 hover:text-ink"
+        >
+          <Ic.creion className="h-3.5 w-3.5" />
+        </button>
+      )}
+      <a
+        href={`/api/panou/fisiere/${fisier.id}?inline=1`}
+        target="_blank" rel="noreferrer"
+        title="Deschide documentul"
+        className="shrink-0 rounded-md p-1.5 text-faint transition-colors hover:bg-surface-3 hover:text-ink"
+      >
+        <Ic.cauta className="h-3.5 w-3.5" />
+      </a>
+      <a
+        href={`/api/panou/fisiere/${fisier.id}`}
+        title="Descarcă documentul"
+        className="shrink-0 rounded-md p-1.5 text-faint transition-colors hover:bg-surface-3 hover:text-ink"
+      >
+        <Ic.descarca className="h-3.5 w-3.5" />
+      </a>
+      {!blocat && (
+        <button
+          onClick={peStergere}
+          disabled={lucreaza}
+          title={`Scoate ${fisier.numeFisier} din dosar`}
+          className="shrink-0 rounded-md p-1.5 text-faint transition-colors hover:bg-bad-dim hover:text-bad disabled:opacity-40"
+        >
+          {lucreaza ? <Rotitor className="h-3.5 w-3.5" /> : <Ic.cos className="h-3.5 w-3.5" />}
+        </button>
+      )}
+    </li>
   );
 }
