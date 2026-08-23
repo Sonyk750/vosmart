@@ -7,9 +7,9 @@ import { dataRo, type Ton } from "@/app/components/baza";
 import { Ic } from "@/app/components/icoane";
 import { useContract } from "../ContractContext";
 import {
-  areRaportAi, constatariActive, cuMajuscula, deCitit, stareDosar, verdictul,
+  areRaportAi, constatariActive, cuMajuscula, raportAi, stareDosar, verdictul,
   type DosarLunar,
-} from "../dosare";
+} from "../dosar-lunar";
 
 /**
  * Rapoartele AI, luna cu luna.
@@ -188,7 +188,7 @@ export default function RapoarteAiClient() {
             ) : (
               <ul className="space-y-2">
                 {verificate.map(d => (
-                  <RandRaport key={d.id} dosar={d} lucreaza={lucreaza === d.id} pePornire={() => porneste(d)} />
+                  <RandRaport key={d.id} dosar={d} />
                 ))}
               </ul>
             )}
@@ -212,21 +212,12 @@ function PastilaLuna({ dosar }: { dosar: DosarLunar }) {
   );
 }
 
-function RandRaport({
-  dosar, lucreaza, pePornire,
-}: {
-  dosar: DosarLunar;
-  lucreaza: boolean;
-  pePornire: () => void;
-}) {
+function RandRaport({ dosar }: { dosar: DosarLunar }) {
   const stare = stareDosar(dosar);
   const esuat = dosar.stareEtapa === "esuata";
   const gata = areRaportAi(dosar);
   const v = verdictul(dosar);
   const active = constatariActive(dosar);
-  // Cate documente ar citi o reluare — cifra pe care omul trebuie sa o vada
-  // INAINTE de apasare, fiindca ea e costul.
-  const nou = deCitit(dosar);
 
   // Increderea nu e decor: un scor mare pe date incomplete nu inseamna un dosar
   // curat, inseamna un dosar necitit. De aceea sta langa scor, nu ascunsa.
@@ -303,28 +294,12 @@ function RandRaport({
             )}
           </div>
 
-          <div className="flex shrink-0 items-center gap-2">
-            {dosar.etapa !== "semnat" && !stare.inLucru && (
-              <Buton
-                fel="moale" marime="mic" incarca={lucreaza} onClick={pePornire}
-                title={nou.tot
-                  ? `Se recitesc toate cele ${nou.cate} documente`
-                  : `Se citesc doar cele ${nou.cate} documente noi; restul se păstrează`}
-              >
-                {!lucreaza && <Ic.scanteie className="h-3.5 w-3.5" />}
-                {esuat ? "Încearcă din nou"
-                  : nou.cate === 0 ? "Nimic nou de citit"
-                    : nou.tot ? `Reia tot (${nou.cate})`
-                      : `Citește cele ${nou.cate} noi`}
-              </Buton>
-            )}
-            <Link
-              href={`/panou/dosar/${dosar.id}`}
-              className="inline-flex items-center gap-1.5 rounded-[var(--radius-field)] border border-line-strong bg-surface-3 px-3 py-1.5 text-[12.5px] font-medium text-ink transition-colors hover:bg-surface-4"
-            >
-              {dosar.etapa === "semnat" ? "Vezi raportul" : "Deschide"} <Ic.dreapta className="h-3.5 w-3.5" />
-            </Link>
-          </div>
+          {/* Un singur meniu, nu doua butoane.
+              „Reia" statea la un clic distanta de o rulare de un dolar, si se
+              apasa din greseala; verificarea se porneste acum din dosar, cu
+              intrebare. Iar „Deschide" nu spunea ce deschide — dosarul sau
+              raportul? — deci amandoua au intrat aici, cu numele lor. */}
+          <MeniuRaport dosar={dosar} />
         </div>
 
         <div className="mt-3">
@@ -340,5 +315,68 @@ function RandRaport({
         )}
       </Card>
     </li>
+  );
+}
+
+
+/**
+ * Ce se poate face cu o luna verificata.
+ *
+ * Doua drumuri, si se cheama pe nume: raportul, ca hartie de citit si tiparit;
+ * dosarul, ca loc de lucru. Reluarea NU e aici — costa bani reali, iar un buton
+ * langa un rand se apasa din greseala. Ea sta in meniul lunii, cu intrebare.
+ */
+function MeniuRaport({ dosar }: { dosar: DosarLunar }) {
+  const [deschis, setDeschis] = useState(false);
+  const raport = raportAi(dosar);
+  const semnat = dosar.reports.find(r => r.tip === "expert" && r.status === "publicat");
+
+  return (
+    <div className="relative shrink-0">
+      <Buton fel="moale" marime="mic" onClick={() => setDeschis(v => !v)} aria-haspopup="menu" aria-expanded={deschis}>
+        Acțiuni <Ic.jos className={`h-3.5 w-3.5 transition-transform ${deschis ? "rotate-180" : ""}`} />
+      </Buton>
+
+      {deschis && (
+        <>
+          <button aria-label="Închide meniul" onClick={() => setDeschis(false)}
+            className="fixed inset-0 z-40 cursor-default" />
+          <div role="menu"
+            className="rise absolute right-0 top-[calc(100%+6px)] z-50 w-[240px] rounded-[var(--radius-card)] border border-line bg-surface-2 p-1.5 shadow-2xl">
+            {raport ? (
+              <a
+                href={`/raport/${raport.id}`} target="_blank" rel="noreferrer" role="menuitem"
+                onClick={() => setDeschis(false)}
+                className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] text-muted transition-colors hover:bg-surface-3 hover:text-ink"
+              >
+                <Ic.descarca className="h-3.5 w-3.5" /> Descarcă raportul PDF
+              </a>
+            ) : (
+              <span className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] text-faint opacity-50">
+                <Ic.descarca className="h-3.5 w-3.5" /> Raportul nu e încă gata
+              </span>
+            )}
+
+            {semnat && (
+              <a
+                href={`/raport/${semnat.id}`} target="_blank" rel="noreferrer" role="menuitem"
+                onClick={() => setDeschis(false)}
+                className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] text-muted transition-colors hover:bg-surface-3 hover:text-ink"
+              >
+                <Ic.semnatura className="h-3.5 w-3.5" /> Raportul semnat
+              </a>
+            )}
+
+            <div className="my-1 border-t border-line" />
+            <Link
+              href={`/panou/dosar/${dosar.id}`} role="menuitem" onClick={() => setDeschis(false)}
+              className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] text-muted transition-colors hover:bg-surface-3 hover:text-ink"
+            >
+              <Ic.balanta className="h-3.5 w-3.5" /> Vezi dosarul
+            </Link>
+          </div>
+        </>
+      )}
+    </div>
   );
 }

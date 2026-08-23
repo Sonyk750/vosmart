@@ -61,6 +61,7 @@ export type DosarLunar = {
   updatedAt: string;
   fisiere: FisierDinDosar[];
   constatari: ConstatareScurta[];
+  reports: { id: string; tip: string; status: string }[];
 };
 
 /* ------------------------------------------------------------- MARIMI */
@@ -154,6 +155,11 @@ export const VERDICTE: Record<string, { eticheta: string; ton: Ton; explicatie: 
 
 export function verdictul(d: DosarLunar) {
   return VERDICTE[d.verdict ?? ""] ?? { eticheta: d.verdict ?? "—", ton: "neutru" as Ton, explicatie: "" };
+}
+
+/** Raportul AI al dosarului, daca s-a produs vreunul. */
+export function raportAi(d: DosarLunar) {
+  return d.reports.find(r => r.tip === "ai") ?? null;
 }
 
 /** Cate constatari intra efectiv in scor: cele respinse de cenzor nu. */

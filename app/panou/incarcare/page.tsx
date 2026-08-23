@@ -1,5 +1,4 @@
-import { requireAdmin } from "@/lib/auth";
-import { lunaDeLucru } from "@/lib/luni";
+import { lunaDeLucru, numarLuna } from "@/lib/luni";
 import IncarcareClient from "./IncarcareClient";
 
 /**
@@ -14,15 +13,18 @@ import IncarcareClient from "./IncarcareClient";
  * miezul noptii dintre luni — o nepotrivire de hidratare pe care nimeni n-ar
  * reusi sa o reproduca a doua zi.
  */
-export default async function PaginaIncarcare() {
-  // Cine intocmeste inventarul se scrie pe hartie, sub semnatura. Poarta e tot in
-  // `layout.tsx`; aici doar aflam numele.
-  const user = await requireAdmin();
+export default async function PaginaIncarcare({
+  searchParams,
+}: {
+  searchParams: Promise<{ luna?: string; an?: string }>;
+}) {
+  // Din ecranul de dosare se vine cu luna in adresa („adaugă documente" la o lună
+  // anume). Fara asta, omul ar ajunge aici pe luna implicita si ar trebui sa o
+  // caute din nou pe cea la care tocmai se uita.
+  const cerut = await searchParams;
+  const implicit = lunaDeLucru();
+  const luna = cerut.luna && numarLuna(cerut.luna) ? cerut.luna : implicit.luna;
+  const an = Number(cerut.an) >= 2015 ? Number(cerut.an) : implicit.an;
 
-  return (
-    <IncarcareClient
-      implicit={lunaDeLucru()}
-      intocmitDe={user?.name || user?.email || "VoSmart"}
-    />
-  );
+  return <IncarcareClient implicit={{ luna, an }} />;
 }

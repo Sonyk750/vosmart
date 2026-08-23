@@ -70,6 +70,9 @@ const CAMPURI_DOSAR = {
   // nevoie sa le numere pe categorii, nu sa le citeasca. Cele respinse de cenzor
   // nu mai intra in scor, deci `stare` trebuie sa vina cu ele.
   constatari: { select: { severitate: true, stare: true, sursa: true } },
+  // Id-ul raportului, ca ecranul sa poata trimite direct la el. Fara asta,
+  // „descarcă raportul" ar fi insemnat inca o cerere pentru fiecare rand.
+  reports: { select: { id: true, tip: true, status: true } },
   fisiere: {
     select: {
       id: true, numeFisier: true, tip: true, eticheta: true, mimeType: true,
@@ -184,7 +187,6 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const totalOcteti = fisiere.reduce((s, f) => s + f.size, 0);
   // Verificarea e pe FIECARE fisier, nu pe teanc: limita platformei e pe cerere,
   // iar ecranul trimite cate un fisier pe cerere. Oricum, o cerere mai mare
   // decat atat n-ar ajunge pana aici — ar fi respinsa inainte.
@@ -276,21 +278,62 @@ export async function POST(req: NextRequest) {
     pregatite.push({ brut, gata: await pregatesteFisier(brut, mimeDupaNume(f.name, f.type)), nume: f.name });
   }
 
-  // INVENTARUL. Modelul deschide fiecare document si spune ce e — nu se ia dupa
-  // numele fisierului, care la facturile scoase din programele de administrare
-  // nu spune nici ce e documentul, nici de la cine vine.
-  const inventar = await inventariaza(
-    pregatite.map(p => ({ continut: p.gata.continut, numeFisier: p.nume, mimeType: p.gata.mimeType })),
+  /**
+   * CE E DEJA IN DOSAR NU MAI INTRA A DOUA OARA.
+   *
+   * Amprenta sha256 o calculam oricum, ca dovada a ce s-a primit; aici isi mai
+   * face o treaba. Cine reincarca folderul lunii — fiindca a mai adaugat doua
+   * facturi, sau fiindca prima incercare a picat pe la jumatate — nu trebuie sa
+   * ajunga cu dosarul dublat. S-a intamplat: 22 de documente au devenit 44, iar
+   * verificarea a numarat facturile de doua ori.
+   *
+   * Se compara octetii, nu numele: acelasi document exportat de doua ori din
+   * programul de administrare poarta nume diferite, dar are aceeasi amprenta.
+   */
+  const amprenteInDosar = new Set(
+    (await prisma.fisier.findMany({ where: { dosarId: dosar.id }, select: { amprenta: true } }))
+      .map(f => f.amprenta)
+      .filter((a): a is string => Boolean(a)),
   );
 
-  for (let i = 0; i < fisiere.length; i++) {
-    const f = fisiere[i];
-    const { gata } = pregatite[i];
+  const duplicate: string[] = [];
+  const deIntrat: typeof pregatite = [];
+  for (const p of pregatite) {
+    // Si fata de dosar, si fata de teancul de acum: acelasi fisier poate fi ales
+    // de doua ori dintr-un folder, sub doua nume.
+    if (amprenteInDosar.has(p.gata.amprenta)) { duplicate.push(p.nume); continue; }
+    amprenteInDosar.add(p.gata.amprenta);
+    deIntrat.push(p);
+  }
+
+  if (deIntrat.length === 0) {
+    return NextResponse.json({
+      dosarId: dosar.id, primite: 0, nesalvate: [], necitibile: [], duplicate,
+      octetiPrimiti: 0, octetiPastrati: 0,
+      lipsa: lipsuri((await prisma.fisier.findMany({ where: { dosarId: dosar.id }, select: { tip: true } })).map(f => f.tip)),
+      inventar: { citite: 0, cost: 0, denumiri: [] },
+      pornit: false,
+    }, { status: 200 });
+  }
+
+  // INVENTARUL. Modelul deschide fiecare document si spune ce e — nu se ia dupa
+  // numele fisierului, care la facturile scoase din programele de administrare
+  // nu spune nici ce e documentul, nici de la cine vine. Duplicatele nu ajung
+  // aici: pentru ele s-ar plati o citire care s-a facut deja.
+  const inventar = await inventariaza(
+    deIntrat.map(p => ({ continut: p.gata.continut, numeFisier: p.nume, mimeType: p.gata.mimeType })),
+  );
+
+  for (let i = 0; i < deIntrat.length; i++) {
+    const { gata, nume } = deIntrat[i];
+    const f = { name: nume };
 
     // Tipul pus cu mana de cenzor bate tot. In rest comanda ce s-a citit din
     // document; ghicitul din nume ramane doar pentru ce n-a putut fi citit —
     // Word, Excel, arhive, sau un document pe care modelul nu l-a inteles.
-    const pusDeOm = tipuri[i] && tipuri[i] !== "altele" && tipuri[i] !== "auto" ? tipuri[i] : null;
+    const pozitie = pregatite.indexOf(deIntrat[i]);
+    const ales = tipuri[pozitie];
+    const pusDeOm = ales && ales !== "altele" && ales !== "auto" ? ales : null;
     const citit = inventar.citiri[i] ?? dinNume(f.name);
     const tip = pusDeOm ?? citit.tip;
     const tipSursa = pusDeOm ? "om" : citit.tipSursa;
@@ -346,12 +389,14 @@ export async function POST(req: NextRequest) {
 
   // In jurnal scriem si cat s-a strans prin recodare: e singurul loc din care se
   // poate afla mai tarziu de ce dosarul ocupa mai putin decat s-a trimis.
-  const strans = totalOcteti - octetiPastrati;
+  const octetiIntrati = deIntrat.reduce((t, p) => t + p.gata.marimeOriginala, 0);
+  const strans = octetiIntrati - octetiPastrati;
   const primite =
     `${randuri.length} ${randuri.length === 1 ? "document primit" : "documente primite"} · ` +
     (strans > 256 * 1024
-      ? `${(totalOcteti / 1024 / 1024).toFixed(1)} MB primiți, ${(octetiPastrati / 1024 / 1024).toFixed(1)} MB păstrați`
-      : `${(totalOcteti / 1024 / 1024).toFixed(1)} MB`);
+      ? `${(octetiIntrati / 1024 / 1024).toFixed(1)} MB primiți, ${(octetiPastrati / 1024 / 1024).toFixed(1)} MB păstrați`
+      : `${(octetiIntrati / 1024 / 1024).toFixed(1)} MB`)
+    + (duplicate.length ? ` · ${duplicate.length} erau deja în dosar și nu s-au dublat` : "");
   await prisma.evenimentFlux.create({
     data: {
       dosarId: dosar.id,
@@ -403,8 +448,9 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({
     dosarId: dosar.id,
     primite: randuri.length,
-    octetiPrimiti: totalOcteti,
+    octetiPrimiti: octetiIntrati,
     octetiPastrati,
+    duplicate,
     inventar: {
       citite: inventar.citiri.filter(Boolean).length,
       cost: inventar.cost,

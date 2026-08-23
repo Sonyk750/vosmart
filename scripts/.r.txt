@@ -1,16 +1,20 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { TIPURI, lipsuri, eticheta as etichetaTip } from "@/lib/cenzorat/documente";
 import {
   ACCEPT, FORMATE_TEXT, LIMITA_FISIER_MB,
   esteAcceptat, esteArhiva, formatul, mimeDupaNume, sePoateDesface,
 } from "@/lib/cenzorat/formate";
 import { LUNI, numarLuna } from "@/lib/luni";
-import { Buton, Card, Eticheta, Rotitor } from "@/app/components/ui";
-import { claseCamp } from "@/app/components/baza";
+import { Bara, Buton, Card, Eticheta, Gol, Rotitor, Schelet } from "@/app/components/ui";
+import { claseCamp, dataRo } from "@/app/components/baza";
 import { Ic } from "@/app/components/icoane";
 import { useContract } from "../ContractContext";
-import { cuMajuscula, kb, mb, type DosarLunar as Dosar } from "../dosar-lunar";
+import {
+  cantitate, cuMajuscula, deCitit, kb, mb, stareDosar,
+  type DosarLunar as Dosar, type FisierDinDosar,
+} from "../dosar-lunar";
 
 /** Un fisier ales de om, inainte sa plece spre dosar. */
 type FisierAles = {
@@ -84,7 +88,13 @@ async function fisiereDinDrop(dt: DataTransfer): Promise<File[]> {
   return gasite;
 }
 
-export default function IncarcareClient({ implicit }: { implicit: { luna: string; an: number } }) {
+export default function IncarcareClient({
+  implicit, intocmitDe,
+}: {
+  implicit: { luna: string; an: number };
+  /** Numele cenzorului, pentru inventarul tiparit. */
+  intocmitDe: string;
+}) {
   const { ales } = useContract();
 
   const [luna, setLuna] = useState(String(numarLuna(implicit.luna) ?? 1).padStart(2, "0"));
@@ -95,12 +105,13 @@ export default function IncarcareClient({ implicit }: { implicit: { luna: string
   const [desface, setDesface] = useState(false);
   const [trimite, setTrimite] = useState(false);
   const [progres, setProgres] = useState({ gata: 0, total: 0 });
-  /** Dosarul in care tocmai au intrat documentele, ca sa se poata trece la el. */
-  const [dosarulIntrat, setDosarulIntrat] = useState<string | null>(null);
 
   const [eroare, setEroare] = useState("");
   const [izbanda, setIzbanda] = useState("");
 
+  const [deschis, setDeschis] = useState<string | null>(null);
+  const [modSters, setModSters] = useState(false);
+  const [lucreaza, setLucreaza] = useState<string | null>(null);
 
   // Lista se tine impreuna cu contractul pentru care a venit: la schimbarea
   // contractului, lunile vechi dispar in aceeasi randare in care se schimba bara
@@ -117,6 +128,7 @@ export default function IncarcareClient({ implicit }: { implicit: { luna: string
     () => (lista?.cheie === contractId ? lista.dosare : []),
     [lista, contractId],
   );
+  const seIncarca = Boolean(contractId) && lista?.cheie !== contractId;
   const numeLunaAleasa = LUNI[parseInt(luna, 10) - 1];
   const dosarulLunii = dosare.find(d => d.luna === numeLunaAleasa && d.an === parseInt(an, 10));
 
@@ -139,6 +151,13 @@ export default function IncarcareClient({ implicit }: { implicit: { luna: string
   // Cat timp un dosar e in lucru, ecranul se uita din nou din cand in cand.
   // Verificarea dureaza in jur de un minut si se intampla pe server, dupa ce
   // raspunsul a plecat; fara asta, omul ar sta pe o bara care nu se misca.
+  // Cat ocupa tot contractul: intrebarea „cat ma costa stocarea?" se pune pe
+  // contract, nu pe luna, iar raspunsul trebuie sa fie la vedere fara sa desfaci
+  // fiecare rand in parte.
+  const totalContract = useMemo(() => {
+    const toate = dosare.flatMap(d => d.fisiere);
+    return { documente: toate.length, ...cantitate(toate) };
+  }, [dosare]);
 
   const inLucru = dosare.some(d => d.stareEtapa === "in_lucru");
   useEffect(() => {
@@ -340,7 +359,10 @@ export default function IncarcareClient({ implicit }: { implicit: { luna: string
         + (strans > 256 * 1024 ? ` ${kb(primiti)} primite → ${kb(pastrati)} pe server.` : "")
         + (cost > 0 ? ` Citirea documentelor: $${cost.toFixed(3)}.` : ""),
       );
-      setDosarulIntrat(dosarId);
+      // Dosarul se deschide singur, cu inventarul in el. Inainte il inchideam,
+      // si omul ramanea fara raspuns la singura intrebare pe care o avea dupa
+      // incarcare: „bun, si ce sunt documentele astea?".
+      if (dosarId) { setDeschis(dosarId); setModSters(false); }
       setReincarca(n => n + 1);
     }
     if (cazute.length > 0) {
@@ -563,14 +585,6 @@ export default function IncarcareClient({ implicit }: { implicit: { luna: string
           <p className="flex items-start gap-2 text-[13px] text-ok">
             <Ic.bifa className="mt-0.5 h-4 w-4 shrink-0" /> {izbanda}
           </p>
-          {/* Inventarul, verificarea si restul se fac in ecranul de dosare;
-              de aici se pleaca spre el, ca omul sa nu-l caute in meniu. */}
-          <Link
-            href={dosarulIntrat ? `/panou/dosar/${dosarulIntrat}` : "/panou/dosare"}
-            className="mt-3 inline-flex items-center gap-1.5 rounded-[var(--radius-field)] border border-line-strong bg-surface-3 px-3.5 py-2 text-[13px] font-medium text-ink transition-colors hover:bg-surface-4"
-          >
-            Vezi dosarul pe {numeLunaAleasa} {an} <Ic.dreapta className="h-3.5 w-3.5" />
-          </Link>
         </Card>
       )}
 

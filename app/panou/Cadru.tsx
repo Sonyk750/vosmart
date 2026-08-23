@@ -89,6 +89,9 @@ const GRUPURI: Grup[] = [
     intrari: [
       { cale: "/panou/rapoarte-ai", eticheta: "Rapoarte AI", pictograma: Ic.scanteie, numar: "deVerificat", ton: "brand" },
       { cale: "/panou/rapoarte-expert", eticheta: "Rapoarte expert", pictograma: Ic.semnatura, numar: "laExpert", ton: "warn" },
+      // Dosarele stau dupa rapoarte, nu langa incarcare: aici se lucreaza cu
+      // luna intreaga — inventar, verificare, stergere — nu se arunca fisiere.
+      { cale: "/panou/dosare", eticheta: "Dosare", pictograma: Ic.dosar },
     ],
   },
   {
