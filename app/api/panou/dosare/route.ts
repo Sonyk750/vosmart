@@ -62,7 +62,12 @@ function citesteTinta(contractId: unknown, lunaBruta: unknown, anBrut: unknown):
 const CAMPURI_DOSAR = {
   id: true, luna: true, an: true, titlu: true,
   etapa: true, stareEtapa: true, incredere: true, scor: true, verdict: true, rezumat: true,
+  tokensIn: true, tokensOut: true, terminatLa: true,
   createdAt: true, updatedAt: true,
+  // Doar severitatea si starea, nu constatarile intregi: ecranul de rapoarte are
+  // nevoie sa le numere pe categorii, nu sa le citeasca. Cele respinse de cenzor
+  // nu mai intra in scor, deci `stare` trebuie sa vina cu ele.
+  constatari: { select: { severitate: true, stare: true, sursa: true } },
   fisiere: {
     select: {
       id: true, numeFisier: true, tip: true, eticheta: true, mimeType: true,

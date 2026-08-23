@@ -6,65 +6,17 @@ import {
   ACCEPT, FORMATE_TEXT, LIMITA_FISIER_MB,
   esteAcceptat, esteArhiva, formatul, mimeDupaNume, sePoateDesface,
 } from "@/lib/cenzorat/formate";
-import { ETAPE, INDEX_ETAPA, type Etapa } from "@/lib/cenzorat/tipuri";
 import { LUNI, numarLuna } from "@/lib/luni";
 import { Bara, Buton, Card, Eticheta, Gol, Rotitor, Schelet } from "@/app/components/ui";
-import { claseCamp, dataRo, type Ton } from "@/app/components/baza";
+import { claseCamp, dataRo } from "@/app/components/baza";
 import { Ic } from "@/app/components/icoane";
 import { useContract } from "../ContractContext";
+import {
+  cantitate, cuMajuscula, kb, mb, stareDosar,
+  type DosarLunar as Dosar, type FisierDinDosar,
+} from "../dosare";
 
-/**
- * Încărcarea documentelor, pe luni.
- *
- * Ecranul e o LISTA DE LUNI, nu un formular. Sus alegi perioada si arunci
- * documentele; jos apare un rand pentru luna aceea, si de acolo incolo tot ce
- * faci cu dosarul faci din meniul randului: mai adaugi, vezi ce e inauntru,
- * scoti ce a intrat gresit, trimiti la verificare.
- *
- * Incarcarea NU porneste verificarea. Asociatia trimite in trei transe, iar o
- * citire la fiecare transa ar costa de trei ori si ar citi de doua ori un dosar
- * pe jumatate. Verificarea e o apasare separata, din meniul lunii, cand omul
- * spune ca dosarul e destul de plin.
- */
-
-type FisierDinDosar = {
-  id: string;
-  numeFisier: string;
-  tip: string;
-  eticheta: string;
-  mimeType: string;
-  /** Cat ocupa in stocare, dupa recodare. */
-  marime: number;
-  /** Cat avea cand a fost trimis. Gol la fisierele intrate inainte de recodare. */
-  marimeOriginala: number | null;
-  /** sha256 al originalului — dovada a ce s-a primit. */
-  amprenta: string | null;
-  optimizat: boolean;
-  /** Ce a citit modelul in document: „Factură Apa Nova". */
-  denumireAi: string | null;
-  emitentAi: string | null;
-  perioadaAi: string | null;
-  /** ai | nume | om — de unde vine tipul. */
-  tipSursa: string;
-  createdAt: string;
-};
-
-type Dosar = {
-  id: string;
-  luna: string;
-  an: number;
-  titlu: string | null;
-  etapa: Etapa;
-  stareEtapa: string;
-  incredere: number | null;
-  scor: number | null;
-  verdict: string | null;
-  rezumat: string | null;
-  createdAt: string;
-  updatedAt: string;
-  fisiere: FisierDinDosar[];
-};
-
+/** Un fisier ales de om, inainte sa plece spre dosar. */
 type FisierAles = {
   id: string;
   fisier: File;
@@ -80,26 +32,19 @@ type FisierAles = {
 let contor = 0;
 const idNou = () => `f${++contor}`;
 
-const mb = (octeti: number) => octeti / 1024 / 1024;
-const cuMajuscula = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
-
-function kb(octeti: number): string {
-  return octeti < 1024 * 1024
-    ? `${Math.max(1, Math.round(octeti / 1024))} KB`
-    : `${mb(octeti).toFixed(1)} MB`;
-}
-
 /**
- * Cat cantareste un dosar — primit fata de pastrat.
+ * Încărcarea documentelor, pe luni.
  *
- * `marimeOriginala` lipseste la fisierele intrate inainte de recodare; atunci
- * cade pe `marime`, deci raportul iese 1:1 si nu se afiseaza nicio sageata.
+ * Ecranul e o LISTA DE LUNI, nu un formular. Sus alegi perioada si arunci
+ * documentele; jos apare un rand pentru luna aceea, si de acolo incolo tot ce
+ * faci cu dosarul faci din meniul randului: mai adaugi, vezi ce e inauntru,
+ * scoti ce a intrat gresit, trimiti la verificare.
+ *
+ * Incarcarea NU porneste verificarea. Asociatia trimite in trei transe, iar o
+ * citire la fiecare transa ar costa de trei ori si ar citi de doua ori un dosar
+ * pe jumatate. Verificarea e o apasare separata, din meniul lunii, cand omul
+ * spune ca dosarul e destul de plin.
  */
-function cantitate(fisiere: FisierDinDosar[]) {
-  const primit = fisiere.reduce((s, f) => s + (f.marimeOriginala ?? f.marime), 0);
-  const pastrat = fisiere.reduce((s, f) => s + f.marime, 0);
-  return { primit, pastrat, strans: primit - pastrat };
-}
 
 /**
  * Fisierele dintr-un „drop", inclusiv cand s-a tras un FOLDER.
@@ -141,23 +86,6 @@ async function fisiereDinDrop(dt: DataTransfer): Promise<File[]> {
 
   for (const i of intrari) await coboara(i);
   return gasite;
-}
-
-/** Unde a ajuns dosarul, in cuvinte si in culoare. */
-function stareDosar(d: Dosar): { text: string; ton: Ton; inLucru: boolean; procent: number } {
-  const procent = ((INDEX_ETAPA[d.etapa] ?? 0) + 1) / ETAPE.length * 100;
-  const numeEtapa = ETAPE.find(e => e.cheie === d.etapa)?.eticheta ?? d.etapa;
-
-  if (d.stareEtapa === "esuata") return { text: "Verificare eșuată", ton: "bad", inLucru: false, procent };
-  if (d.stareEtapa === "in_lucru") return { text: `${numeEtapa}…`, ton: "brand", inLucru: true, procent };
-  if (d.etapa === "semnat") return { text: "Raport semnat", ton: "ok", inLucru: false, procent };
-  if (d.etapa === "revizuire") return { text: "La cenzor", ton: "warn", inLucru: false, procent };
-  if (d.etapa === "intrare") {
-    return d.fisiere.length === 0
-      ? { text: "Dosar gol", ton: "neutru", inLucru: false, procent: 0 }
-      : { text: "Documente primite", ton: "info", inLucru: false, procent };
-  }
-  return { text: numeEtapa, ton: "info", inLucru: false, procent };
 }
 
 export default function IncarcareClient({
