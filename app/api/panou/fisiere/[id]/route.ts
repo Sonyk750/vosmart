@@ -3,6 +3,7 @@ import { getSession, requireAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { poateVedeaContractul } from "@/lib/acces";
 import { citesteFisier, stergeFisiere } from "@/lib/stocare";
+import { numeDupaMime } from "@/lib/cenzorat/optimizare";
 
 export const runtime = "nodejs";
 
@@ -48,7 +49,12 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     return NextResponse.json({ error: "Fișierul nu mai este disponibil" }, { status: 404 });
   }
 
-  const numeCurat = fisier.numeFisier.replace(/[^a-zA-Z0-9._ -]/g, "_");
+  // Tipul care conteaza e cel din baza, nu cel intors de stocare: el descrie
+  // octetii pe care ii avem noi. Iar numele isi ia extensia dupa el — o scanare
+  // trimisa ca „lista.png" si pastrata recodata ca JPEG trebuie sa iasa
+  // „lista.jpg", altfel primul program care o deschide se plange.
+  const mimeType = fisier.mimeType || continut.mimeType;
+  const numeCurat = numeDupaMime(fisier.numeFisier, mimeType).replace(/[^a-zA-Z0-9._ -]/g, "_");
 
   // Implicit `attachment`, nu `inline`: chiar daca ar ajunge vreodata un fisier
   // cu continut activ pana aici, browserul il salveaza, nu il executa.
@@ -56,11 +62,11 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   // `?inline=1` il deschide in pagina, dar numai daca e un format pasiv. Chiar
   // si atunci punem `sandbox` in CSP, deci documentul ruleaza fara scripturi si
   // fara acces la originea aplicatiei; un PDF cu JavaScript in el ramane o foaie.
-  const potInline = inline && MIME_INLINE.includes(continut.mimeType);
+  const potInline = inline && MIME_INLINE.includes(mimeType);
 
   return new NextResponse(continut.stream, {
     headers: {
-      "Content-Type": continut.mimeType,
+      "Content-Type": mimeType,
       "Content-Disposition": `${potInline ? "inline" : "attachment"}; filename="${numeCurat}"`,
       "Cache-Control": "private, no-store",
       "X-Content-Type-Options": "nosniff",

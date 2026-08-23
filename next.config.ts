@@ -1,6 +1,12 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // `sharp` are binare native (libvips). Trecut prin bundler ar fi rescris in
+  // JavaScript si si-ar pierde legatura cu ele; lasat extern, e cerut la rulare
+  // asa cum e instalat. Il folosim la recodarea scanarilor — vezi
+  // `lib/cenzorat/optimizare.ts`.
+  serverExternalPackages: ["sharp"],
+
   async headers() {
     return [{
       source: "/(.*)",

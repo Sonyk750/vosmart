@@ -33,7 +33,13 @@ type FisierDinDosar = {
   tip: string;
   eticheta: string;
   mimeType: string;
+  /** Cat ocupa in stocare, dupa recodare. */
   marime: number;
+  /** Cat avea cand a fost trimis. Gol la fisierele intrate inainte de recodare. */
+  marimeOriginala: number | null;
+  /** sha256 al originalului — dovada a ce s-a primit. */
+  amprenta: string | null;
+  optimizat: boolean;
   createdAt: string;
 };
 
@@ -229,8 +235,14 @@ export default function IncarcareClient({ implicit }: { implicit: { luna: string
       if (!r.ok) throw new Error(d.error || "Documentele nu au putut fi trimise.");
 
       setFisiere([]);
+      // Cand recodarea a strans ceva de spus, se spune: altfel omul vede in dosar
+      // alte cifre decat cele de pe calculatorul lui si nu stie de ce.
+      const strans = (d.octetiPrimiti ?? 0) - (d.octetiPastrati ?? 0);
       setIzbanda(
-        `${d.primite} ${d.primite === 1 ? "document a intrat" : "documente au intrat"} în dosarul pe ${numeLunaAleasa} ${an}.`,
+        `${d.primite} ${d.primite === 1 ? "document a intrat" : "documente au intrat"} în dosarul pe ${numeLunaAleasa} ${an}.`
+        + (strans > 256 * 1024
+          ? ` Scanările au fost recodate: ${kb(d.octetiPrimiti)} primiți, ${kb(d.octetiPastrati)} păstrați.`
+          : ""),
       );
       setDeschis(d.dosarId);
       setModSters(false);
@@ -660,9 +672,17 @@ function RandLuna({
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-[13px] text-ink">{f.eticheta || etichetaTip(f.tip)}</p>
                         <p className="truncate text-[11.5px] text-faint">
-                          {f.numeFisier} · {kb(f.marime)}
+                          {f.numeFisier} · {f.optimizat && f.marimeOriginala
+                            ? `${kb(f.marimeOriginala)} → ${kb(f.marime)}`
+                            : kb(f.marime)}
                           {!formatul(f.numeFisier)?.citibilDeAi && " · nu intră în citirea AI"}
                         </p>
+                        {f.amprenta && (
+                          <p className="truncate font-mono text-[10px] text-faint/70"
+                            title={`sha256 al fișierului original: ${f.amprenta}`}>
+                            {f.optimizat ? "recodat · " : ""}amprentă {f.amprenta.slice(0, 16)}…
+                          </p>
+                        )}
                       </div>
                       <a
                         href={`/api/panou/fisiere/${f.id}?inline=1`}

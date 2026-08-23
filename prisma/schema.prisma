@@ -81,18 +81,18 @@ model Contract {
   persoanaTelefon String?
 
   /// Ziua din luna pana la care asociatia trebuie sa trimita documentele.
-  ziTermen   Int     @default(15)
+  ziTermen Int @default(15)
 
   status     String  @default("activ") // activ | suspendat | incheiat
   observatii String?
 
   /// Cenzorul din VoSmart care raspunde de contract. Gol = il lucreaza proprietarul.
-  cenzorId  String?
+  cenzorId String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  cenzor  User?      @relation("ContracteCenzor", fields: [cenzorId], references: [id], onDelete: SetNull)
+  cenzor  User?    @relation("ContracteCenzor", fields: [cenzorId], references: [id], onDelete: SetNull)
   dosare  Dosar[]
   reports Report[]
 
@@ -115,8 +115,8 @@ model Dosar {
   titlu      String?
 
   // --- Fluxul de verificare. Vezi lib/cenzorat/pipeline.ts ---
-  etapa      String    @default("intrare")    // intrare | extragere | verificare | sinteza | revizuire | semnat
-  stareEtapa String    @default("asteptare")  // asteptare | in_lucru | gata | esuata
+  etapa      String    @default("intrare") // intrare | extragere | verificare | sinteza | revizuire | semnat
+  stareEtapa String    @default("asteptare") // asteptare | in_lucru | gata | esuata
   /// Cifrele citite din documente (ExtrasDosar). Din ele se calculeaza tot restul.
   extras     Json?
   /// Cat la suta din datele asteptate s-au gasit efectiv in documente.
@@ -148,18 +148,32 @@ model Dosar {
 ///
 /// In baza tinem doar adresa; continutul nu se serveste niciodata direct, ci
 /// prin ruta de descarcare, care verifica intai a cui e dosarul.
+///
+/// Scanarile se pastreaza RECODATE, nu asa cum au venit: o pagina A4 la 300 dpi
+/// are 5-7 MB si nu se lasa comprimata (un JPEG e deja comprimat), dar recodata
+/// la ~200 dpi are 1,2 MB si se citeste la fel. Vezi `lib/cenzorat/optimizare.ts`.
+/// Ca sa nu se piarda dovada a ce s-a primit, `amprenta` tine sha256 al
+/// fisierului ORIGINAL, calculat inainte de orice atingere.
 model Fisier {
-  id       String @id @default(cuid())
-  dosarId  String
-  tip      String // lista_plata | explicatii_lista | registru_casa | facturi | ...
-  eticheta String
+  id              String   @id @default(cuid())
+  dosarId         String
+  tip             String // lista_plata | explicatii_lista | registru_casa | facturi | ...
+  eticheta        String
   /// Numele original, asa cum l-a trimis omul.
-  numeFisier String
+  numeFisier      String
   /// Adresa din Blob; fara token nu se poate citi.
-  blobUrl  String
-  mimeType String
-  marime   Int
-  createdAt DateTime @default(now())
+  blobUrl         String
+  /// Tipul octetilor PASTRATI. Poate diferi de ce a trimis browserul, daca s-a recodat.
+  mimeType        String
+  /// Cat ocupa in stocare, dupa recodare.
+  marime          Int
+  /// Cat avea cand a fost trimis. Gol la fisierele intrate inainte de recodare.
+  marimeOriginala Int?
+  /// sha256 (hex) al fisierului original. Raspunsul la „ce mi-ati trimis de fapt?".
+  amprenta        String?
+  /// A fost recodat la pastrare? Cand e fals, in Blob sta chiar originalul.
+  optimizat       Boolean  @default(false)
+  createdAt       DateTime @default(now())
 
   dosar Dosar @relation(fields: [dosarId], references: [id], onDelete: Cascade)
 
@@ -174,8 +188,8 @@ model Constatare {
   cod         String
   titlu       String
   detaliu     String
-  severitate  String   // critica | ridicata | medie | scazuta | info
-  sursa       String   // regula | ai | cenzor
+  severitate  String // critica | ridicata | medie | scazuta | info
+  sursa       String // regula | ai | cenzor
   temei       String?
   /// Cifrele pe care se sprijina, ca sa nu fie nevoie de redeschiderea PDF-ului.
   probe       Json?
@@ -217,10 +231,10 @@ model Report {
   contractId String
   tip        String @default("ai") // ai | expert
 
-  titlu   String
+  titlu  String
   /// Raportul in forma structurata: date, constatari, scor.
-  date    Json?
-  status  String @default("draft") // draft | publicat
+  date   Json?
+  status String @default("draft") // draft | publicat
 
   semnatDe String?
   semnatLa DateTime?

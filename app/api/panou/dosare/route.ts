@@ -5,6 +5,7 @@ import { poateVedeaContractul } from "@/lib/acces";
 import { salveazaFisier, stocareConfigurata } from "@/lib/stocare";
 import { eticheta as etichetaTip, ghicesteTip, lipsuri } from "@/lib/cenzorat/documente";
 import { esteAcceptat, formatul, mimeDupaNume, FORMATE_TEXT, LIMITA_MB } from "@/lib/cenzorat/formate";
+import { numeDupaMime, pregatesteFisier } from "@/lib/cenzorat/optimizare";
 import { ruleazaFlux } from "@/lib/cenzorat/pipeline";
 import type { FisierDeCitit } from "@/lib/cenzorat/extragere";
 import { numarLuna, numeLuna } from "@/lib/luni";
@@ -62,7 +63,10 @@ const CAMPURI_DOSAR = {
   etapa: true, stareEtapa: true, incredere: true, scor: true, verdict: true, rezumat: true,
   createdAt: true, updatedAt: true,
   fisiere: {
-    select: { id: true, numeFisier: true, tip: true, eticheta: true, mimeType: true, marime: true, createdAt: true },
+    select: {
+      id: true, numeFisier: true, tip: true, eticheta: true, mimeType: true,
+      marime: true, marimeOriginala: true, amprenta: true, optimizat: true, createdAt: true,
+    },
     orderBy: { createdAt: "asc" as const },
   },
 } as const;
@@ -229,8 +233,10 @@ export async function POST(req: NextRequest) {
   const randuri: {
     dosarId: string; tip: string; eticheta: string; numeFisier: string;
     blobUrl: string; mimeType: string; marime: number;
+    marimeOriginala: number; amprenta: string; optimizat: boolean;
   }[] = [];
   const nesalvate: string[] = [];
+  let octetiPastrati = 0;
 
   for (let i = 0; i < fisiere.length; i++) {
     const f = fisiere[i];
@@ -238,15 +244,19 @@ export async function POST(req: NextRequest) {
     // il ghicim din nume, ca fisierul sa nu intre in dosar fara identitate.
     const alesDeOm = tipuri[i];
     const tip = alesDeOm && alesDeOm !== "altele" ? alesDeOm : ghicesteTip(f.name).cheie;
-    const mimeType = mimeDupaNume(f.name, f.type);
-    const continut = Buffer.from(await f.arrayBuffer());
+    const brut = Buffer.from(await f.arrayBuffer());
 
-    const numeSigur = `${tip}_${marca}_${i}_${f.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
-    const salvat = await salveazaFisier(`${dosarBlob}/${numeSigur}`, continut, mimeType);
+    // Scanarile se recodeaza inainte de pastrare, iar amprenta originalului se
+    // calculeaza inainte de asta. Vezi `lib/cenzorat/optimizare.ts`.
+    const gata = await pregatesteFisier(brut, mimeDupaNume(f.name, f.type));
+
+    const numeSigur = `${tip}_${marca}_${i}_${numeDupaMime(f.name, gata.mimeType).replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+    const salvat = await salveazaFisier(`${dosarBlob}/${numeSigur}`, gata.continut, gata.mimeType);
     if (!salvat) {
       nesalvate.push(f.name);
       continue;
     }
+    octetiPastrati += salvat.size;
 
     randuri.push({
       dosarId: dosar.id,
@@ -254,10 +264,15 @@ export async function POST(req: NextRequest) {
       eticheta: etichetaTip(tip),
       numeFisier: f.name,
       blobUrl: salvat.url,
-      mimeType,
+      mimeType: gata.mimeType,
       marime: salvat.size,
+      marimeOriginala: gata.marimeOriginala,
+      amprenta: gata.amprenta,
+      optimizat: gata.optimizat,
     });
-    pentruCitire.push({ tip, numeFisier: f.name, mimeType, continut });
+    // Modelul citeste exact octetii pe care ii pastram, nu originalul: altfel
+    // raportul s-ar sprijini pe o imagine pe care cenzorul n-o mai poate deschide.
+    pentruCitire.push({ tip, numeFisier: f.name, mimeType: gata.mimeType, continut: gata.continut });
   }
 
   if (randuri.length === 0) {
@@ -280,7 +295,14 @@ export async function POST(req: NextRequest) {
   // nu le poate deschide asa cum sunt. Se spune aici, nu dupa verificare.
   const necitibile = randuri.filter(r => !formatul(r.numeFisier)?.citibilDeAi).map(r => r.numeFisier);
 
-  const primite = `${randuri.length} ${randuri.length === 1 ? "document primit" : "documente primite"} · ${(totalOcteti / 1024 / 1024).toFixed(1)} MB`;
+  // In jurnal scriem si cat s-a strans prin recodare: e singurul loc din care se
+  // poate afla mai tarziu de ce dosarul ocupa mai putin decat s-a trimis.
+  const strans = totalOcteti - octetiPastrati;
+  const primite =
+    `${randuri.length} ${randuri.length === 1 ? "document primit" : "documente primite"} · ` +
+    (strans > 256 * 1024
+      ? `${(totalOcteti / 1024 / 1024).toFixed(1)} MB primiți, ${(octetiPastrati / 1024 / 1024).toFixed(1)} MB păstrați`
+      : `${(totalOcteti / 1024 / 1024).toFixed(1)} MB`);
   await prisma.evenimentFlux.create({
     data: {
       dosarId: dosar.id,
@@ -316,6 +338,8 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({
     dosarId: dosar.id,
     primite: randuri.length,
+    octetiPrimiti: totalOcteti,
+    octetiPastrati,
     nesalvate,
     necitibile,
     lipsa,
