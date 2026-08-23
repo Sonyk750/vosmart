@@ -80,6 +80,18 @@ function kb(octeti: number): string {
     : `${mb(octeti).toFixed(1)} MB`;
 }
 
+/**
+ * Cat cantareste un dosar — primit fata de pastrat.
+ *
+ * `marimeOriginala` lipseste la fisierele intrate inainte de recodare; atunci
+ * cade pe `marime`, deci raportul iese 1:1 si nu se afiseaza nicio sageata.
+ */
+function cantitate(fisiere: FisierDinDosar[]) {
+  const primit = fisiere.reduce((s, f) => s + (f.marimeOriginala ?? f.marime), 0);
+  const pastrat = fisiere.reduce((s, f) => s + f.marime, 0);
+  return { primit, pastrat, strans: primit - pastrat };
+}
+
 /** Unde a ajuns dosarul, in cuvinte si in culoare. */
 function stareDosar(d: Dosar): { text: string; ton: Ton; inLucru: boolean; procent: number } {
   const procent = ((INDEX_ETAPA[d.etapa] ?? 0) + 1) / ETAPE.length * 100;
@@ -123,7 +135,12 @@ export default function IncarcareClient({ implicit }: { implicit: { luna: string
   const intrare = useRef<HTMLInputElement>(null);
 
   const contractId = ales?.id ?? "";
-  const dosare = lista?.cheie === contractId ? lista.dosare : [];
+  // Memorat, nu doar derivat: un `[]` nou la fiecare randare ar face `useMemo`-ul
+  // totalului sa recalculeze mereu, adica sa nu memoreze nimic.
+  const dosare = useMemo(
+    () => (lista?.cheie === contractId ? lista.dosare : []),
+    [lista, contractId],
+  );
   const seIncarca = Boolean(contractId) && lista?.cheie !== contractId;
   const numeLunaAleasa = LUNI[parseInt(luna, 10) - 1];
   const dosarulLunii = dosare.find(d => d.luna === numeLunaAleasa && d.an === parseInt(an, 10));
@@ -147,6 +164,14 @@ export default function IncarcareClient({ implicit }: { implicit: { luna: string
   // Cat timp un dosar e in lucru, ecranul se uita din nou din cand in cand.
   // Verificarea dureaza in jur de un minut si se intampla pe server, dupa ce
   // raspunsul a plecat; fara asta, omul ar sta pe o bara care nu se misca.
+  // Cat ocupa tot contractul: intrebarea „cat ma costa stocarea?" se pune pe
+  // contract, nu pe luna, iar raspunsul trebuie sa fie la vedere fara sa desfaci
+  // fiecare rand in parte.
+  const totalContract = useMemo(() => {
+    const toate = dosare.flatMap(d => d.fisiere);
+    return { documente: toate.length, ...cantitate(toate) };
+  }, [dosare]);
+
   const inLucru = dosare.some(d => d.stareEtapa === "in_lucru");
   useEffect(() => {
     if (!inLucru) return;
@@ -484,11 +509,17 @@ export default function IncarcareClient({ implicit }: { implicit: { luna: string
       {/* ------------------------------------------------------- PAS 2: lunile */}
 
       <div className="mt-7">
-        <div className="mb-3 flex items-baseline justify-between gap-3">
+        <div className="mb-3 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
           <h2 className="text-[15px] font-semibold tracking-tight text-ink">Dosarele lunare</h2>
           {dosare.length > 0 && (
             <p className="tnum text-[12px] text-faint">
               {dosare.length} {dosare.length === 1 ? "lună" : "luni"}
+              {" · "}{totalContract.documente} {totalContract.documente === 1 ? "document" : "documente"}
+              {totalContract.documente > 0 && (
+                totalContract.strans > 256 * 1024
+                  ? ` · ${kb(totalContract.primit)} primite → ${kb(totalContract.pastrat)} pe server`
+                  : ` · ${kb(totalContract.pastrat)} pe server`
+              )}
             </p>
           )}
         </div>
@@ -548,7 +579,7 @@ function RandLuna({
 }) {
   const [meniu, setMeniu] = useState(false);
   const stare = stareDosar(dosar);
-  const octeti = dosar.fisiere.reduce((s, f) => s + f.marime, 0);
+  const cat = cantitate(dosar.fisiere);
   const semnat = dosar.etapa === "semnat";
 
   const lipsa = useMemo(() => lipsuri(dosar.fisiere.map(f => f.tip)), [dosar.fisiere]);
@@ -577,7 +608,11 @@ function RandLuna({
               </span>
               <span className="block truncate text-[11.5px] text-faint">
                 {dosar.fisiere.length} {dosar.fisiere.length === 1 ? "document" : "documente"}
-                {dosar.fisiere.length > 0 && ` · ${kb(octeti)}`}
+                {dosar.fisiere.length > 0 && (
+                  cat.strans > 256 * 1024
+                    ? ` · ${kb(cat.primit)} primite → ${kb(cat.pastrat)} pe server`
+                    : ` · ${kb(cat.pastrat)}`
+                )}
                 {lipsa.length > 0 && ` · lipsesc ${lipsa.length}`}
               </span>
             </span>
@@ -637,8 +672,17 @@ function RandLuna({
         {/* ------------------------------------------------- ce e înăuntru */}
         {deschis && (
           <div className="rise border-t border-line">
-            {(dosar.rezumat || dosar.incredere !== null || dosar.scor !== null) && (
+            {(dosar.rezumat || dosar.incredere !== null || dosar.scor !== null || dosar.fisiere.length > 0) && (
               <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-b border-line bg-surface-1 px-5 py-3">
+                {dosar.fisiere.length > 0 && <Cifra eticheta="Primite" valoare={kb(cat.primit)} />}
+                {dosar.fisiere.length > 0 && (
+                  <Cifra
+                    eticheta="Pe server"
+                    valoare={cat.strans > 1024
+                      ? `${kb(cat.pastrat)} (−${Math.round((cat.strans / cat.primit) * 100)}%)`
+                      : kb(cat.pastrat)}
+                  />
+                )}
                 {dosar.scor !== null && (
                   <Cifra eticheta="Scor" valoare={`${Math.round(dosar.scor)}%`} />
                 )}
