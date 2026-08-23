@@ -66,7 +66,20 @@ const SURSA: Record<string, string> = {
   regula: "verificare automată", ai: "citire AI", cenzor: "adăugată de cenzor",
 };
 
-export default function PupitruCenzor({ dosarId }: { dosarId: string }) {
+export default function PupitruCenzor({
+  dosarId, faraAntet,
+}: {
+  dosarId: string;
+  /**
+   * Ascunde antetul propriu — numele asociatiei, luna, inelul de scor.
+   *
+   * La adresa directa `/panou/dosar/<id>` antetul e singurul lucru care spune al
+   * cui e dosarul. La „Dosare" insa, asociatia sta deja in bara de sus si luna
+   * in capul cardului; repetate, ocupa un ecran intreg inainte sa se vada un
+   * document. Cine incadreaza pupitrul isi pune propriul antet.
+   */
+  faraAntet?: boolean;
+}) {
   const [date, setDate] = useState<Date_ | null>(null);
   const [eroare, setEroare] = useState("");
   const [lucreaza, setLucreaza] = useState<string | null>(null);
@@ -215,9 +228,9 @@ export default function PupitruCenzor({ dosarId }: { dosarId: string }) {
   const verdict = VERDICT[date.scor.verdict] ?? { text: date.scor.verdict, ton: "neutru" as Ton };
 
   return (
-    <div className="mx-auto max-w-[1500px] px-4 py-5 sm:px-6">
+    <div className={faraAntet ? "" : "mx-auto max-w-[1500px] px-4 py-5 sm:px-6"}>
       {/* ------------------------------------------------------------ antet */}
-      <div className="mb-4 flex flex-wrap items-start justify-between gap-4">
+      <div className={`mb-4 flex flex-wrap items-start justify-between gap-4 ${faraAntet ? "hidden" : ""}`}>
         <div className="min-w-0">
           <Link href="/panou/rapoarte-expert" className="mb-2 inline-flex items-center gap-1.5 text-[12.5px] text-faint transition-colors hover:text-ink">
             <Ic.stanga className="h-3.5 w-3.5" /> Rapoarte expert
