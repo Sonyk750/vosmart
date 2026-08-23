@@ -12,7 +12,7 @@ import { claseCamp, dataRo } from "@/app/components/baza";
 import { Ic } from "@/app/components/icoane";
 import { useContract } from "../ContractContext";
 import {
-  cantitate, cuMajuscula, kb, mb, stareDosar,
+  cantitate, cuMajuscula, deCitit, kb, mb, stareDosar,
   type DosarLunar as Dosar, type FisierDinDosar,
 } from "../dosare";
 
@@ -431,6 +431,38 @@ export default function IncarcareClient({
     }
   }
 
+  /**
+   * Sterge dosarul unei luni, cu tot ce e in el.
+   *
+   * Se intampla cand luna a fost deschisa gresit. Confirmarea e cu numarul de
+   * documente in ea: „18 documente" opreste mana mai bine decat „ești sigur?".
+   */
+  async function stergeDosarul(dosar: Dosar) {
+    const cate = dosar.fisiere.length;
+    const sigur = window.confirm(
+      `Se șterge dosarul pe ${dosar.luna} ${dosar.an}, cu tot ce e în el`
+      + (cate ? `: ${cate} ${cate === 1 ? "document" : "documente"}, inventarul și verificarea.` : ".")
+      + "\n\nȘtergerea e definitivă.",
+    );
+    if (!sigur) return;
+
+    setLucreaza(dosar.id);
+    setEroare("");
+    setIzbanda("");
+    try {
+      const r = await fetch(`/api/panou/dosare/${dosar.id}`, { method: "DELETE" });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(d.error || "Dosarul nu a putut fi șters.");
+      setIzbanda(`Dosarul pe ${dosar.luna} ${dosar.an} a fost șters.`);
+      setDeschis(null);
+      setReincarca(n => n + 1);
+    } catch (e) {
+      setEroare(e instanceof Error ? e.message : "Dosarul nu a putut fi șters.");
+    } finally {
+      setLucreaza(null);
+    }
+  }
+
   /** „Adaugă documente" din meniul unei luni: aduce perioada sus si deschide alegerea. */
   function adaugaLa(dosar: Dosar) {
     setLuna(String(numarLuna(dosar.luna) ?? 1).padStart(2, "0"));
@@ -706,6 +738,7 @@ export default function IncarcareClient({
                 }}
                 peAdauga={() => adaugaLa(d)}
                 peCorectat={() => setReincarca(n => n + 1)}
+                peStergereDosar={() => stergeDosarul(d)}
                 pePornire={() => porneste(d)}
                 peStergere={stergeDocument}
               />
@@ -720,7 +753,8 @@ export default function IncarcareClient({
 /* ------------------------------------------------------------- UN RÂND */
 
 function RandLuna({
-  dosar, deschis, modSters, lucreaza, peComuta, peAdauga, pePornire, peStergere, peInventar, peCorectat,
+  dosar, deschis, modSters, lucreaza, peComuta, peAdauga, pePornire, peStergere, peStergereDosar,
+  peInventar, peCorectat,
 }: {
   dosar: Dosar;
   /** Scoate inventarul lunii pe hartie. */
@@ -732,6 +766,7 @@ function RandLuna({
   peAdauga: () => void;
   pePornire: () => void;
   peStergere: (f: FisierDinDosar) => void;
+  peStergereDosar: () => void;
   /** Dupa o corectie, lista se aduce din nou de la server. */
   peCorectat: () => void;
 }) {
@@ -741,6 +776,7 @@ function RandLuna({
   const semnat = dosar.etapa === "semnat";
 
   const lipsa = useMemo(() => lipsuri(dosar.fisiere.map(f => f.tip)), [dosar.fisiere]);
+  const nou = deCitit(dosar);
 
   const actiune = (fn: () => void) => () => { setMeniu(false); fn(); };
 
@@ -816,9 +852,16 @@ function RandLuna({
                     Salvează inventarul (PDF)
                   </ElementMeniu>
                   <ElementMeniu pictograma={<Ic.scanteie className="h-3.5 w-3.5" />}
-                    dezactivat={semnat || dosar.fisiere.length === 0 || stare.inLucru}
+                    dezactivat={semnat || dosar.fisiere.length === 0 || stare.inLucru || nou.cate === 0}
                     peApasare={actiune(pePornire)}>
-                    Trimite la verificare AI
+                    {nou.cate === 0 ? "Totul e deja verificat"
+                      : nou.tot ? `Trimite la verificare AI (${nou.cate})`
+                        : `Verifică cele ${nou.cate} documente noi`}
+                  </ElementMeniu>
+                  <div className="my-1 border-t border-line" />
+                  <ElementMeniu pictograma={<Ic.cos className="h-3.5 w-3.5" />} dezactivat={semnat}
+                    peApasare={actiune(peStergereDosar)}>
+                    Șterge dosarul lunii
                   </ElementMeniu>
                   <div className="my-1 border-t border-line" />
                   <Link href={`/panou/dosar/${dosar.id}`} role="menuitem" onClick={() => setMeniu(false)}

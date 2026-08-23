@@ -39,9 +39,9 @@ export async function noteaza(
 }
 
 /** Aduce continutul fisierelor dosarului din stocare, ca sa poata fi recitite. */
-async function incarcaFisiere(dosarId: string): Promise<FisierDeCitit[]> {
+async function incarcaFisiere(dosarId: string, doarIds?: string[]): Promise<FisierDeCitit[]> {
   const randuri = await prisma.fisier.findMany({
-    where: { dosarId },
+    where: { dosarId, ...(doarIds ? { id: { in: doarIds } } : {}) },
     orderBy: { createdAt: "asc" },
   });
 
@@ -89,10 +89,50 @@ export async function ruleazaFlux({ dosarId, fisiere }: OptiuniFlux): Promise<vo
     /* ---------------------------------------------------------- CITIRE */
     await noteaza(dosarId, "extragere", "in_lucru", "Se deschid documentele din dosar");
 
-    const deCitit = fisiere ?? (await incarcaFisiere(dosarId));
+    /**
+     * CE SE RECITESTE SI CE NU.
+     *
+     * O verificare pe douazeci si doua de documente costa in jur de un dolar. Daca
+     * dupa ea mai intra o factura, n-are niciun rost sa se plateasca a doua oara
+     * citirea celor douazeci si doua — se citeste factura, iar ce iese din ea se
+     * imbina peste ce se stia.
+     *
+     * Reluarea completa ramane pentru cazurile in care asa TREBUIE: cand nu s-a
+     * citit nimic pana acum, si cand din dosar A DISPARUT un document. La stergere
+     * nu se poate scoate din `extras` doar ce venise de la el, asa ca singurul
+     * raspuns corect e sa se citeasca tot din nou.
+     */
+    const toateRandurile = await prisma.fisier.findMany({
+      where: { dosarId }, select: { id: true, tip: true }, orderBy: { createdAt: "asc" },
+    });
+    const idsAcum = toateRandurile.map(f => f.id);
+    const cititeInainte = Array.isArray(dosar.fisiereCitite) ? (dosar.fisiereCitite as string[]) : [];
+    const stiute = new Set(cititeInainte.filter(id => idsAcum.includes(id)));
+
+    const nuS_aPierdutNimic = cititeInainte.length === stiute.size;
+    const incremental = Boolean(dosar.extras) && nuS_aPierdutNimic && stiute.size > 0 && stiute.size < idsAcum.length;
+    const idsDeCitit = incremental ? idsAcum.filter(id => !stiute.has(id)) : idsAcum;
+
+    const deCitit = fisiere && !incremental
+      ? fisiere
+      : await incarcaFisiere(dosarId, incremental ? idsDeCitit : undefined);
+
     if (deCitit.length === 0) {
-      await noteaza(dosarId, "extragere", "esuata", "Dosarul nu conține niciun fișier care să poată fi citit.");
-      return;
+      // Nimic nou si nimic pierdut: dosarul a fost deja citit intreg. Nu mai
+      // platim o rulare ca sa aflam acelasi lucru.
+      if (incremental || (stiute.size > 0 && nuS_aPierdutNimic)) {
+        await noteaza(dosarId, "extragere", "gata", "Toate documentele erau deja citite — nu s-a recitit nimic.");
+      } else {
+        await noteaza(dosarId, "extragere", "esuata", "Dosarul nu conține niciun fișier care să poată fi citit.");
+        return;
+      }
+    }
+
+    if (incremental) {
+      await noteaza(
+        dosarId, "extragere", "in_lucru",
+        `Se citesc doar cele ${deCitit.length} ${deCitit.length === 1 ? "document nou" : "documente noi"} · ${stiute.size} erau deja citite`,
+      );
     }
 
     const { extras, tokensIn, tokensOut, netrimise } = await citesteDosar(
@@ -104,18 +144,29 @@ export async function ruleazaFlux({ dosarId, fisiere }: OptiuniFlux): Promise<vo
         an: dosar.an,
       },
       mesaj => noteaza(dosarId, "extragere", "in_lucru", mesaj),
+      incremental ? (dosar.extras as ExtrasDosar) : null,
     );
 
     const incredere = increderaDate(extras);
     await prisma.dosar.update({
       where: { id: dosarId },
-      data: { extras: extras as never, incredere: incredere.procent, tokensIn, tokensOut },
+      data: {
+        extras: extras as never,
+        incredere: incredere.procent,
+        // Tokenii se ADUNA: la o citire incrementala, cei de acum sunt doar ai
+        // documentelor noi, iar costul dosarului e tot ce s-a cheltuit pe el.
+        tokensIn: incremental ? (dosar.tokensIn ?? 0) + tokensIn : tokensIn,
+        tokensOut: incremental ? (dosar.tokensOut ?? 0) + tokensOut : tokensOut,
+        fisiereCitite: idsAcum as never,
+      },
     });
     await noteaza(
       dosarId,
       "extragere",
       "gata",
-      `${deCitit.length - netrimise.length} documente citite · ${incredere.gasite} din ${incredere.total} indicatori găsiți`,
+      incremental
+        ? `${deCitit.length - netrimise.length} documente noi citite (${idsAcum.length} în dosar) · ${incredere.gasite} din ${incredere.total} indicatori găsiți`
+        : `${deCitit.length - netrimise.length} documente citite · ${incredere.gasite} din ${incredere.total} indicatori găsiți`,
     );
 
     /* ----------------------------------------------------- VERIFICĂRI */
@@ -125,7 +176,10 @@ export async function ruleazaFlux({ dosarId, fisiere }: OptiuniFlux): Promise<vo
       extras,
       cuiDeclarat: dosar.contract.cui,
       denumireDeclarata: dosar.contract.denumire,
-      tipuriPrimite: deCitit.map(f => f.tip),
+      // Toate tipurile din dosar, nu doar cele citite acum: la o citire
+      // incrementala, `deCitit` are doar documentele noi, iar regulile care se
+      // uita la ce LIPSESTE ar fi crezut ca dosarul are un singur document.
+      tipuriPrimite: toateRandurile.map(f => f.tip),
     });
 
     // Constatarile se rescriu de la zero la fiecare rulare: o reluare nu trebuie

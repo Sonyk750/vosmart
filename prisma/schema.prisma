@@ -115,19 +115,25 @@ model Dosar {
   titlu      String?
 
   // --- Fluxul de verificare. Vezi lib/cenzorat/pipeline.ts ---
-  etapa      String    @default("intrare") // intrare | extragere | verificare | sinteza | revizuire | semnat
-  stareEtapa String    @default("asteptare") // asteptare | in_lucru | gata | esuata
+  etapa         String    @default("intrare") // intrare | extragere | verificare | sinteza | revizuire | semnat
+  stareEtapa    String    @default("asteptare") // asteptare | in_lucru | gata | esuata
   /// Cifrele citite din documente (ExtrasDosar). Din ele se calculeaza tot restul.
-  extras     Json?
+  extras        Json?
+  /// Ce fisiere au produs `extras` — lista de id-uri.
+  ///
+  /// Din ea se afla, la o reluare, ce mai e de citit. O verificare pe 22 de
+  /// documente costa in jur de un dolar; fara lista asta, adaugarea unei singure
+  /// facturi ar fi insemnat sa se plateasca tot dosarul din nou.
+  fisiereCitite Json?
   /// Cat la suta din datele asteptate s-au gasit efectiv in documente.
-  incredere  Int?
-  scor       Float?
-  verdict    String?
-  rezumat    String?
-  tokensIn   Int?
-  tokensOut  Int?
-  inceputLa  DateTime?
-  terminatLa DateTime?
+  incredere     Int?
+  scor          Float?
+  verdict       String?
+  rezumat       String?
+  tokensIn      Int?
+  tokensOut     Int?
+  inceputLa     DateTime?
+  terminatLa    DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

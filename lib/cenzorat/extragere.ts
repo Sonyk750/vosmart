@@ -375,6 +375,14 @@ export async function citesteDosar(
   fisiere: FisierDeCitit[],
   context: { denumire: string; cui: string; luna: string; an: number },
   jurnal?: (mesaj: string) => void | Promise<void>,
+  /**
+   * Ce s-a citit deja, la o rulare anterioara.
+   *
+   * Cand e dat, `fisiere` contine DOAR documentele noi, iar ce iese de la ele se
+   * imbina peste asta. Fara el, adaugarea unei facturi la un dosar de douazeci
+   * ar fi insemnat sa se plateasca a doua oara citirea tuturor celor douazeci.
+   */
+  deja?: ExtrasDosar | null,
 ): Promise<RezultatExtragere> {
   const client = new Anthropic();
 
@@ -382,9 +390,10 @@ export async function citesteDosar(
     .filter(f => !sePoateCiti(f.mimeType))
     .map(f => ({ tip: f.tip, numeFisier: f.numeFisier, motiv: `format ${f.mimeType} — nu poate fi citit` }));
 
+  const problematice = netrimise.map(n => ({ tip: n.tip, problema: n.motiv }));
   const citibile = fisiere.filter(f => sePoateCiti(f.mimeType));
   if (citibile.length === 0) {
-    return { extras: { ...EXTRAS_GOL, documenteProblematice: netrimise.map(n => ({ tip: n.tip, problema: n.motiv })) }, tokensIn: 0, tokensOut: 0, netrimise };
+    return { extras: { ...(deja ?? EXTRAS_GOL), documenteProblematice: problematice }, tokensIn: 0, tokensOut: 0, netrimise };
   }
 
   // Documentele principale merg in prima transa: daca ceva se strica pe drum,
@@ -395,7 +404,8 @@ export async function citesteDosar(
     transe.push(ordonate.slice(i, i + MAX_FISIERE_PE_CERERE));
   }
 
-  let extras: ExtrasDosar = { ...EXTRAS_GOL, documenteProblematice: netrimise.map(n => ({ tip: n.tip, problema: n.motiv })) };
+  // Pornim de la ce se stia deja, cand exista: transele urmatoare se imbina peste.
+  let extras: ExtrasDosar = { ...(deja ?? EXTRAS_GOL), documenteProblematice: problematice };
   let tokensIn = 0;
   let tokensOut = 0;
 
@@ -407,7 +417,9 @@ export async function citesteDosar(
         : `Se citesc ${transa.length} documente`,
     );
 
-    const rezultat = await citesteTransa(client, transa, context, i > 0 ? extras : null);
+    // Modelului i se spune ce s-a gasit pana acum — si din transele de dinainte,
+    // si din rularile de dinainte — ca sa nu repete si sa se uite doar la ce e nou.
+    const rezultat = await citesteTransa(client, transa, context, i > 0 || deja ? extras : null);
     tokensIn += rezultat.tokensIn;
     tokensOut += rezultat.tokensOut;
     extras = imbina(extras, rezultat.extras);

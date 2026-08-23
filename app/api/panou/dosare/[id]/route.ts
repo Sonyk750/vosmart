@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { poateVedeaContractul } from "@/lib/acces";
+import { stergeFisiere } from "@/lib/stocare";
 import { constatariDosar } from "@/lib/cenzorat/pipeline";
 import { calculeazaScor } from "@/lib/cenzorat/scor";
 import { ExtrasDosar } from "@/lib/cenzorat/tipuri";
@@ -67,4 +68,46 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     // inchide la modificari.
     raport: dosar.reports[0] ?? null,
   });
+}
+
+/**
+ * Stergerea unui dosar, cu tot ce e in el.
+ *
+ * Se intampla cand luna a fost deschisa gresit — documentele lui iulie puse pe
+ * iunie, de pilda. Fisierele, constatarile, jurnalul si rapoartele pleaca odata
+ * cu el prin `onDelete: Cascade`; documentele din Blob le stergem noi, fiindca
+ * acolo baza nu ajunge.
+ *
+ * Dosarul cu raport semnat nu se sterge. Raportul a fost dat pe documentele lui
+ * si a plecat la asociatie; ce sustine o semnatura nu dispare la o apasare.
+ */
+export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const user = await requireAdmin();
+  if (!user) return NextResponse.json({ error: "Neautorizat" }, { status: 401 });
+
+  const { id } = await params;
+
+  const dosar = await prisma.dosar.findUnique({
+    where: { id },
+    select: {
+      contractId: true, etapa: true, luna: true, an: true,
+      fisiere: { select: { blobUrl: true } },
+    },
+  });
+  if (!dosar) return NextResponse.json({ error: "Dosar negăsit" }, { status: 404 });
+
+  if (!(await poateVedeaContractul(user, dosar.contractId))) {
+    return NextResponse.json({ error: "Neautorizat" }, { status: 403 });
+  }
+  if (dosar.etapa === "semnat") {
+    return NextResponse.json(
+      { error: `Dosarul pe ${dosar.luna} ${dosar.an} are raport semnat și nu se poate șterge.` },
+      { status: 409 },
+    );
+  }
+
+  await prisma.dosar.delete({ where: { id } });
+  await stergeFisiere(dosar.fisiere.map(f => f.blobUrl));
+
+  return NextResponse.json({ sters: true, documente: dosar.fisiere.length });
 }

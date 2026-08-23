@@ -55,6 +55,8 @@ export type DosarLunar = {
   tokensIn: number | null;
   tokensOut: number | null;
   terminatLa: string | null;
+  /** Id-urile fisierelor care au produs `extras`. Vezi `deCitit`. */
+  fisiereCitite: string[] | null;
   createdAt: string;
   updatedAt: string;
   fisiere: FisierDinDosar[];
@@ -102,6 +104,26 @@ export function stareDosar(d: DosarLunar): { text: string; ton: Ton; inLucru: bo
       : { text: "Documente primite", ton: "info", inLucru: false, procent };
   }
   return { text: numeEtapa, ton: "info", inLucru: false, procent };
+}
+
+/**
+ * Cate documente ar citi o reluare a verificarii — adica pe ce se dau banii.
+ *
+ * O citire costa in jur de cinci centi pe document, deci diferenta dintre „3" si
+ * „22" e diferenta dintre cincisprezece centi si un dolar. Ecranul o spune INAINTE
+ * de apasare, nu dupa.
+ *
+ * Cand din dosar a disparut un document, se reciteste tot: din `extras` nu se
+ * poate scoate inapoi doar ce venise de la el.
+ */
+export function deCitit(d: DosarLunar): { cate: number; tot: boolean } {
+  const cititeInainte = d.fisiereCitite ?? [];
+  const idsAcum = d.fisiere.map(f => f.id);
+  const stiute = cititeInainte.filter(id => idsAcum.includes(id));
+
+  const sAPierdut = stiute.length !== cititeInainte.length;
+  if (!d.scor || stiute.length === 0 || sAPierdut) return { cate: idsAcum.length, tot: true };
+  return { cate: idsAcum.length - stiute.length, tot: false };
 }
 
 /** A trecut dosarul prin verificare? Scorul are inteles doar atunci. */

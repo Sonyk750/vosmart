@@ -7,7 +7,7 @@ import { dataRo, type Ton } from "@/app/components/baza";
 import { Ic } from "@/app/components/icoane";
 import { useContract } from "../ContractContext";
 import {
-  areRaportAi, constatariActive, cuMajuscula, stareDosar, verdictul,
+  areRaportAi, constatariActive, cuMajuscula, deCitit, stareDosar, verdictul,
   type DosarLunar,
 } from "../dosare";
 
@@ -224,6 +224,9 @@ function RandRaport({
   const gata = areRaportAi(dosar);
   const v = verdictul(dosar);
   const active = constatariActive(dosar);
+  // Cate documente ar citi o reluare — cifra pe care omul trebuie sa o vada
+  // INAINTE de apasare, fiindca ea e costul.
+  const nou = deCitit(dosar);
 
   // Increderea nu e decor: un scor mare pe date incomplete nu inseamna un dosar
   // curat, inseamna un dosar necitit. De aceea sta langa scor, nu ascunsa.
@@ -302,9 +305,17 @@ function RandRaport({
 
           <div className="flex shrink-0 items-center gap-2">
             {dosar.etapa !== "semnat" && !stare.inLucru && (
-              <Buton fel="moale" marime="mic" incarca={lucreaza} onClick={pePornire}>
+              <Buton
+                fel="moale" marime="mic" incarca={lucreaza} onClick={pePornire}
+                title={nou.tot
+                  ? `Se recitesc toate cele ${nou.cate} documente`
+                  : `Se citesc doar cele ${nou.cate} documente noi; restul se păstrează`}
+              >
                 {!lucreaza && <Ic.scanteie className="h-3.5 w-3.5" />}
-                {esuat ? "Încearcă din nou" : "Reia"}
+                {esuat ? "Încearcă din nou"
+                  : nou.cate === 0 ? "Nimic nou de citit"
+                    : nou.tot ? `Reia tot (${nou.cate})`
+                      : `Citește cele ${nou.cate} noi`}
               </Buton>
             )}
             <Link
