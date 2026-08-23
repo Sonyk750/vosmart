@@ -109,6 +109,10 @@ const SCHEMA_EXTRAS = obiect({
       items: obiect({ iban: txt, descriere: { type: "string" }, sold: nr }),
     },
   }),
+  distributie: obiect({
+    total: optional("number", "TOTALUL general din documentul „Distribuirea facturilor” al lunii verificate — cifra de la rândul TOTAL, nu suma facturilor scanate."),
+    perioada: optional("string", "Luna la care se referă documentul de distribuire, așa cum scrie pe el."),
+  }),
   fonduri: obiect({
     rulment: nr, reparatii: nr, penalitati: nr,
     altele: { type: "array", items: obiect({ denumire: { type: "string" }, sold: nr }) },
@@ -170,9 +174,13 @@ Sarcina ta este să CITEȘTI documentele atașate și să întorci cifrele din e
 
 Reguli, în ordinea importanței:
 
+0. FIECARE FACTURĂ O SINGURĂ DATĂ. Aceeași factură apare, în mod normal, în trei-patru locuri: factura scanată, „Distribuirea facturilor", registrul jurnal, registrul de bancă. Este UN SINGUR document justificativ, deci intră o singură dată în listă, cu numărul lui. Nu o repeta pentru că ai văzut-o din nou; completează-i câmpurile lipsă din locul în care apare mai complet. Comisioanele bancare NU sunt facturi de furnizor.
+
 1. Ce nu scrie în documente rămâne null. Nu deduce, nu calcula ce n-ai văzut, nu completa cu o valoare plauzibilă. Un câmp null este un răspuns corect și util; o cifră inventată ajunge într-un raport semnat de cenzor și îl compromite.
 2. Sumele se întorc ca numere, în lei, cu punct zecimal (1234.56), fără separator de mii și fără simbol de monedă. Sumele scrise între paranteze sau cu semnul minus sunt negative.
-3. Dacă același indicator apare în două documente cu valori diferite, întoarce valoarea din documentul primar (registrul, nu recapitulația) și descrie diferența în neconcordante. Tot acolo pun și totalurile care nu se închid sau listele afișate parțial. Nu le pune în documenteProblematice: acele documente s-au citit, doar că nu se potrivesc între ele.
+3. Dacă același indicator apare în două documente cu valori diferite, întoarce valoarea din documentul primar (registrul, nu recapitulația) și descrie diferența în neconcordante.
+
+3b. NU RAPORTA DIFERENȚELE DE ROTUNJIRE. O cheltuială împărțită pe apartamente cu două zecimale nu se mai adună exact la loc: 605,00 lei pe factură devine 604,99 lei pe listă, 90,00 devine 89,99, 856,00 devine 855,99. Sub 1 leu diferență între același element din două documente este rotunjire din împărțire, nu neconcordanță — treci mai departe fără să o menționezi. Semnalează doar diferențele care nu se pot explica așa. Tot acolo pun și totalurile care nu se închid sau listele afișate parțial. Nu le pune în documenteProblematice: acele documente s-au citit, doar că nu se potrivesc între ele.
 4. documenteProblematice este exclusiv pentru documente pe care NU le-ai putut citi — scanare proastă, pagini lipsă, format neașteptat, conținut care nu corespunde numelui. Nu ghici conținutul lor.
 5. La restanțieri, întoarce apartamentele individual, cu numărul așa cum apare pe listă. Dacă lista are zeci de apartamente restante, întoarce-le pe toate.
 6. modalitatePlata se completează doar când reiese explicit din document (mențiune de virament, ordin de plată, chitanță de casă). Altfel null.
@@ -287,9 +295,11 @@ export function curataExtras(brut: unknown): ExtrasDosar {
   const restantieri = obiectDin(r.restantieri);
   const furnizori = obiectDin(r.furnizori);
   const penalizari = obiectDin(r.penalizari);
+  const distributie = obiectDin(r.distributie);
   const salarii = obiectDin(r.salarii);
 
   return {
+    distributie: { total: numar(distributie.total), perioada: sir(distributie.perioada) },
     identificare: {
       denumire: sir(ident.denumire), cui: sir(ident.cui), adresa: sir(ident.adresa),
       iban: sir(ident.iban), banca: sir(ident.banca), presedinte: sir(ident.presedinte),
@@ -535,6 +545,10 @@ function imbina(a: ExtrasDosar, b: ExtrasDosar): ExtrasDosar {
   const primul = <T>(x: T | null, y: T | null): T | null => (x !== null && x !== undefined ? x : y ?? null);
 
   return {
+    distributie: {
+      total: primul(a.distributie?.total ?? null, b.distributie?.total ?? null),
+      perioada: primul(a.distributie?.perioada ?? null, b.distributie?.perioada ?? null),
+    },
     identificare: {
       denumire: primul(a.identificare.denumire, b.identificare.denumire),
       cui: primul(a.identificare.cui, b.identificare.cui),

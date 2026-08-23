@@ -53,6 +53,18 @@ export type ExtrasDosar = {
     totalPlati: Suma;
     conturi: { iban: string | null; descriere: string; sold: Suma }[];
   };
+  /**
+   * Documentul „Distribuirea facturilor" — totalul repartizat efectiv pe luna.
+   *
+   * E singura cifra cu care are sens sa compari totalul listei. Teancul de
+   * facturi scanate NU e: aceeasi factura apare in trei documente, iar in dosar
+   * intra si facturi din alte luni. Vezi regula LISTA-VS-DISTRIBUTIE.
+   */
+  distributie: {
+    total: Suma;
+    /** Luna la care se refera documentul, asa cum scrie pe el. */
+    perioada: string | null;
+  };
   fonduri: {
     rulment: Suma;
     reparatii: Suma;
@@ -117,6 +129,7 @@ export const EXTRAS_GOL: ExtrasDosar = {
   perioada: { luna: null, an: null, dataAfisarii: null, dataScadenta: null },
   casa: { soldInitial: null, soldFinal: null, totalIncasari: null, totalPlati: null, primaChitanta: { numar: null, suma: null }, ultimaChitanta: { numar: null, suma: null }, soldMaximZilnic: null, zileCuIncasari: null },
   banca: { soldInitial: null, soldFinal: null, totalIncasari: null, totalPlati: null, conturi: [] },
+  distributie: { total: null, perioada: null },
   fonduri: { rulment: null, reparatii: null, penalitati: null, altele: [] },
   lista: { totalCheltuieli: null, totalRestante: null, numarApartamente: null, coloane: [], areColoanaRestante: null, areColoanaPenalizari: null, areColoanaFondRulment: null },
   restantieri: { total: null, apartamente: [] },

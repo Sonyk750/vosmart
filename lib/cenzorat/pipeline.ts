@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { citesteFisier } from "@/lib/stocare";
 import { citesteDosar, FisierDeCitit } from "./extragere";
 import { aplicaReguli, increderaDate } from "./reguli";
+import { profilAsociatiei } from "./istoric";
 import { calculeazaScor } from "./scor";
 import { Constatare, Etapa, ExtrasDosar, StareEtapa } from "./tipuri";
 
@@ -172,8 +173,18 @@ export async function ruleazaFlux({ dosarId, fisiere }: OptiuniFlux): Promise<vo
     /* ----------------------------------------------------- VERIFICĂRI */
     await noteaza(dosarId, "verificare", "in_lucru", "Se aplică regulile de cenzorat");
 
+    // Ce stim despre asociatia asta din lunile ei de dinainte: ce cota de
+    // penalizare foloseste, ce coloane are lista ei, ce inseamna acolo o restanta
+    // mare. Regulile se masoara dupa practica ei, nu dupa un ideal inventat.
+    const istoric = await profilAsociatiei(dosar.contractId, dosarId);
+    if (istoric.luni > 0) {
+      await noteaza(dosarId, "verificare", "in_lucru",
+        `Se compară și cu ${istoric.luni} ${istoric.luni === 1 ? "lună verificată anterior" : "luni verificate anterior"}`);
+    }
+
     const constatari = aplicaReguli({
       extras,
+      istoric,
       cuiDeclarat: dosar.contract.cui,
       denumireDeclarata: dosar.contract.denumire,
       // Toate tipurile din dosar, nu doar cele citite acum: la o citire

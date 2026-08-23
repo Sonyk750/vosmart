@@ -1,5 +1,6 @@
 import { Constatare, ExtrasDosar } from "./tipuri";
 import { PLAFON_CASA_LEI, TOLERANTA_ROTUNJIRE_LEI, temei } from "./temeiuri";
+import { faraDuplicate, type ProfilAsociatie } from "./istoric";
 import { eticheta, lipsuri } from "./documente";
 
 /**
@@ -16,12 +17,39 @@ import { eticheta, lipsuri } from "./documente";
 
 export type ContextVerificare = {
   extras: ExtrasDosar;
+  /**
+   * Ce stim despre asociatia asta din lunile ei de dinainte.
+   *
+   * Regulile nu trebuie sa o masoare dupa un ideal inventat de mine, ci dupa cum
+   * lucreaza ea si dupa ce cere legea. La prima verificare istoricul e gol, si
+   * atunci regulile care depind de el TAC — nu presupun.
+   */
+  istoric?: ProfilAsociatie | null;
   /** Datele din fisa asociatiei, ca sa se poata compara cu ce scrie pe documente. */
   cuiDeclarat: string | null;
   denumireDeclarata: string | null;
   /** Cheile de tip ale fisierelor primite in dosar. */
   tipuriPrimite: string[];
 };
+
+/**
+ * Sub atat, o restanta nu merita nicio constatare.
+ *
+ * Doi bani ramasi dintr-o impartire pe apartamente nu sunt o restanta, sunt o
+ * rotunjire. Pragul e ales sa lase afara exact asta si sa nu ascunda o datorie
+ * adevarata: o cota lunara de intretinere e, oriunde in tara, peste el.
+ */
+const PRAG_RESTANTA_LEI = 50;
+
+/**
+ * De cand se pot aplica penalizari.
+ *
+ * Legea le ingaduie dupa scadenta, dar practica — confirmata de cenzor — e ca se
+ * aplica dupa doua liste neplatite, adica in jur de 54 de zile. Numarul de LUNI
+ * e ce putem masura din date: `luniIntarziere` vine din lista de plata.
+ */
+const LISTE_PANA_LA_PENALIZARE = 2;
+const ZILE_PANA_LA_PENALIZARE = 54;
 
 const lei = (n: number) =>
   new Intl.NumberFormat("ro-RO", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n) + " lei";
@@ -105,17 +133,69 @@ const casaNegativa: Regula = ({ extras }) => {
 
 /* --------------------------------------------------------------- BANCA */
 
-const bancaContinuitate: Regula = ({ extras }) => {
+/**
+ * Continuitatea soldului bancar — dar numai cand chiar se poate verifica.
+ *
+ * Doua greseli reparate aici, amandoua semnalate de cenzor:
+ *
+ * 1. Titlul spunea „nu corespunde cu extrasul", desi in dosar NU era niciun
+ *    extras de cont. Regula compara registrul cu el insusi. O constatare n-are
+ *    voie sa afirme ce n-a vazut.
+ * 2. Cand asociatia are mai multe conturi — curent si colector — rulajele vin
+ *    insumate de la toate, iar soldul final poate fi al unuia singur. Scaderea
+ *    iese uriasa si complet falsa: la dosarul pe iunie a raportat 9.767 lei
+ *    diferenta din nimic. Cu mai multe conturi si fara solduri pe fiecare,
+ *    regula tace.
+ */
+const bancaContinuitate: Regula = ({ extras, tipuriPrimite }) => {
   const b = extras.banca;
   if (!are(b.soldInitial) || !are(b.soldFinal) || !are(b.totalIncasari) || !are(b.totalPlati)) return [];
+
+  const conturi = b.conturi?.length ?? 0;
+  const areExtras = tipuriPrimite.some(t => t === "extras_cont");
+
+  // MAI MULTE CONTURI: cifrele de sus sunt insumate sau, mai rau, ale unuia
+  // singur, iar continuitatea nu se poate socoti pe ele. La dosarul pe iunie
+  // asociatia avea trei intrari de cont, iar soldul initial, rulajele si soldul
+  // final erau toate ale contului curent — verificarea a raportat 9.767 lei
+  // diferenta din nimic. Aici nu afirmam, spunem ce nu s-a putut face.
+  if (conturi > 1) {
+    return [{
+      cod: "BANCA-NEVERIFICATA",
+      titlu: "Continuitatea conturilor bancare nu a putut fi verificată",
+      detaliu:
+        `Asociația are ${conturi} conturi bancare, iar registrul nu dă soldul inițial, rulajele și soldul final `
+        + "separat pentru fiecare. Fără ele, verificarea s-ar face pe cifre amestecate și ar da un rezultat fals."
+        + (areExtras ? "" : " În dosar nu există nici extras de cont."),
+      severitate: "info",
+      sursa: "regula",
+      temei: temei("ord1969"),
+      probe: [
+        { eticheta: "Conturi găsite", valoare: String(conturi) },
+        ...(b.conturi ?? []).slice(0, 4).map(c => ({
+          eticheta: c.iban ?? c.descriere.slice(0, 40),
+          valoare: are(c.sold) ? lei(c.sold as number) : "sold necitit",
+        })),
+        { eticheta: "Extras de cont în dosar", valoare: areExtras ? "da" : "nu" },
+      ],
+      recomandare: "Solicitarea registrului de bancă pe fiecare cont în parte și a extraselor aferente.",
+    }];
+  }
+
   const asteptat = b.soldInitial + b.totalIncasari - b.totalPlati;
   const diferenta = b.soldFinal - asteptat;
   if (Math.abs(diferenta) <= TOLERANTA_ROTUNJIRE_LEI) return [];
   return [{
     cod: "BANCA-CONTINUITATE",
-    titlu: "Registrul de bancă nu corespunde cu extrasul",
-    detaliu: `Rulajul bancar al lunii nu duce de la soldul inițial la soldul final raportat. Diferența este de ${lei(Math.abs(diferenta))}.`,
-    severitate: "ridicata",
+    titlu: "Rulajul din registrul de bancă nu duce la soldul final",
+    detaliu:
+      `Soldul inițial plus încasările minus plățile dau ${lei(asteptat)}, iar registrul raportează ${lei(b.soldFinal)}. `
+      + `Diferența este de ${lei(Math.abs(diferenta))}. `
+      + (areExtras
+        ? "Se compară cu extrasul de cont, operațiune cu operațiune."
+        : "ATENȚIE: în dosar nu există extras de cont, deci verificarea s-a făcut doar pe registru, cu cifrele lui. "
+          + "Fără extras nu se poate spune care dintre cele două cifre este cea reală."),
+    severitate: areExtras ? "ridicata" : "info",
     sursa: "regula",
     temei: temei("ord1969"),
     probe: [
@@ -124,20 +204,70 @@ const bancaContinuitate: Regula = ({ extras }) => {
       { eticheta: "Total plăți", valoare: lei(b.totalPlati) },
       { eticheta: "Sold final calculat", valoare: lei(asteptat) },
       { eticheta: "Sold final raportat", valoare: lei(b.soldFinal) },
+      { eticheta: "Extras de cont în dosar", valoare: areExtras ? "da" : "NU — comparația cu banca nu s-a putut face" },
     ],
-    recomandare: "Punctarea registrului de bancă cu extrasul de cont, operațiune cu operațiune.",
+    recomandare: areExtras
+      ? "Punctarea registrului de bancă cu extrasul de cont, operațiune cu operațiune."
+      : "Solicitarea extrasului de cont pe luna verificată, fără de care registrul nu poate fi confruntat cu banca.",
   }];
 };
 
 /* ------------------------------------------------------- LISTA DE PLATA */
 
-const listaColoane: Regula = ({ extras }) => {
+/**
+ * Coloanele listei — dar numai cele care au ce sa arate.
+ *
+ * Regula cerea „penalizări" si „fond de rulment" pe orice lista. Cenzorul:
+ * „atat timp cat in lista de plata nu se incaseaza fond de rulment sau alte
+ * cheltuieli, ce are de ce sa apara in lista". Are dreptate — o coloana goala nu
+ * ajuta pe nimeni, iar o constatare pentru lipsa ei e zgomot.
+ *
+ * Deci: restantele raman mereu obligatorii (legea cere sa se vada ce datorezi
+ * din trecut). Penalizarile se cer doar daca s-au calculat penalizari; fondul de
+ * rulment, doar daca s-a incasat ceva pe el. Iar daca asociatia a avut coloana
+ * in lunile de dinainte si acum a disparut, asta se semnaleaza — nu ca lipsa
+ * legala, ci ca schimbare fata de propria ei practica.
+ */
+const listaColoane: Regula = ({ extras, istoric }) => {
   const l = extras.lista;
   const lipsa: string[] = [];
+
   if (l.areColoanaRestante === false) lipsa.push("restanțe");
-  if (l.areColoanaPenalizari === false) lipsa.push("penalizări");
-  if (l.areColoanaFondRulment === false) lipsa.push("fond de rulment");
-  if (lipsa.length === 0) return [];
+
+  // PENALIZARI: doar daca s-au APLICAT penalizari luna asta.
+  //
+  // Nu ne uitam la `penalizari.total`: acolo ajunge, de regula, SOLDUL fondului
+  // de penalizari din situatia activ/pasiv — 2.212 lei stransi in ani. Un fond
+  // care exista nu inseamna ca luna asta s-a calculat ceva de trecut pe lista.
+  if (l.areColoanaPenalizari === false && extras.penalizari.aplicate === true) lipsa.push("penalizări");
+
+  // FOND DE RULMENT: doar daca asociatia il incaseaza prin lista, adica daca
+  // avea coloana in lunile de dinainte. Soldul fondului nu spune nimic despre
+  // luna curenta — el sta acolo si cand nu se incaseaza nimic.
+  const incaseazaRulment = (istoric?.coloaneObisnuite ?? []).some(c => /fond.*rulment/i.test(c));
+  if (l.areColoanaFondRulment === false && incaseazaRulment) lipsa.push("fond de rulment");
+
+  // Ce avea de obicei si acum nu mai are.
+  const acum = new Set(l.coloane ?? []);
+  const disparute = (istoric?.coloaneObisnuite ?? []).filter(c => !acum.has(c));
+
+  if (lipsa.length === 0 && disparute.length === 0) return [];
+  if (lipsa.length === 0) {
+    return [{
+      cod: "LISTA-COLOANE-SCHIMBATE",
+      titlu: "Lista are altă structură decât în lunile de dinainte",
+      detaliu: `Față de lunile verificate anterior, din listă lipsesc coloanele: ${disparute.join(", ")}. `
+        + "Nu e neapărat o abatere — poate să nu fi fost nimic de trecut pe ele luna aceasta — dar merită confirmat.",
+      severitate: "info",
+      sursa: "regula",
+      temei: null,
+      probe: [
+        { eticheta: "Coloane dispărute", valoare: disparute.join(", ") },
+        { eticheta: "Luni comparate", valoare: String(istoric?.luni ?? 0) },
+      ],
+      recomandare: "Confirmarea că lipsa coloanelor e intenționată, nu o scăpare de formatare.",
+    }];
+  }
   return [{
     cod: "LISTA-COLOANE",
     titlu: "Lista de plată nu conține toate coloanele",
@@ -168,30 +298,77 @@ const listaDataAfisarii: Regula = ({ extras }) => {
   }];
 };
 
-const listaVsFacturi: Regula = ({ extras }) => {
+/**
+ * Lista de plata fata de distribuirea facturilor.
+ *
+ * REGULA ASTA A FOST GRESITA SI A COSTAT INCREDERE. Aduna teancul de facturi din
+ * dosar si il compara cu totalul listei. La dosarul pe iunie a iesit „facturi
+ * 4.556 lei, lista 2.324 lei, nerepartizat 2.232 lei" — o acuzatie grea, si
+ * complet falsa. Cenzorul: „aici ai gresit grav, nu ai citit facturile cum
+ * trebuie".
+ *
+ * De ce era falsa, verificat pe datele extrase:
+ *  - ACEEASI factura aparea de doua-trei ori. O factura sta in dosar in patru
+ *    locuri — scanarea ei, distribuirea facturilor, registrul jurnal, registrul
+ *    de banca — si fusese numarata din fiecare. Sapte facturi dublate, ~1.400 lei
+ *    inventati din nimic;
+ *  - intrasera facturi din ALTE LUNI, pana la una din august 2025;
+ *  - comisioanele bancare ING figurau ca facturi de furnizor.
+ *
+ * Comparatia corecta exista deja in dosar, iar modelul o gasise singur si o
+ * scrisese la neconcordante: documentul „Distribuirea facturilor" are un TOTAL,
+ * si ACELA se compara cu totalul listei. Sunt doua documente despre aceeasi
+ * repartizare; daca nu se potrivesc, e o problema reala.
+ *
+ * Cand distribuirea lipseste din dosar, regula nu mai improvizeaza cu teancul de
+ * facturi. Spune ca nu a putut face verificarea si cere documentul.
+ */
+const listaVsDistributie: Regula = ({ extras, tipuriPrimite }) => {
   const total = extras.lista.totalCheltuieli;
-  const facturi = extras.furnizori.facturi.filter(f => are(f.suma));
-  if (!are(total) || facturi.length === 0) return [];
-  const sumaFacturi = facturi.reduce((s, f) => s + (f.suma as number), 0);
-  const diferenta = total - sumaFacturi;
-  // Lista contine si cheltuieli care nu vin din facturi (salarii, fond de
-  // rulment), deci o diferenta mica e normala. Semnalam doar cand lista e MAI
-  // MICA decat facturile: atunci raman cheltuieli nerepartizate.
-  if (diferenta >= -TOLERANTA_ROTUNJIRE_LEI) return [];
+  if (!are(total)) return [];
+
+  const distribuit = extras.distributie?.total ?? null;
+  const areDocument = tipuriPrimite.includes("distributia_facturilor");
+
+  if (!are(distribuit)) {
+    if (!areDocument) {
+      return [{
+        cod: "DISTRIBUTIE-LIPSA",
+        titlu: "Lipsește distribuirea facturilor",
+        detaliu:
+          "Fără documentul de distribuire nu se poate verifica dacă totalul repartizat pe lista de plată "
+          + "corespunde cu cheltuielile lunii. Suma facturilor din dosar NU ține locul lui: aceeași factură "
+          + "apare în mai multe documente, iar în dosar intră și facturi din alte luni.",
+        severitate: "medie",
+        sursa: "regula",
+        temei: null,
+        probe: [{ eticheta: "Total pe lista de plată", valoare: lei(total) }],
+        recomandare: "Solicitarea documentului „Distribuirea facturilor” pentru luna verificată.",
+      }];
+    }
+    // Documentul e in dosar, dar totalul lui n-a putut fi citit. Nu inventam.
+    return [];
+  }
+
+  const diferenta = total - distribuit;
+  if (Math.abs(diferenta) <= TOLERANTA_ROTUNJIRE_LEI) return [];
+
   return [{
-    cod: "LISTA-VS-FACTURI",
-    titlu: "Facturile lunii depășesc totalul repartizat pe listă",
-    detaliu: `Facturile primite însumează ${lei(sumaFacturi)}, iar lista de plată repartizează ${lei(total)}. Diferența de ${lei(Math.abs(diferenta))} nu a ajuns la proprietari și rămâne în sarcina asociației.`,
-    severitate: "ridicata",
+    cod: "LISTA-VS-DISTRIBUTIE",
+    titlu: "Totalul listei nu se potrivește cu distribuirea facturilor",
+    detaliu:
+      `Distribuirea facturilor totalizează ${lei(distribuit)}, iar lista de plată repartizează ${lei(total)}. `
+      + `Diferența este de ${lei(Math.abs(diferenta))}. Cele două documente descriu aceeași repartizare, `
+      + "deci ar trebui să dea aceeași cifră.",
+    severitate: Math.abs(diferenta) > 100 ? "ridicata" : "medie",
     sursa: "regula",
     temei: null,
     probe: [
-      { eticheta: "Total facturi", valoare: lei(sumaFacturi) },
-      { eticheta: "Facturi luate în calcul", valoare: String(facturi.length) },
+      { eticheta: "Total distribuire facturi", valoare: lei(distribuit) },
       { eticheta: "Total repartizat pe listă", valoare: lei(total) },
-      { eticheta: "Nerepartizat", valoare: lei(Math.abs(diferenta)) },
+      { eticheta: "Diferență", valoare: lei(Math.abs(diferenta)) },
     ],
-    recomandare: "Identificarea cheltuielilor nerepartizate și includerea lor în lista lunii următoare.",
+    recomandare: "Punctarea listei de plată cu distribuirea facturilor, poziție cu poziție.",
   }];
 };
 
@@ -236,16 +413,45 @@ const restanteNivel: Regula = ({ extras }) => {
   }];
 };
 
-const restantePenalizari: Regula = ({ extras }) => {
+/**
+ * Penalizarile — dar numai cand chiar erau de aplicat.
+ *
+ * Regula veche semnala orice restanta, oricat de mica. La dosarul pe iunie a
+ * iesit „nu s-au aplicat penalizari" pentru DOI BANI. Cenzorul: „nu aveai ce
+ * penalitati sa aplici, penalitatile se aplica dupa 54 de zile de neplata, adica
+ * doua liste, iar restanta este derizorie".
+ *
+ * Doua conditii, deci, si amandoua trebuie indeplinite:
+ *  - restanta sa treaca de un prag sub care nu are rost sa vorbesti;
+ *  - intarzierea sa fi depasit termenul de la care penalizarile se pot aplica.
+ *    O restanta aparuta luna asta nu e inca penalizabila; abia una veche de doua
+ *    liste este.
+ *
+ * Cand nu stim de cand dureaza restanta, regula TACE. E preferabil sa scape o
+ * constatare decat sa se ceara cenzorului ceva ce legea nu-i cere.
+ */
+const restantePenalizari: Regula = ({ extras, istoric }) => {
   const restante = are(extras.restantieri.total) ? extras.restantieri.total : extras.lista.totalRestante;
-  if (!are(restante) || restante <= 0) return [];
+  if (!are(restante) || restante <= PRAG_RESTANTA_LEI) return [];
   if (extras.penalizari.aplicate !== false) return [];
-  const vechi = extras.restantieri.apartamente.filter(a => are(a.luniIntarziere) && (a.luniIntarziere as number) >= 2);
+
+  // Cate apartamente au restanta mai veche decat termenul de la care se pot
+  // aplica penalizari. Fara ele, n-avem pe ce sprijini constatarea.
+  const vechi = extras.restantieri.apartamente.filter(
+    a => are(a.luniIntarziere) && (a.luniIntarziere as number) >= LISTE_PANA_LA_PENALIZARE,
+  );
+  if (vechi.length === 0) return [];
+
+  const cota = istoric?.cotaPenalizare ?? null;
   return [{
     cod: "RESTANTE-PENALIZARI",
-    titlu: "Nu s-au aplicat penalizări pentru întârziere",
-    detaliu: `Există restanțe de ${lei(restante)}, dar nu au fost calculate penalizări. Neaplicarea lor înseamnă că proprietarii care plătesc la timp îi finanțează pe ceilalți.`,
-    severitate: vechi.length > 0 ? "ridicata" : "medie",
+    titlu: "Nu s-au aplicat penalizări pentru restanțe mai vechi de două liste",
+    detaliu:
+      `${vechi.length} ${vechi.length === 1 ? "apartament are" : "apartamente au"} restanțe mai vechi de `
+      + `${LISTE_PANA_LA_PENALIZARE} liste (peste ${ZILE_PANA_LA_PENALIZARE} de zile), în total ${lei(restante)}, `
+      + `dar nu s-au calculat penalizări.`
+      + (cota !== null ? ` În lunile de dinainte asociația a aplicat ${cota}% pe zi de întârziere.` : ""),
+    severitate: "medie",
     sursa: "regula",
     temei: temei("l196_art77"),
     probe: [
@@ -263,7 +469,9 @@ const furnizoriNeachitat: Regula = ({ extras }) => {
   const neachitat = are(extras.furnizori.totalNeachitat)
     ? extras.furnizori.totalNeachitat
     : (() => {
-        const restante = extras.furnizori.facturi.filter(f => f.achitata === false && are(f.suma));
+        // Fara duplicate: aceeasi factura vine din mai multe documente si ar fi
+        // fost numarata de doua ori si aici.
+        const restante = faraDuplicate(extras.furnizori.facturi).filter(f => f.achitata === false && are(f.suma));
         return restante.length > 0 ? restante.reduce((s, f) => s + (f.suma as number), 0) : null;
       })();
   if (!are(neachitat) || neachitat <= TOLERANTA_ROTUNJIRE_LEI) return [];
@@ -454,7 +662,7 @@ const REGULI: Regula[] = [
   bancaContinuitate,
   listaColoane,
   listaDataAfisarii,
-  listaVsFacturi,
+  listaVsDistributie,
   restanteNivel,
   restantePenalizari,
   furnizoriNeachitat,
