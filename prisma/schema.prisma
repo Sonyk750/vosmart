@@ -155,7 +155,7 @@ model Dosar {
 /// Ca sa nu se piarda dovada a ce s-a primit, `amprenta` tine sha256 al
 /// fisierului ORIGINAL, calculat inainte de orice atingere.
 model Fisier {
-  id              String   @id @default(cuid())
+  id              String  @id @default(cuid())
   dosarId         String
   tip             String // lista_plata | explicatii_lista | registru_casa | facturi | ...
   eticheta        String
@@ -172,8 +172,23 @@ model Fisier {
   /// sha256 (hex) al fisierului original. Raspunsul la „ce mi-ati trimis de fapt?".
   amprenta        String?
   /// A fost recodat la pastrare? Cand e fals, in Blob sta chiar originalul.
-  optimizat       Boolean  @default(false)
-  createdAt       DateTime @default(now())
+  optimizat       Boolean @default(false)
+
+  // --- Inventarul: ce este documentul, citit DIN el, nu din numele fisierului.
+  // Vezi lib/cenzorat/inventar.ts. La o factura, `denumireAi` iese „Factură Apa
+  // Nova" — furnizorul e lucrul care conteaza intr-un dosar de cenzorat, iar
+  // numele fisierului scos de programul de administrare nu-l contine niciodata.
+  /// Cum se numeste documentul, in cuvintele lui.
+  denumireAi String?
+  /// Cine l-a emis, asa cum scrie in antet.
+  emitentAi  String?
+  /// Perioada la care se refera, ex. „iunie 2026".
+  perioadaAi String?
+  /// De unde vine `tip`: ai — citit din document; nume — ghicit din numele
+  /// fisierului; om — pus cu mana de cenzor, si atunci nu se mai suprascrie.
+  tipSursa   String  @default("nume")
+
+  createdAt DateTime @default(now())
 
   dosar Dosar @relation(fields: [dosarId], references: [id], onDelete: Cascade)
 

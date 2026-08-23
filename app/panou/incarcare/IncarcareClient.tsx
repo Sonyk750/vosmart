@@ -1,9 +1,9 @@
 "use client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { TIPURI, ghicesteTip, lipsuri, eticheta as etichetaTip } from "@/lib/cenzorat/documente";
+import { lipsuri, eticheta as etichetaTip } from "@/lib/cenzorat/documente";
 import {
-  ACCEPT, FORMATE_TEXT, LIMITA_MB,
+  ACCEPT, FORMATE_TEXT, LIMITA_FISIER_MB,
   esteAcceptat, esteArhiva, formatul, mimeDupaNume, sePoateDesface,
 } from "@/lib/cenzorat/formate";
 import { ETAPE, INDEX_ETAPA, type Etapa } from "@/lib/cenzorat/tipuri";
@@ -40,6 +40,12 @@ type FisierDinDosar = {
   /** sha256 al originalului — dovada a ce s-a primit. */
   amprenta: string | null;
   optimizat: boolean;
+  /** Ce a citit modelul in document: „Factură Apa Nova". */
+  denumireAi: string | null;
+  emitentAi: string | null;
+  perioadaAi: string | null;
+  /** ai | nume | om — de unde vine tipul. */
+  tipSursa: string;
   createdAt: string;
 };
 
@@ -62,10 +68,13 @@ type Dosar = {
 type FisierAles = {
   id: string;
   fisier: File;
-  cheie: string;
-  incredere: "sigur" | "probabil" | "necunoscut";
   /** Fisierele scoase dintr-o arhiva se marcheaza, ca omul sa stie de unde vin. */
   dinArhiva?: string;
+  /** Ce s-a intamplat cu el la trimitere. */
+  stare?: "asteapta" | "trimite" | "gata" | "esuat";
+  /** Ce a citit modelul, dupa ce a plecat. */
+  citit?: string;
+  motiv?: string;
 };
 
 let contor = 0;
@@ -199,14 +208,14 @@ export default function IncarcareClient({ implicit }: { implicit: { luna: string
           for (const [cale, intrareArhiva] of Object.entries(arhiva.files)) {
             if (intrareArhiva.dir) continue;
             const numeScurt = cale.split("/").pop() || cale;
-            // Fara arhive in arhive si fara fisierele de serviciu ale sistemului.
             if (numeScurt.startsWith(".") || esteArhiva(numeScurt)) continue;
             if (!esteAcceptat(numeScurt)) { refuzate.push(numeScurt); continue; }
-
             const octeti = await intrareArhiva.async("arraybuffer");
-            const fisierNou = new File([octeti], numeScurt, { type: mimeDupaNume(numeScurt) });
-            const ghicit = ghicesteTip(numeScurt);
-            noi.push({ id: idNou(), fisier: fisierNou, cheie: ghicit.cheie, incredere: ghicit.incredere, dinArhiva: f.name });
+            noi.push({
+              id: idNou(),
+              fisier: new File([octeti], numeScurt, { type: mimeDupaNume(numeScurt) }),
+              dinArhiva: f.name,
+            });
           }
         } catch {
           refuzate.push(`${f.name} (arhiva nu a putut fi deschisă)`);
@@ -216,9 +225,7 @@ export default function IncarcareClient({ implicit }: { implicit: { luna: string
       }
 
       if (!esteAcceptat(f.name)) { refuzate.push(f.name); continue; }
-
-      const ghicit = ghicesteTip(f.name);
-      noi.push({ id: idNou(), fisier: f, cheie: ghicit.cheie, incredere: ghicit.incredere });
+      noi.push({ id: idNou(), fisier: f });
     }
 
     if (refuzate.length > 0) setEroare(`Nu s-au putut prelua: ${refuzate.join(", ")}. Se primesc ${FORMATE_TEXT}.`);
@@ -226,57 +233,123 @@ export default function IncarcareClient({ implicit }: { implicit: { luna: string
   }, []);
 
   const scoate = (id: string) => setFisiere(p => p.filter(f => f.id !== id));
-  const schimbaTip = (id: string, cheie: string) =>
-    setFisiere(p => p.map(f => (f.id === id ? { ...f, cheie, incredere: cheie === "altele" ? "necunoscut" : "sigur" } : f)));
 
   const octeti = fisiere.reduce((s, f) => s + f.fisier.size, 0);
-  const preaMare = mb(octeti) > LIMITA_MB;
-  const nerecunoscute = fisiere.filter(f => f.cheie === "altele");
+  // Ce nu poate fi micsorat in browser si tot nu incape intr-o cerere: un PDF
+  // mare. Se spune pe nume, nu se lasa sa cada intr-o eroare generica.
+  const preaGrele = fisiere.filter(
+    f => f.fisier.size > LIMITA_FISIER_MB * 1024 * 1024 && !f.fisier.type.startsWith("image/"),
+  );
   const necitibile = fisiere.filter(f => !formatul(f.fisier.name)?.citibilDeAi);
   const inchisaLuna = dosarulLunii?.etapa === "semnat";
-  const potTrimite = Boolean(contractId) && fisiere.length > 0 && nerecunoscute.length === 0 && !preaMare && !inchisaLuna;
+  const potTrimite = Boolean(contractId) && fisiere.length > 0 && preaGrele.length === 0 && !inchisaLuna;
 
   /* ------------------------------------------------------------- acțiuni */
 
+  /**
+   * Micsoreaza o imagine in browser, cand nu ar incapea intr-o cerere.
+   *
+   * Serverul recodeaza oricum tot ce primeste, dar o poza de telefon de 7 MB
+   * n-ar ajunge PANA la server: platforma taie cererea la 4,5 MB. Deci prima
+   * micsorare se face aici, exact la aceeasi latura ca pe server, ca sa nu iasa
+   * doua rezultate diferite pentru acelasi document.
+   */
+  async function micsoreaza(f: File): Promise<File> {
+    if (!f.type.startsWith("image/") || f.size <= LIMITA_FISIER_MB * 1024 * 1024) return f;
+    try {
+      const imagine = await createImageBitmap(f);
+      const scara = Math.min(1, 2400 / Math.max(imagine.width, imagine.height));
+      const panza = new OffscreenCanvas(Math.round(imagine.width * scara), Math.round(imagine.height * scara));
+      const ctx = panza.getContext("2d");
+      if (!ctx) return f;
+      // Fundal alb intai: un PNG transparent desenat direct ar iesi cu fundal negru.
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, panza.width, panza.height);
+      ctx.drawImage(imagine, 0, 0, panza.width, panza.height);
+      imagine.close();
+      const bucata = await panza.convertToBlob({ type: "image/jpeg", quality: 0.82 });
+      return bucata.size < f.size
+        ? new File([bucata], f.name.replace(/\.[^.]+$/, "") + ".jpg", { type: "image/jpeg" })
+        : f;
+    } catch {
+      // Browser fara OffscreenCanvas: pleaca asa cum e si serverul spune de ce nu merge.
+      return f;
+    }
+  }
+
+  /**
+   * Trimite teancul, UN FISIER PE CERERE.
+   *
+   * Nu din eleganta: platforma respinge orice cerere peste 4,5 MB inainte ca
+   * ruta sa fie chemata, iar treizeci de facturi intr-un `FormData` treceau lejer
+   * de limita. Asa se vedea „documentele nu au putut fi trimise", fara motiv —
+   * codul nostru nici nu apucase sa ruleze.
+   *
+   * Fisier cu fisier inseamna si ca o factura stricata nu mai darama tot teancul:
+   * ea ramane rosie in lista, restul intra in dosar.
+   */
   async function incarcaInDosar() {
     if (!potTrimite || trimite) return;
     setTrimite(true);
     setEroare("");
     setIzbanda("");
 
-    const date = new FormData();
-    date.append("contractId", contractId);
-    date.append("luna", numeLunaAleasa);
-    date.append("an", an);
-    date.append("porneste", "0");
-    for (const f of fisiere) {
-      date.append("fisiere", f.fisier, f.fisier.name);
-      date.append("tipuri", f.cheie);
+    const deTrimis = fisiere.filter(f => f.stare !== "gata");
+    let intrate = 0, primiti = 0, pastrati = 0, cost = 0;
+    const cazute: string[] = [];
+
+    for (const f of deTrimis) {
+      setFisiere(p => p.map(x => (x.id === f.id ? { ...x, stare: "trimite", motiv: undefined } : x)));
+      try {
+        const bucata = await micsoreaza(f.fisier);
+        const date = new FormData();
+        date.append("contractId", contractId);
+        date.append("luna", numeLunaAleasa);
+        date.append("an", an);
+        date.append("porneste", "0");
+        date.append("fisiere", bucata, bucata.name);
+        // „auto" = nu impune nimic; tipul iese din citirea documentului.
+        date.append("tipuri", "auto");
+
+        const r = await fetch("/api/panou/dosare", { method: "POST", body: date });
+        const d = await r.json().catch(() => ({}));
+        if (!r.ok) {
+          throw new Error(
+            d.error
+            // 413 vine de la platforma, nu de la noi: raspunsul e o pagina de
+            // text, nu JSON, deci `d.error` lipseste. Traducem noi.
+            || (r.status === 413 ? `prea mare pentru o cerere (peste ${LIMITA_FISIER_MB} MB)` : `eroare ${r.status}`),
+          );
+        }
+
+        intrate += d.primite ?? 1;
+        primiti += d.octetiPrimiti ?? 0;
+        pastrati += d.octetiPastrati ?? 0;
+        cost += d.inventar?.cost ?? 0;
+        const citit = d.inventar?.denumiri?.[0] as string | undefined;
+        setFisiere(p => p.map(x => (x.id === f.id ? { ...x, stare: "gata", citit } : x)));
+      } catch (e) {
+        cazute.push(f.fisier.name);
+        setFisiere(p => p.map(x => (x.id === f.id
+          ? { ...x, stare: "esuat", motiv: e instanceof Error ? e.message : "nu a putut fi trimis" }
+          : x)));
+      }
     }
 
-    try {
-      const r = await fetch("/api/panou/dosare", { method: "POST", body: date });
-      const d = await r.json().catch(() => ({}));
-      if (!r.ok) throw new Error(d.error || "Documentele nu au putut fi trimise.");
-
-      setFisiere([]);
-      // Cand recodarea a strans ceva de spus, se spune: altfel omul vede in dosar
-      // alte cifre decat cele de pe calculatorul lui si nu stie de ce.
-      const strans = (d.octetiPrimiti ?? 0) - (d.octetiPastrati ?? 0);
+    if (intrate > 0) {
+      const strans = primiti - pastrati;
       setIzbanda(
-        `${d.primite} ${d.primite === 1 ? "document a intrat" : "documente au intrat"} în dosarul pe ${numeLunaAleasa} ${an}.`
-        + (strans > 256 * 1024
-          ? ` Scanările au fost recodate: ${kb(d.octetiPrimiti)} primiți, ${kb(d.octetiPastrati)} păstrați.`
-          : ""),
+        `${intrate} ${intrate === 1 ? "document a intrat" : "documente au intrat"} în dosarul pe ${numeLunaAleasa} ${an}.`
+        + (strans > 256 * 1024 ? ` ${kb(primiti)} primite → ${kb(pastrati)} pe server.` : "")
+        + (cost > 0 ? ` Citirea documentelor: $${cost.toFixed(3)}.` : ""),
       );
-      setDeschis(d.dosarId);
-      setModSters(false);
+      setDeschis(null);
       setReincarca(n => n + 1);
-    } catch (e) {
-      setEroare(e instanceof Error ? e.message : "Documentele nu au putut fi trimise.");
-    } finally {
-      setTrimite(false);
     }
+    if (cazute.length > 0) {
+      setEroare(`${cazute.length} ${cazute.length === 1 ? "document nu a intrat" : "documente nu au intrat"}: ${cazute.join(", ")}. Vezi motivul în dreptul fiecăruia.`);
+    }
+    setTrimite(false);
   }
 
   async function porneste(dosar: Dosar) {
@@ -409,8 +482,9 @@ export default function IncarcareClient({ implicit }: { implicit: { luna: string
               </span>
             ) : (
               <>
-                Unul sau mai multe deodată — sau trage-le direct aici. {FORMATE_TEXT}, până la {LIMITA_MB} MB
-                pe încărcare. Arhiva ZIP o deschidem noi și așezăm fiecare document la locul lui.
+                Unul sau mai multe deodată — sau trage-le direct aici. {FORMATE_TEXT}. Nu alege tu
+                ce sunt: fiecare document e deschis și citit, iar în inventar apare cu numele lui
+                („Factură Apa Nova”), nu cu cel al fișierului. Arhiva ZIP o deschidem noi.
               </>
             )}
           </p>
@@ -429,31 +503,33 @@ export default function IncarcareClient({ implicit }: { implicit: { luna: string
 
             <ul className="divide-y divide-line">
               {fisiere.map(f => {
-                const necunoscut = f.cheie === "altele";
                 const format = formatul(f.fisier.name);
+                const greu = f.fisier.size > LIMITA_FISIER_MB * 1024 * 1024 && !f.fisier.type.startsWith("image/");
                 return (
                   <li key={f.id} className="flex flex-wrap items-center gap-3 px-5 py-2.5">
-                    <Ic.fisier className={`h-4 w-4 shrink-0 ${necunoscut ? "text-warn" : "text-faint"}`} />
+                    <span className="shrink-0">
+                      {f.stare === "trimite" ? <Rotitor className="h-4 w-4 text-brand-soft" />
+                        : f.stare === "gata" ? <Ic.bifa className="h-4 w-4 text-ok" />
+                          : f.stare === "esuat" || greu ? <Ic.alerta className="h-4 w-4 text-bad" />
+                            : <Ic.fisier className="h-4 w-4 text-faint" />}
+                    </span>
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-[13px] text-ink">{f.fisier.name}</p>
-                      <p className="text-[11.5px] text-faint">
+                      <p className="truncate text-[13px] text-ink">
+                        {f.citit ?? f.fisier.name}
+                      </p>
+                      <p className="truncate text-[11.5px] text-faint">
+                        {f.citit && <span className="text-faint/80">{f.fisier.name} · </span>}
                         {format?.eticheta} · {kb(f.fisier.size)}
                         {f.dinArhiva && ` · din ${f.dinArhiva}`}
-                        {f.incredere === "probabil" && !necunoscut && " · potrivire probabilă, verifică"}
                         {format && !format.citibilDeAi && " · nu poate fi citit de AI"}
                       </p>
+                      {(f.motiv || greu) && (
+                        <p className="text-[11.5px] text-bad">
+                          {f.motiv ?? `prea mare pentru o cerere — limita e ${LIMITA_FISIER_MB} MB pe fișier`}
+                        </p>
+                      )}
                     </div>
-                    <select
-                      value={f.cheie}
-                      onChange={e => schimbaTip(f.id, e.target.value)}
-                      aria-label={`Tipul documentului ${f.fisier.name}`}
-                      className={`w-48 shrink-0 rounded-lg border bg-surface-1 px-2 py-1.5 text-[12.5px] outline-none transition-colors focus:border-brand/60 ${
-                        necunoscut ? "border-warn/50 text-warn" : "border-line-strong text-muted"
-                      }`}
-                    >
-                      <option value="altele">— alege tipul —</option>
-                      {TIPURI.map(t => <option key={t.cheie} value={t.cheie}>{t.eticheta}</option>)}
-                    </select>
+                    {f.stare === "gata" && <Eticheta ton="ok">în dosar</Eticheta>}
                     <button onClick={() => scoate(f.id)} aria-label={`Scoate ${f.fisier.name}`}
                       className="shrink-0 rounded-md p-1.5 text-faint transition-colors hover:bg-surface-3 hover:text-bad">
                       <Ic.x className="h-3.5 w-3.5" />
@@ -468,16 +544,10 @@ export default function IncarcareClient({ implicit }: { implicit: { luna: string
                 {!trimite && <Ic.jos className="h-4 w-4" />}
                 {trimite ? "Se încarcă…" : `Adaugă în dosarul pe ${numeLunaAleasa} ${an}`}
               </Buton>
-              {nerecunoscute.length > 0 && (
-                <span className="flex items-center gap-1.5 text-[12.5px] text-warn">
-                  <Ic.alerta className="h-3.5 w-3.5" />
-                  {nerecunoscute.length} fără tip ales
-                </span>
-              )}
-              {preaMare && (
+              {preaGrele.length > 0 && (
                 <span className="flex items-center gap-1.5 text-[12.5px] text-bad">
                   <Ic.alerta className="h-3.5 w-3.5" />
-                  {mb(octeti).toFixed(1)} MB, peste limita de {LIMITA_MB} MB
+                  {preaGrele.length} {preaGrele.length === 1 ? "fișier depășește" : "fișiere depășesc"} {LIMITA_FISIER_MB} MB — scoate-le din listă
                 </span>
               )}
               {necitibile.length > 0 && (
@@ -714,13 +784,25 @@ function RandLuna({
                     <li key={f.id} className="flex flex-wrap items-center gap-3 px-5 py-2.5">
                       <Ic.fisier className="h-4 w-4 shrink-0 text-faint" />
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-[13px] text-ink">{f.eticheta || etichetaTip(f.tip)}</p>
+                        {/* Ce a citit modelul e numele principal. Tipul si numele
+                            fisierului stau dedesubt: felul documentului si de unde
+                            a venit, amandoua utile, dar niciunul nu e „cum se
+                            cheama documentul asta". */}
+                        <p className="truncate text-[13px] text-ink">
+                          {f.denumireAi || f.eticheta || etichetaTip(f.tip)}
+                        </p>
                         <p className="truncate text-[11.5px] text-faint">
+                          {f.denumireAi && <span>{etichetaTip(f.tip)} · </span>}
                           {f.numeFisier} · {f.optimizat && f.marimeOriginala
                             ? `${kb(f.marimeOriginala)} → ${kb(f.marime)}`
                             : kb(f.marime)}
                           {!formatul(f.numeFisier)?.citibilDeAi && " · nu intră în citirea AI"}
                         </p>
+                        {f.tipSursa === "nume" && (
+                          <p className="text-[11px] text-warn/80">
+                            nu a putut fi citit — tipul e ghicit din numele fișierului
+                          </p>
+                        )}
                         {f.amprenta && (
                           <p className="truncate font-mono text-[10px] text-faint/70"
                             title={`sha256 al fișierului original: ${f.amprenta}`}>

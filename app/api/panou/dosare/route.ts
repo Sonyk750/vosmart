@@ -3,8 +3,9 @@ import { requireAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { poateVedeaContractul } from "@/lib/acces";
 import { salveazaFisier, stocareConfigurata } from "@/lib/stocare";
-import { eticheta as etichetaTip, ghicesteTip, lipsuri } from "@/lib/cenzorat/documente";
-import { esteAcceptat, formatul, mimeDupaNume, FORMATE_TEXT, LIMITA_MB } from "@/lib/cenzorat/formate";
+import { eticheta as etichetaTip, lipsuri } from "@/lib/cenzorat/documente";
+import { dinNume, inventariaza } from "@/lib/cenzorat/inventar";
+import { esteAcceptat, formatul, mimeDupaNume, FORMATE_TEXT, LIMITA_FISIER_MB } from "@/lib/cenzorat/formate";
 import { numeDupaMime, pregatesteFisier } from "@/lib/cenzorat/optimizare";
 import { ruleazaFlux } from "@/lib/cenzorat/pipeline";
 import type { FisierDeCitit } from "@/lib/cenzorat/extragere";
@@ -65,7 +66,8 @@ const CAMPURI_DOSAR = {
   fisiere: {
     select: {
       id: true, numeFisier: true, tip: true, eticheta: true, mimeType: true,
-      marime: true, marimeOriginala: true, amprenta: true, optimizat: true, createdAt: true,
+      marime: true, marimeOriginala: true, amprenta: true, optimizat: true,
+      denumireAi: true, emitentAi: true, perioadaAi: true, tipSursa: true, createdAt: true,
     },
     orderBy: { createdAt: "asc" as const },
   },
@@ -134,7 +136,7 @@ export async function POST(req: NextRequest) {
     // Cererea a picat pe drum, aproape sigur fiindca era prea mare ca sa ajunga
     // intreaga. Spunem limita, nu „eroare de rețea".
     return NextResponse.json(
-      { error: `Documentele nu au ajuns intacte la server. Limita este de ${LIMITA_MB} MB pe încărcare.` },
+      { error: `Documentul nu a ajuns intact la server. Limita platformei este de ${LIMITA_FISIER_MB} MB pe cerere.` },
       { status: 413 },
     );
   }
@@ -176,10 +178,14 @@ export async function POST(req: NextRequest) {
   }
 
   const totalOcteti = fisiere.reduce((s, f) => s + f.size, 0);
-  if (totalOcteti > LIMITA_MB * 1024 * 1024) {
+  // Verificarea e pe FIECARE fisier, nu pe teanc: limita platformei e pe cerere,
+  // iar ecranul trimite cate un fisier pe cerere. Oricum, o cerere mai mare
+  // decat atat n-ar ajunge pana aici — ar fi respinsa inainte.
+  const greu = fisiere.find(f => f.size > LIMITA_FISIER_MB * 1024 * 1024);
+  if (greu) {
     return NextResponse.json(
       {
-        error: `Documentele au ${(totalOcteti / 1024 / 1024).toFixed(1)} MB, peste limita de ${LIMITA_MB} MB. Trimite-le în două rânduri — se adaugă în același dosar.`,
+        error: `„${greu.name}" are ${(greu.size / 1024 / 1024).toFixed(1)} MB, peste limita de ${LIMITA_FISIER_MB} MB pe fișier.`,
       },
       { status: 413 },
     );
@@ -234,21 +240,37 @@ export async function POST(req: NextRequest) {
     dosarId: string; tip: string; eticheta: string; numeFisier: string;
     blobUrl: string; mimeType: string; marime: number;
     marimeOriginala: number; amprenta: string; optimizat: boolean;
+    denumireAi: string | null; emitentAi: string | null; perioadaAi: string | null; tipSursa: string;
   }[] = [];
   const nesalvate: string[] = [];
   let octetiPastrati = 0;
 
+  // Recodarea intai: inventarul citeste exact octetii care raman in dosar, nu
+  // originalul. Altfel ar descrie un document pe care nimeni nu-l mai deschide.
+  const pregatite: { brut: Buffer; gata: Awaited<ReturnType<typeof pregatesteFisier>>; nume: string }[] = [];
+  for (const f of fisiere) {
+    const brut = Buffer.from(await f.arrayBuffer());
+    pregatite.push({ brut, gata: await pregatesteFisier(brut, mimeDupaNume(f.name, f.type)), nume: f.name });
+  }
+
+  // INVENTARUL. Modelul deschide fiecare document si spune ce e — nu se ia dupa
+  // numele fisierului, care la facturile scoase din programele de administrare
+  // nu spune nici ce e documentul, nici de la cine vine.
+  const inventar = await inventariaza(
+    pregatite.map(p => ({ continut: p.gata.continut, numeFisier: p.nume, mimeType: p.gata.mimeType })),
+  );
+
   for (let i = 0; i < fisiere.length; i++) {
     const f = fisiere[i];
-    // Tipul ales de om are ultimul cuvant; daca lipseste sau a ramas „altele",
-    // il ghicim din nume, ca fisierul sa nu intre in dosar fara identitate.
-    const alesDeOm = tipuri[i];
-    const tip = alesDeOm && alesDeOm !== "altele" ? alesDeOm : ghicesteTip(f.name).cheie;
-    const brut = Buffer.from(await f.arrayBuffer());
+    const { gata } = pregatite[i];
 
-    // Scanarile se recodeaza inainte de pastrare, iar amprenta originalului se
-    // calculeaza inainte de asta. Vezi `lib/cenzorat/optimizare.ts`.
-    const gata = await pregatesteFisier(brut, mimeDupaNume(f.name, f.type));
+    // Tipul pus cu mana de cenzor bate tot. In rest comanda ce s-a citit din
+    // document; ghicitul din nume ramane doar pentru ce n-a putut fi citit —
+    // Word, Excel, arhive, sau un document pe care modelul nu l-a inteles.
+    const pusDeOm = tipuri[i] && tipuri[i] !== "altele" && tipuri[i] !== "auto" ? tipuri[i] : null;
+    const citit = inventar.citiri[i] ?? dinNume(f.name);
+    const tip = pusDeOm ?? citit.tip;
+    const tipSursa = pusDeOm ? "om" : citit.tipSursa;
 
     const numeSigur = `${tip}_${marca}_${i}_${numeDupaMime(f.name, gata.mimeType).replace(/[^a-zA-Z0-9._-]/g, "_")}`;
     const salvat = await salveazaFisier(`${dosarBlob}/${numeSigur}`, gata.continut, gata.mimeType);
@@ -261,6 +283,8 @@ export async function POST(req: NextRequest) {
     randuri.push({
       dosarId: dosar.id,
       tip,
+      // Eticheta ramane numele tipului („Facturi furnizori"); ce a citit modelul
+      // sta separat, in `denumireAi`, ca sa se vada amandoua: felul si bucata.
       eticheta: etichetaTip(tip),
       numeFisier: f.name,
       blobUrl: salvat.url,
@@ -269,9 +293,11 @@ export async function POST(req: NextRequest) {
       marimeOriginala: gata.marimeOriginala,
       amprenta: gata.amprenta,
       optimizat: gata.optimizat,
+      denumireAi: citit.denumire || null,
+      emitentAi: citit.emitent || null,
+      perioadaAi: citit.perioada || null,
+      tipSursa,
     });
-    // Modelul citeste exact octetii pe care ii pastram, nu originalul: altfel
-    // raportul s-ar sprijini pe o imagine pe care cenzorul n-o mai poate deschide.
     pentruCitire.push({ tip, numeFisier: f.name, mimeType: gata.mimeType, continut: gata.continut });
   }
 
@@ -314,6 +340,22 @@ export async function POST(req: NextRequest) {
     },
   });
 
+  if (inventar.tokensIn > 0) {
+    // Costul se scrie in jurnal, nu doar se trimite in raspuns: peste trei luni,
+    // intrebarea „cat m-a costat cititul dosarelor?" are un raspuns care se poate
+    // aduna, nu unul care a disparut odata cu ecranul.
+    const citite = inventar.citiri.filter(Boolean).length;
+    await prisma.evenimentFlux.create({
+      data: {
+        dosarId: dosar.id,
+        etapa: "intrare",
+        stare: "gata",
+        mesaj: `Inventar: ${citite} ${citite === 1 ? "document citit" : "documente citite"} · `
+          + `${inventar.tokensIn.toLocaleString("ro-RO")} tokeni · $${inventar.cost.toFixed(4)}`,
+      },
+    });
+  }
+
   if (!porneste) {
     // Dosarul ramane deschis, in asteptarea restului documentelor. Etapa nu se
     // muta: „intrare / așteptare" e exact adevarul.
@@ -340,6 +382,11 @@ export async function POST(req: NextRequest) {
     primite: randuri.length,
     octetiPrimiti: totalOcteti,
     octetiPastrati,
+    inventar: {
+      citite: inventar.citiri.filter(Boolean).length,
+      cost: inventar.cost,
+      denumiri: randuri.map(r => r.denumireAi ?? r.numeFisier),
+    },
     nesalvate,
     necitibile,
     lipsa,

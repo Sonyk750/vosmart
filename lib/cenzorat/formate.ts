@@ -94,8 +94,20 @@ export function mimeDupaNume(nume: string, dinBrowser?: string): string {
   return f.mime[0];
 }
 
-/** Cat incape intr-o singura incarcare. */
-export const LIMITA_MB = 50;
+/**
+ * Cat incape intr-un singur fisier trimis.
+ *
+ * Nu e o cifra aleasa de noi: platforma respinge orice cerere peste 4,5 MB cu
+ * `FUNCTION_PAYLOAD_TOO_LARGE`, INAINTE ca ruta sa fie chemata — de aceea o
+ * incarcare prea mare se vedea ca „documentele nu au putut fi trimise", fara
+ * niciun motiv. Masurat pe productie: 4 MB trec, 5 MB nu.
+ *
+ * De aici vin doua reguli: fisierele pleaca UNUL CATE UNUL, nu tot teancul
+ * intr-o cerere, iar imaginile mai grele decat atat se micsoreaza in browser
+ * inainte sa plece. Ce ramane peste limita e un PDF mare, si atunci se spune pe
+ * nume, nu se ascunde intr-o eroare generica.
+ */
+export const LIMITA_FISIER_MB = 4;
 
 /** Enumerarea formatelor, pentru mesajele catre om. */
 export const FORMATE_TEXT = "PDF, Word, Excel, JPG, PNG, ZIP și RAR";
