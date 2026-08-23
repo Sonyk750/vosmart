@@ -241,6 +241,7 @@ export default function IncarcareClient({ implicit }: { implicit: { luna: string
     f => f.fisier.size > LIMITA_FISIER_MB * 1024 * 1024 && !f.fisier.type.startsWith("image/"),
   );
   const necitibile = fisiere.filter(f => !formatul(f.fisier.name)?.citibilDeAi);
+  const nedeschise = fisiere.filter(f => !formatul(f.fisier.name)?.inventariabil);
   const inchisaLuna = dosarulLunii?.etapa === "semnat";
   const potTrimite = Boolean(contractId) && fisiere.length > 0 && preaGrele.length === 0 && !inchisaLuna;
 
@@ -521,7 +522,7 @@ export default function IncarcareClient({ implicit }: { implicit: { luna: string
                         {f.citit && <span className="text-faint/80">{f.fisier.name} · </span>}
                         {format?.eticheta} · {kb(f.fisier.size)}
                         {f.dinArhiva && ` · din ${f.dinArhiva}`}
-                        {format && !format.citibilDeAi && " · nu poate fi citit de AI"}
+                        {format && !format.inventariabil && " · nu poate fi deschis, rămâne pe numele fișierului"}
                       </p>
                       {(f.motiv || greu) && (
                         <p className="text-[11.5px] text-bad">
@@ -553,7 +554,14 @@ export default function IncarcareClient({ implicit }: { implicit: { luna: string
               {necitibile.length > 0 && (
                 <span className="flex items-center gap-1.5 text-[12.5px] text-faint">
                   <Ic.info className="h-3.5 w-3.5" />
-                  {necitibile.length} se păstrează, dar nu intră în citirea AI
+                  {necitibile.length} {necitibile.length === 1 ? "document intră" : "documente intră"} în inventar,
+                  dar nu în verificarea cifrelor
+                </span>
+              )}
+              {nedeschise.length > 0 && (
+                <span className="flex items-center gap-1.5 text-[12.5px] text-warn">
+                  <Ic.alerta className="h-3.5 w-3.5" />
+                  {nedeschise.length} nu {nedeschise.length === 1 ? "poate fi deschis" : "pot fi deschise"} — rămân pe numele fișierului
                 </span>
               )}
             </div>
@@ -796,7 +804,7 @@ function RandLuna({
                           {f.numeFisier} · {f.optimizat && f.marimeOriginala
                             ? `${kb(f.marimeOriginala)} → ${kb(f.marime)}`
                             : kb(f.marime)}
-                          {!formatul(f.numeFisier)?.citibilDeAi && " · nu intră în citirea AI"}
+                          {!formatul(f.numeFisier)?.citibilDeAi && " · nu intră în verificarea automată"}
                         </p>
                         {f.tipSursa === "nume" && (
                           <p className="text-[11px] text-warn/80">

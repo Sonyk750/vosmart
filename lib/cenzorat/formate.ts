@@ -18,34 +18,45 @@ export type Format = {
   /** Antetele MIME pe care le trimit browserele pentru formatul asta. */
   mime: string[];
   eticheta: string;
-  /** Poate fi citit de model asa cum e, fara conversie? */
+  /** Intra in VERIFICAREA automata, adica modelul ii poate citi cifrele din pagina? */
   citibilDeAi: boolean;
+  /**
+   * Poate fi INVENTARIAT, adica se poate afla din el ce document e?
+   *
+   * Nu e acelasi lucru cu cel de sus. Un .xlsx nu se poate arata modelului ca
+   * pagina, dar e o arhiva cu XML inauntru, din care se scot titlul si textul —
+   * destul cat sa stim ca e „Registru de casă - iunie 2026". Vezi
+   * `lib/cenzorat/inventar.ts`. `.doc` si `.xls` vechi sunt binare, deci nu;
+   * arhivele, nici atat.
+   */
+  inventariabil: boolean;
 };
 
 export const FORMATE: Format[] = [
-  { extensii: [".pdf"], mime: ["application/pdf"], eticheta: "PDF", citibilDeAi: true },
-  { extensii: [".jpg", ".jpeg"], mime: ["image/jpeg"], eticheta: "JPEG", citibilDeAi: true },
-  { extensii: [".png"], mime: ["image/png"], eticheta: "PNG", citibilDeAi: true },
-  { extensii: [".webp"], mime: ["image/webp"], eticheta: "WEBP", citibilDeAi: true },
+  { extensii: [".pdf"], mime: ["application/pdf"], eticheta: "PDF", citibilDeAi: true, inventariabil: true },
+  { extensii: [".jpg", ".jpeg"], mime: ["image/jpeg"], eticheta: "JPEG", citibilDeAi: true, inventariabil: true },
+  { extensii: [".png"], mime: ["image/png"], eticheta: "PNG", citibilDeAi: true, inventariabil: true },
+  { extensii: [".webp"], mime: ["image/webp"], eticheta: "WEBP", citibilDeAi: true, inventariabil: true },
   {
     extensii: [".doc", ".docx"],
     mime: ["application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"],
-    eticheta: "Word", citibilDeAi: false,
+    // .docx se inventariaza (e XML zipat); .doc vechi e binar si nu.
+    eticheta: "Word", citibilDeAi: false, inventariabil: true,
   },
   {
     extensii: [".xls", ".xlsx"],
     mime: ["application/vnd.ms-excel", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"],
-    eticheta: "Excel", citibilDeAi: false,
+    eticheta: "Excel", citibilDeAi: false, inventariabil: true,
   },
   {
     extensii: [".zip"],
     mime: ["application/zip", "application/x-zip-compressed", "multipart/x-zip"],
-    eticheta: "Arhivă ZIP", citibilDeAi: false,
+    eticheta: "Arhivă ZIP", citibilDeAi: false, inventariabil: false,
   },
   {
     extensii: [".rar"],
     mime: ["application/vnd.rar", "application/x-rar-compressed", "application/octet-stream"],
-    eticheta: "Arhivă RAR", citibilDeAi: false,
+    eticheta: "Arhivă RAR", citibilDeAi: false, inventariabil: false,
   },
 ];
 
