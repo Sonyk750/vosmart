@@ -61,7 +61,28 @@ function Rand({ eticheta, valoare }: { eticheta: string; valoare: React.ReactNod
   );
 }
 
-export default function RaportHartie({ date, titlu }: { date: DateRaport; titlu: string }) {
+/**
+ * Raportul, ca hartie.
+ *
+ * Primeste ce s-a salvat in baza, iar acolo poate sta si un raport scris de o
+ * versiune mai veche a codului. De aceea partile care lipsesc capata valori
+ * neutre in loc sa dea cu capul: un raport mai sarac se citeste, unul care
+ * arunca lasa in loc un ecran negru cu „a server error occurred".
+ */
+export default function RaportHartie({ date: brut, titlu }: { date: DateRaport; titlu: string }) {
+  const date: DateRaport = {
+    ...brut,
+    asociatie: brut.asociatie ?? { denumire: null, cui: null, adresa: null },
+    perioada: brut.perioada ?? { luna: null, an: null },
+    incredere: brut.incredere ?? { procent: 0, gasite: 0, total: 0 },
+    scor: brut.scor ?? { valoare: 0, verdict: "conform", defalcare: [] },
+    constatari: brut.constatari ?? [],
+    extras: brut.extras ?? null,
+    concluzie: brut.concluzie ?? null,
+    semnatar: brut.semnatar ?? null,
+    semnatLa: brut.semnatLa ?? null,
+  };
+
   const e = date.extras;
   const verdict = VERDICTE[date.scor.verdict] ?? VERDICTE.observatii;
   const retinute = date.constatari.filter(c => c.stare !== "respinsa");

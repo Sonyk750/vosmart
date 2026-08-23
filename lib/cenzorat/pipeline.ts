@@ -78,7 +78,7 @@ export type OptiuniFlux = {
 export async function ruleazaFlux({ dosarId, fisiere }: OptiuniFlux): Promise<void> {
   const dosar = await prisma.dosar.findUnique({
     where: { id: dosarId },
-    include: { contract: { select: { id: true, denumire: true, cui: true } } },
+    include: { contract: { select: { id: true, denumire: true, cui: true, adresa: true } } },
   });
   if (!dosar) return;
 
@@ -230,9 +230,30 @@ export async function ruleazaFlux({ dosarId, fisiere }: OptiuniFlux): Promise<vo
 
     // Un dosar are un singur raport AI. La reluare se rescrie, nu se mai adauga
     // unul — altfel clientul vedea trei rapoarte pentru aceeasi luna.
+    // ACEEASI FORMA ca la raportul semnat (`versiune: 2`), nu una a ei.
+    //
+    // Pagina de raport e una singura, si pentru proiectul AI, si pentru cel
+    // semnat. Raportul AI se salva insa fara `asociatie`, `concluzie` si
+    // `semnatar`, iar pagina cadea cu eroare de server cand incerca sa le
+    // citeasca. Doua forme pentru acelasi lucru inseamna, mai devreme sau mai
+    // tarziu, un ecran care crapa.
     const dateRaport = {
-      extras, scor, incredere, constatari,
+      versiune: 2,
+      asociatie: {
+        denumire: dosar.contract.denumire,
+        cui: dosar.contract.cui,
+        adresa: dosar.contract.adresa,
+      },
       perioada: { luna: dosar.luna, an: dosar.an },
+      extras,
+      incredere,
+      scor,
+      constatari,
+      // Concluzia si semnatura sunt ale omului. Pana le scrie el, lipsesc — iar
+      // bara de sus marcheaza raportul drept proiect nesemnat.
+      concluzie: null,
+      semnatar: null,
+      semnatLa: null,
       generatLa: new Date().toISOString(),
     };
     await prisma.report.upsert({
