@@ -782,7 +782,11 @@ function RandLuna({
 
   return (
     <li>
-      <Card className="overflow-hidden">
+      {/* Fara `overflow-hidden` pe card: meniul „Acțiuni" e pozitionat absolut si
+          iese in afara lui, iar orice stramos care taie continutul il reteaza —
+          exact asa se vedea meniul pe jumatate. Taierea ramane doar pe panoul
+          desfacut, unde chiar e nevoie de ea pentru colturile de jos. */}
+      <Card>
         {/* ------------------------------------------------------ capul */}
         <div className="flex flex-wrap items-center gap-3 px-4 py-3">
           <button
@@ -865,7 +869,7 @@ function RandLuna({
 
         {/* ------------------------------------------------- ce e înăuntru */}
         {deschis && (
-          <div className="rise border-t border-line">
+          <div className="rise overflow-hidden rounded-b-[var(--radius-card)] border-t border-line">
             {(dosar.rezumat || dosar.incredere !== null || dosar.scor !== null || dosar.fisiere.length > 0) && (
               <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-b border-line bg-surface-1 px-5 py-3">
                 {dosar.fisiere.length > 0 && <Cifra eticheta="Primite" valoare={kb(cat.primit)} />}

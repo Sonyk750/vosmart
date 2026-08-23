@@ -70,8 +70,12 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       "Content-Disposition": `${potInline ? "inline" : "attachment"}; filename="${numeCurat}"`,
       "Cache-Control": "private, no-store",
       "X-Content-Type-Options": "nosniff",
+      // Documentul deschis in pagina nu are voie sa ceara nimic din afara si nu
+      // ruleaza scripturi. `sandbox` a fost scos dinadins: in unele browsere
+      // impiedica vizualizatorul intern de PDF sa porneasca, si atunci cenzorul
+      // se uita la o foaie alba. `frame-ancestors 'self'` tine incadrarea la noi.
       ...(potInline
-        ? { "Content-Security-Policy": "sandbox; default-src 'none'; object-src 'none'; script-src 'none'" }
+        ? { "Content-Security-Policy": "default-src 'none'; script-src 'none'; object-src 'none'; frame-ancestors 'self'" }
         : {}),
     },
   });
