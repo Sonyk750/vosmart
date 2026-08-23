@@ -1,3 +1,4 @@
+import { requireAdmin } from "@/lib/auth";
 import { lunaDeLucru } from "@/lib/luni";
 import IncarcareClient from "./IncarcareClient";
 
@@ -13,6 +14,15 @@ import IncarcareClient from "./IncarcareClient";
  * miezul noptii dintre luni — o nepotrivire de hidratare pe care nimeni n-ar
  * reusi sa o reproduca a doua zi.
  */
-export default function PaginaIncarcare() {
-  return <IncarcareClient implicit={lunaDeLucru()} />;
+export default async function PaginaIncarcare() {
+  // Cine intocmeste inventarul se scrie pe hartie, sub semnatura. Poarta e tot in
+  // `layout.tsx`; aici doar aflam numele.
+  const user = await requireAdmin();
+
+  return (
+    <IncarcareClient
+      implicit={lunaDeLucru()}
+      intocmitDe={user?.name || user?.email || "VoSmart"}
+    />
+  );
 }

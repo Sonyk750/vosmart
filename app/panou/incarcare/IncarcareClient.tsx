@@ -160,7 +160,13 @@ function stareDosar(d: Dosar): { text: string; ton: Ton; inLucru: boolean; proce
   return { text: numeEtapa, ton: "info", inLucru: false, procent };
 }
 
-export default function IncarcareClient({ implicit }: { implicit: { luna: string; an: number } }) {
+export default function IncarcareClient({
+  implicit, intocmitDe,
+}: {
+  implicit: { luna: string; an: number };
+  /** Numele cenzorului, pentru inventarul tiparit. */
+  intocmitDe: string;
+}) {
   const { ales } = useContract();
 
   const [luna, setLuna] = useState(String(numarLuna(implicit.luna) ?? 1).padStart(2, "0"));
@@ -473,6 +479,30 @@ export default function IncarcareClient({ implicit }: { implicit: { luna: string
     }
   }
 
+  /**
+   * Inventarul lunii, pe hartie.
+   *
+   * `@react-pdf/renderer` e o dependinta grea; se aduce doar la apasare, ca sa nu
+   * intre in pachetul cu care porneste ecranul.
+   */
+  async function salveazaInventarul(dosar: Dosar) {
+    if (!ales) return;
+    setEroare("");
+    try {
+      const { descarcaInventarul } = await import("@/app/components/InventarPDF");
+      await descarcaInventarul({
+        contract: { denumire: ales.denumire, cui: ales.cui, numar: ales.numar },
+        luna: dosar.luna,
+        an: dosar.an,
+        fisiere: dosar.fisiere,
+        lipsa: lipsuri(dosar.fisiere.map(f => f.tip)),
+        intocmitDe,
+      });
+    } catch (e) {
+      setEroare(e instanceof Error ? e.message : "Inventarul nu a putut fi generat.");
+    }
+  }
+
   /** „Adaugă documente" din meniul unei luni: aduce perioada sus si deschide alegerea. */
   function adaugaLa(dosar: Dosar) {
     setLuna(String(numarLuna(dosar.luna) ?? 1).padStart(2, "0"));
@@ -737,6 +767,7 @@ export default function IncarcareClient({ implicit }: { implicit: { luna: string
               <RandLuna
                 key={d.id}
                 dosar={d}
+                peInventar={() => salveazaInventarul(d)}
                 deschis={deschis === d.id}
                 modSters={deschis === d.id && modSters}
                 lucreaza={lucreaza}
@@ -760,9 +791,11 @@ export default function IncarcareClient({ implicit }: { implicit: { luna: string
 /* ------------------------------------------------------------- UN RÂND */
 
 function RandLuna({
-  dosar, deschis, modSters, lucreaza, peComuta, peAdauga, pePornire, peStergere,
+  dosar, deschis, modSters, lucreaza, peComuta, peAdauga, pePornire, peStergere, peInventar,
 }: {
   dosar: Dosar;
+  /** Scoate inventarul lunii pe hartie. */
+  peInventar: () => void;
   deschis: boolean;
   modSters: boolean;
   lucreaza: string | null;
@@ -845,6 +878,11 @@ function RandLuna({
                   <ElementMeniu pictograma={<Ic.cos className="h-3.5 w-3.5" />} dezactivat={semnat || dosar.fisiere.length === 0}
                     peApasare={actiune(() => peComuta(true))}>
                     Șterge documente
+                  </ElementMeniu>
+                  <ElementMeniu pictograma={<Ic.descarca className="h-3.5 w-3.5" />}
+                    dezactivat={dosar.fisiere.length === 0}
+                    peApasare={actiune(peInventar)}>
+                    Salvează inventarul (PDF)
                   </ElementMeniu>
                   <ElementMeniu pictograma={<Ic.scanteie className="h-3.5 w-3.5" />}
                     dezactivat={semnat || dosar.fisiere.length === 0 || stare.inLucru}

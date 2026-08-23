@@ -5,7 +5,7 @@ import { Buton, Camp, Card, CardCap, Eticheta, Gol, InelScor, Rotitor } from "@/
 import { claseCamp, dataRo, lei, Ton } from "@/app/components/baza";
 import { Ic } from "@/app/components/icoane";
 import { SEVERITATI, Severitate } from "@/lib/cenzorat/tipuri";
-import { eticheta as etichetaTip } from "@/lib/cenzorat/documente";
+import { eticheta as etichetaTip, lipsuri } from "@/lib/cenzorat/documente";
 
 /**
  * Pupitrul de revizuire al cenzorului.
@@ -33,11 +33,19 @@ type Scor = {
   defalcare: { severitate: Severitate; eticheta: string; numar: number; puncte: number }[];
   luateInCalcul: number; ignorate: number;
 };
-type Fisier = { id: string; numeFisier: string; eticheta: string; tip: string; mimeType: string; marime: number };
+type Fisier = {
+  id: string; numeFisier: string; eticheta: string; tip: string; mimeType: string;
+  marime: number; marimeOriginala: number | null; amprenta: string | null;
+  /** Denumirea citita din document: „Factură Apa Nova". */
+  denumireAi: string | null; emitentAi: string | null; perioadaAi: string | null; tipSursa: string;
+};
+
+/** Cum se cheama documentul pe fila. Denumirea citita bate numele tipului. */
+const numeleFisierului = (f: Fisier) => f.denumireAi || f.eticheta || etichetaTip(f.tip);
 
 type Date_ = {
   dosar: { id: string; titlu: string; luna: string | null; an: number | null; etapa: string; stareEtapa: string; incredere: number | null; creatLa: string };
-  contract: { id: string; denumire: string; cui: string; adresa: string | null; telefon: string | null; email: string | null; reprezentant: string | null } | null;
+  contract: { id: string; denumire: string; cui: string; numar: string | null; adresa: string | null; telefon: string | null; email: string | null; reprezentant: string | null } | null;
   extras: Record<string, never> | null;
   fisiere: Fisier[];
   constatari: Constatare[];
@@ -63,6 +71,28 @@ export default function PupitruCenzor({ dosarId }: { dosarId: string }) {
   const [eroare, setEroare] = useState("");
   const [lucreaza, setLucreaza] = useState<string | null>(null);
   const [fisierDeschis, setFisierDeschis] = useState<Fisier | null>(null);
+
+  /**
+   * Inventarul dosarului, pe hartie.
+   *
+   * `@react-pdf/renderer` e greu; se aduce doar la apasare, nu odata cu ecranul.
+   */
+  async function salveazaInventarul() {
+    if (!date?.contract) return;
+    try {
+      const { descarcaInventarul } = await import("@/app/components/InventarPDF");
+      await descarcaInventarul({
+        contract: { denumire: date.contract.denumire, cui: date.contract.cui, numar: date.contract.numar },
+        luna: date.dosar.luna ?? "",
+        an: date.dosar.an ?? new Date().getFullYear(),
+        fisiere: date.fisiere,
+        lipsa: lipsuri(date.fisiere.map(f => f.tip)),
+        intocmitDe: date.raport?.semnatDe || "VoSmart",
+      });
+    } catch (e) {
+      setEroare(e instanceof Error ? e.message : "Inventarul nu a putut fi generat.");
+    }
+  }
   const [adaugaDeschis, setAdaugaDeschis] = useState(false);
   const [semneaza, setSemneaza] = useState(false);
   const [confirmSemnare, setConfirmSemnare] = useState(false);
@@ -218,17 +248,25 @@ export default function PupitruCenzor({ dosarId }: { dosarId: string }) {
         {/* ------------------------------------------------- documentul */}
         <div className="space-y-3 xl:sticky xl:top-4 xl:self-start">
           <Card className="overflow-hidden">
+            <div className="flex items-center justify-between gap-3 border-b border-line px-3 py-2">
+              <p className="text-[12.5px] font-medium text-ink">
+                {date.fisiere.length} {date.fisiere.length === 1 ? "document în dosar" : "documente în dosar"}
+              </p>
+              <Buton fel="fantoma" marime="mic" disabled={date.fisiere.length === 0} onClick={salveazaInventarul}>
+                <Ic.descarca className="h-3.5 w-3.5" /> Inventarul
+              </Buton>
+            </div>
             <div className="flex gap-1 overflow-x-auto border-b border-line px-2 py-2 scroll-slim">
               {date.fisiere.map(f => (
                 <button
                   key={f.id}
                   onClick={() => setFisierDeschis(f)}
-                  title={f.numeFisier}
+                  title={`${numeleFisierului(f)} — ${f.numeFisier}`}
                   className={`shrink-0 rounded-lg px-2.5 py-1.5 text-[12px] font-medium transition-colors ${
                     fisierDeschis?.id === f.id ? "bg-brand text-white" : "text-muted hover:bg-surface-3 hover:text-ink"
                   }`}
                 >
-                  {f.eticheta || etichetaTip(f.tip)}
+                  {numeleFisierului(f)}
                 </button>
               ))}
             </div>
@@ -249,7 +287,7 @@ export default function PupitruCenzor({ dosarId }: { dosarId: string }) {
             {fisierDeschis && (
               <div className="flex items-center justify-between gap-3 border-t border-line px-4 py-2.5">
                 <p className="truncate text-[12px] text-faint">
-                  {fisierDeschis.numeFisier} · {(fisierDeschis.marime / 1024).toFixed(0)} KB
+                  {numeleFisierului(fisierDeschis)} · {fisierDeschis.numeFisier} · {(fisierDeschis.marime / 1024).toFixed(0)} KB
                 </p>
                 <a
                   href={`/api/panou/fisiere/${fisierDeschis.id}`}

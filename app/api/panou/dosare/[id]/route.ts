@@ -25,8 +25,18 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   const dosar = await prisma.dosar.findUnique({
     where: { id },
     include: {
-      contract: { select: { id: true, denumire: true, cui: true, adresa: true, telefon: true, email: true, reprezentant: true } },
-      fisiere: { select: { id: true, numeFisier: true, eticheta: true, tip: true, mimeType: true, marime: true }, orderBy: { createdAt: "asc" } },
+      contract: { select: { id: true, denumire: true, cui: true, numar: true, adresa: true, telefon: true, email: true, reprezentant: true } },
+      fisiere: {
+        select: {
+          id: true, numeFisier: true, eticheta: true, tip: true, mimeType: true,
+          marime: true, marimeOriginala: true, amprenta: true,
+          // Ce a citit modelul in document — filele din pupitru arata asta, nu
+          // numele tipului: cinci file scriind toate „Facturi furnizori" nu ajuta
+          // pe nimeni sa gaseasca factura de la Apa Nova.
+          denumireAi: true, emitentAi: true, perioadaAi: true, tipSursa: true,
+        },
+        orderBy: { createdAt: "asc" },
+      },
       reports: { where: { tip: "expert" }, select: { id: true, status: true, semnatDe: true, semnatLa: true } },
     },
   });
