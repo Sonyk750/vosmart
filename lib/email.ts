@@ -101,3 +101,124 @@ export async function sendCodResetareParola(data: {
     `,
   });
 }
+
+/* ------------------------------------------------------------------ *
+ *  Plata unui pachet de pe site
+ * ------------------------------------------------------------------ */
+
+/** Ce stie webhookul despre o comanda platita. Doar campurile folosite aici. */
+type ComandaEmail = {
+  pachet: string;
+  fel: string;
+  denumire: string;
+  cui: string | null;
+  email: string;
+  telefon: string | null;
+  persoana: string | null;
+  apartamente: number | null;
+  leiPeLuna: number;
+};
+
+const BIROU = "office@vosmart.ro";
+
+function esc(s: string): string {
+  return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+function sumaLunara(c: ComandaEmail): string {
+  const suma = c.leiPeLuna.toLocaleString("ro-RO", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return c.apartamente ? `${suma} lei/lună (${c.apartamente} apartamente)` : `${suma} lei/lună`;
+}
+
+/**
+ * Instiintarea catre birou. Fara ea, o plata intrata s-ar vedea abia cand intra
+ * cineva in Stripe — adica poate peste o saptamana, dupa ce clientul a asteptat
+ * degeaba sa fie sunat.
+ */
+export async function anuntaComandaNoua(c: ComandaEmail) {
+  if (!canSendEmail()) return;
+  const from = process.env.EMAIL_FROM || process.env.SMTP_USER!;
+
+  const rand = (eticheta: string, valoare: string | null) =>
+    valoare
+      ? `<tr><td style="padding:9px 0;border-bottom:1px solid #e5e7eb;color:#6b7280;width:150px">${eticheta}</td>
+             <td style="padding:9px 0;border-bottom:1px solid #e5e7eb;font-weight:600">${esc(valoare)}</td></tr>`
+      : "";
+
+  await createTransporter().sendMail({
+    from,
+    to: BIROU,
+    replyTo: c.email || undefined,
+    subject: `[VoSmart] Pachet plătit: ${c.denumire} — ${sumaLunara(c)}`,
+    html: `
+      <div style="font-family:sans-serif;max-width:640px;margin:0 auto;padding:24px">
+        <h2 style="color:#059669;margin:0 0 8px">Plată intrată</h2>
+        <p style="color:#6b7280;margin:0 0 24px;font-size:14px">
+          Abonamentul a fost pornit în Stripe. Urmează contractul, semnat de mână.
+        </p>
+        <table style="width:100%;border-collapse:collapse;font-size:14px">
+          ${rand("Pachet", `${c.pachet} (${c.fel})`)}
+          ${rand("Abonament", sumaLunara(c))}
+          ${rand("Denumire", c.denumire)}
+          ${rand("CUI", c.cui)}
+          ${rand("Persoană de contact", c.persoana)}
+          ${rand("Email", c.email)}
+          ${rand("Telefon", c.telefon)}
+        </table>
+      </div>
+    `,
+  });
+}
+
+/** Confirmarea catre cel care a platit: ce a cumparat si ce urmeaza. */
+export async function trimiteConfirmareaPlatii(c: ComandaEmail) {
+  if (!canSendEmail()) return;
+  const from = process.env.EMAIL_FROM || process.env.SMTP_USER!;
+
+  await createTransporter().sendMail({
+    from,
+    to: c.email,
+    subject: `VoSmart — plata a intrat (${sumaLunara(c)})`,
+    html: `
+      <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:0;background:#0a0e1f;color:#e2e8f0">
+        <div style="background:linear-gradient(135deg,#7c3aed,#06b6d4);padding:32px;border-radius:16px 16px 0 0;text-align:center">
+          <h1 style="margin:0;font-size:24px;color:#ffffff;font-weight:700">VoSmart</h1>
+          <p style="margin:8px 0 0;color:#ddd6fe;font-size:14px">Plata a intrat</p>
+        </div>
+        <div style="padding:32px;background:#0f1629;border-radius:0 0 16px 16px">
+          <p style="font-size:15px;line-height:1.7;margin:0 0 24px">
+            ${c.persoana ? `Bună, <strong style="color:#a78bfa">${esc(c.persoana)}</strong>. ` : ""}Am primit plata pentru
+            <strong style="color:#f1f5f9">${esc(c.denumire)}</strong>. Abonamentul este activ.
+          </p>
+
+          <div style="background:#131a33;border:1px solid #1e293b;border-radius:12px;padding:20px;margin:0 0 24px">
+            <p style="margin:0 0 6px;font-size:13px;color:#94a3b8">Pachet</p>
+            <p style="margin:0 0 16px;font-size:18px;font-weight:700;color:#ffffff">${esc(c.pachet)}</p>
+            <p style="margin:0 0 6px;font-size:13px;color:#94a3b8">Abonament lunar</p>
+            <p style="margin:0;font-size:18px;font-weight:700;color:#67e8f9">${sumaLunara(c)}</p>
+          </div>
+
+          <div style="background:#131a33;border:1px solid #1e293b;border-radius:12px;padding:20px;margin:0 0 24px">
+            <p style="margin:0 0 12px;font-size:13px;font-weight:600;color:#a78bfa;text-transform:uppercase;letter-spacing:.5px">Ce urmează</p>
+            <ol style="margin:0;padding-left:20px;font-size:14px;color:#cbd5e1;line-height:1.9">
+              <li>Te sunăm în cel mult o zi lucrătoare pentru datele contractului.</li>
+              <li>Primești contractul de cenzorat, semnat electronic.</li>
+              <li>Îți deschidem contul și încarci primul dosar.</li>
+            </ol>
+          </div>
+
+          <p style="font-size:13px;color:#64748b;margin:0 0 20px;line-height:1.7">
+            Factura pleacă automat de la Stripe, pe acest email. Abonamentul se reînnoiește lunar
+            și se poate opri oricând, scriindu-ne la ${BIROU}.
+          </p>
+
+          <p style="color:#64748b;font-size:13px;margin:0;border-top:1px solid #1e293b;padding-top:16px">
+            Cu stimă,<br>
+            <strong style="color:#94a3b8">Echipa VoSmart</strong><br>
+            ${BIROU} · 0756 362 828
+          </p>
+        </div>
+      </div>
+    `,
+  });
+}

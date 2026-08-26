@@ -284,3 +284,49 @@ model AsistentCache {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 }
+
+/// O comanda platita (sau incercata) de pe site.
+///
+/// Se scrie de doua ori: o data cand omul pleaca spre pagina Stripe (`initiata`)
+/// si a doua oara cand webhookul confirma ca banii au intrat (`platita`).
+/// Randul se face INAINTE de plata tocmai ca sa ramana urma si atunci cand omul
+/// se razgandeste la pagina de card — altfel n-am sti niciodata cine a incercat
+/// si s-a oprit.
+///
+/// Nu inlocuieste contractul: contractul se semneaza dupa, de mana, si abia
+/// atunci apare in `Contract`. Aici stau doar banii si datele de facturare.
+model Comanda {
+  id String @id @default(cuid())
+
+  /// `smart` | `premium` (per apartament) sau `starter` | `business` |
+  /// `professional` (pret fix). Vezi `lib/preturi.ts`.
+  pachet String
+  /// `asociatie` sau `corporate` — dupa care se citeste pachetul de mai sus.
+  fel    String
+
+  // --- Cine plateste, asa cum va aparea pe factura ---
+  denumire String
+  cui      String?
+  email    String
+  telefon  String?
+  persoana String?
+
+  /// Numai la pachetele de asociatie; la cele corporate ramane gol.
+  apartamente Int?
+  /// Cat se incaseaza pe luna, in lei. Se inghiata la comanda: daca maine
+  /// schimbam pretul din `lib/preturi.ts`, comanda de azi ramane ce a fost.
+  leiPeLuna   Float
+
+  status    String    @default("initiata") // initiata | platita | abandonata
+  platitaLa DateTime?
+
+  stripeSessionId      String  @unique
+  stripeCustomerId     String?
+  stripeSubscriptionId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@index([email])
+}

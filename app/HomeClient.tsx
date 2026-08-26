@@ -4,6 +4,9 @@ import Image from "next/image";
 import Link from "next/link";
 import { Ecosistem } from "@/app/components/Ecosistem";
 import SplashScreen from "@/app/components/SplashScreen";
+// Preturile afisate vin din acelasi loc din care se face plata, ca sa nu ajunga
+// pagina sa arate 720 lei iar Stripe sa ceara altceva.
+import { PACHETE_ASOCIATIE, PACHETE_CORPORATE, scrieLei } from "@/lib/preturi";
 
 /**
  * @react-pdf/renderer e o dependenta grea si intra in first-load JS al paginii
@@ -261,11 +264,11 @@ export default function HomeClient() {
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300">Preț pentru asociații de proprietari</p>
                 <div className="mt-3 flex flex-wrap items-end gap-x-8 gap-y-3">
                   <div>
-                    <p className="text-3xl font-bold text-white">4,5 <span className="text-base font-semibold text-slate-400">lei / ap / lună</span></p>
+                    <p className="text-3xl font-bold text-white">{scrieLei(PACHETE_ASOCIATIE.smart.leiPeApartament)} <span className="text-base font-semibold text-slate-400">lei / ap / lună</span></p>
                     <p className="mt-1 text-sm text-cyan-300">VoSmart Smart</p>
                   </div>
                   <div>
-                    <p className="text-3xl font-bold text-white">5,7 <span className="text-base font-semibold text-slate-400">lei / ap / lună</span></p>
+                    <p className="text-3xl font-bold text-white">{scrieLei(PACHETE_ASOCIATIE.premium.leiPeApartament)} <span className="text-base font-semibold text-slate-400">lei / ap / lună</span></p>
                     <p className="mt-1 text-sm text-violet-300">VoSmart Premium</p>
                   </div>
                 </div>
@@ -379,7 +382,7 @@ export default function HomeClient() {
                 <div className="mt-8 grid gap-4 sm:grid-cols-2">
                   <div className="rounded-2xl border border-cyan-500/30 bg-cyan-500/10 p-5">
                     <p className="text-sm text-cyan-300">Preț per apartament</p>
-                    <p className="mt-2 text-3xl font-bold">4,5 <span className="text-lg font-semibold text-slate-300">lei</span></p>
+                    <p className="mt-2 text-3xl font-bold">{scrieLei(PACHETE_ASOCIATIE.smart.leiPeApartament)} <span className="text-lg font-semibold text-slate-300">lei</span></p>
                     <p className="mt-2 text-sm text-slate-400">/ apartament / lună</p>
                   </div>
                   <div className="rounded-2xl border border-white/10 bg-black/20 p-5">
@@ -397,6 +400,10 @@ export default function HomeClient() {
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
                   Descarcă oferta Smart PDF
                 </button>
+                <Link href="/plata?pachet=smart"
+                  className="mt-3 inline-flex w-full justify-center rounded-xl border border-cyan-500/40 bg-cyan-500/10 px-6 py-3 font-semibold text-cyan-200 transition hover:bg-cyan-500/20">
+                  Plătește cu cardul →
+                </Link>
               </div>
               {/* Premium */}
               <div className="relative rounded-[2rem] border border-violet-500/30 bg-gradient-to-br from-violet-500/10 to-transparent p-8 shadow-[0_0_80px_rgba(124,58,237,0.18)] transition hover:shadow-[0_0_100px_rgba(124,58,237,0.28)]">
@@ -408,7 +415,7 @@ export default function HomeClient() {
                 <div className="mt-8 grid gap-4 sm:grid-cols-2">
                   <div className="rounded-2xl border border-violet-500/30 bg-violet-500/10 p-5">
                     <p className="text-sm text-violet-300">Preț per apartament</p>
-                    <p className="mt-2 text-3xl font-bold">5,7 <span className="text-lg font-semibold text-slate-300">lei</span></p>
+                    <p className="mt-2 text-3xl font-bold">{scrieLei(PACHETE_ASOCIATIE.premium.leiPeApartament)} <span className="text-lg font-semibold text-slate-300">lei</span></p>
                     <p className="mt-2 text-sm text-slate-400">/ apartament / lună</p>
                   </div>
                   <div className="rounded-2xl border border-white/10 bg-black/20 p-5">
@@ -426,6 +433,10 @@ export default function HomeClient() {
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
                   Descarcă oferta Premium PDF
                 </button>
+                <Link href="/plata?pachet=premium"
+                  className="mt-3 inline-flex w-full justify-center rounded-xl border border-violet-500/40 bg-violet-500/10 px-6 py-3 font-semibold text-violet-200 transition hover:bg-violet-500/20">
+                  Plătește cu cardul →
+                </Link>
               </div>
             </div>
           </div>
@@ -477,9 +488,9 @@ export default function HomeClient() {
 
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-12">
               {[
-                { key:"starter", name:"Starter", price:"350", assoc:"10 dosare · 30 doc/dosar", color:"cyan", features:["10 dosare/lună","30 documente/dosar","Portal clienți dedicat","Analiză AI documente","Rapoarte automate","Suport email","Dosare suplimentare (40 lei)"] },
-                { key:"business", name:"Business", price:"720", assoc:"25 dosare · 30 doc/dosar", color:"emerald", recommended:true, features:["25 dosare/lună","30 documente/dosar","Portal clienți dedicat","Analiză AI documente","Rapoarte automate","Logo propriu în portal","Cenzori multipli","Suport prioritar"] },
-                { key:"professional", name:"Professional", price:"1.390", assoc:"50 dosare · 30 doc/dosar", color:"cyan", features:["50 dosare/lună","30 documente/dosar","Portal clienți dedicat","Analiză AI documente","Rapoarte automate","Logo propriu în portal","Cenzori multipli","Suport dedicat"] },
+                { key:"starter", name:"Starter", price:scrieLei(PACHETE_CORPORATE.starter.leiPeLuna), assoc:"10 dosare · 30 doc/dosar", color:"cyan", features:["10 dosare/lună","30 documente/dosar","Portal clienți dedicat","Analiză AI documente","Rapoarte automate","Suport email","Dosare suplimentare (40 lei)"] },
+                { key:"business", name:"Business", price:scrieLei(PACHETE_CORPORATE.business.leiPeLuna), assoc:"25 dosare · 30 doc/dosar", color:"emerald", recommended:true, features:["25 dosare/lună","30 documente/dosar","Portal clienți dedicat","Analiză AI documente","Rapoarte automate","Logo propriu în portal","Cenzori multipli","Suport prioritar"] },
+                { key:"professional", name:"Professional", price:scrieLei(PACHETE_CORPORATE.professional.leiPeLuna), assoc:"50 dosare · 30 doc/dosar", color:"cyan", features:["50 dosare/lună","30 documente/dosar","Portal clienți dedicat","Analiză AI documente","Rapoarte automate","Logo propriu în portal","Cenzori multipli","Suport dedicat"] },
                 { key:"enterprise", name:"Enterprise", price:"Personalizat", assoc:"50+ dosare · 30 doc/dosar", color:"emerald", features:["Dosare nelimitate","30 documente/dosar","Portal clienți dedicat","Analiză AI documente","Rapoarte automate","Logo propriu în portal","Cenzori multipli","API access","Manager cont dedicat"] },
               ].map((pkg)=>(
                 <div key={pkg.name} className={`relative rounded-[2rem] border p-8 transition hover:-translate-y-1
@@ -513,6 +524,13 @@ export default function HomeClient() {
                         : "bg-cyan-500/20 border border-cyan-500/40 text-cyan-300 hover:bg-cyan-500/30"}`}>
                     {pkg.key === "enterprise" ? "Solicită ofertă" : `Solicită ${pkg.name}`}
                   </a>
+                  {/* Enterprise are pret personalizat, deci nu poate trece prin casa. */}
+                  {pkg.key !== "enterprise" && (
+                    <Link href={`/plata?pachet=${pkg.key}`}
+                      className="mt-3 block text-center text-sm font-semibold text-slate-400 transition hover:text-white">
+                      sau plătește cu cardul →
+                    </Link>
+                  )}
                 </div>
               ))}
             </div>

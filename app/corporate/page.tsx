@@ -5,13 +5,15 @@ import { useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import FormularOferta from "@/app/components/FormularOferta";
+// Preturile vin din acelasi loc din care se face plata — vezi lib/preturi.ts.
+import { PACHETE_CORPORATE, estePachetCorporate, scrieLei } from "@/lib/preturi";
 
 const PACKAGES = [
   {
     key: "starter",
     name: "Starter",
-    price: "350",
-    priceLabel: "350 lei/lună",
+    price: scrieLei(PACHETE_CORPORATE.starter.leiPeLuna),
+    priceLabel: `${scrieLei(PACHETE_CORPORATE.starter.leiPeLuna)} lei/lună`,
     assoc: "10 dosare · 30 doc/dosar",
     max: 10,
     color: "cyan",
@@ -20,8 +22,8 @@ const PACKAGES = [
   {
     key: "business",
     name: "Business",
-    price: "720",
-    priceLabel: "720 lei/lună",
+    price: scrieLei(PACHETE_CORPORATE.business.leiPeLuna),
+    priceLabel: `${scrieLei(PACHETE_CORPORATE.business.leiPeLuna)} lei/lună`,
     assoc: "25 dosare · 30 doc/dosar",
     max: 25,
     color: "violet",
@@ -31,8 +33,8 @@ const PACKAGES = [
   {
     key: "professional",
     name: "Professional",
-    price: "1390",
-    priceLabel: "1.390 lei/lună",
+    price: scrieLei(PACHETE_CORPORATE.professional.leiPeLuna),
+    priceLabel: `${scrieLei(PACHETE_CORPORATE.professional.leiPeLuna)} lei/lună`,
     assoc: "50 dosare · 30 doc/dosar",
     max: 50,
     color: "cyan",
@@ -215,6 +217,19 @@ export default function CorporatePage() {
               <strong className="text-white">{PACKAGES.find(p => p.key === selectedPackage)?.name ?? "Business"}</strong>.
             </p>
             <FormularOferta pachet={PACKAGES.find(p => p.key === selectedPackage)?.name ?? "Business"} />
+
+            {/* Cine s-a hotarat deja nu mai are de ce sa astepte un email inapoi.
+                Trialul si Enterprise lipsesc de aici: unul e gratuit, celalalt
+                are pret personalizat, deci n-au ce cauta la casa. */}
+            {estePachetCorporate(selectedPackage) && (
+              <div className="mt-6 border-t border-white/10 pt-5 text-center">
+                <p className="text-sm text-slate-400">Sau plătește abonamentul acum, cu cardul:</p>
+                <Link href={`/plata?pachet=${selectedPackage}`}
+                  className="mt-3 inline-flex w-full justify-center rounded-xl border border-cyan-500/40 bg-cyan-500/10 px-6 py-3.5 font-semibold text-cyan-200 transition hover:bg-cyan-500/20">
+                  {PACKAGES.find(p => p.key === selectedPackage)?.name} — {PACKAGES.find(p => p.key === selectedPackage)?.priceLabel} →
+                </Link>
+              </div>
+            )}
             <p className="mt-5 border-t border-white/10 pt-4 text-center text-sm text-slate-400">
               Ai deja cont?{" "}
               <a href="/login" className="font-semibold text-violet-300 transition hover:text-violet-200">Autentifică-te</a>
