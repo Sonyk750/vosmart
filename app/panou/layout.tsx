@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { requireAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { filtruContracte } from "@/lib/acces";
+import { esteContService } from "@/lib/service-acces";
 import Cadru from "./Cadru";
 import { numaratoriMeniu } from "./date";
 
@@ -38,6 +39,7 @@ export default async function PanouLayout({ children }: { children: React.ReactN
     <div className="min-h-screen bg-app text-ink">
       <Cadru
         utilizator={{ nume: user.name ?? "", email: user.email, rol: user.role }}
+        esteService={esteContService(user.email)}
         numaratori={numaratori}
         contracte={contracte}
       >

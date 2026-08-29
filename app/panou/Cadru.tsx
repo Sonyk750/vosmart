@@ -71,6 +71,8 @@ type Intrare = {
   /** Ton pentru numar: „warn" cand asteapta pe cineva anume. */
   ton?: "brand" | "warn";
   doarProprietar?: boolean;
+  /** Doar contul de service (vezi lib/service-acces). Decis pe server. */
+  doarService?: boolean;
 };
 
 type Grup = { titlu: string; intrari: Intrare[] };
@@ -99,14 +101,19 @@ const GRUPURI: Grup[] = [
     intrari: [
       { cale: "/panou/contracte", eticheta: "Contracte", pictograma: Ic.contract },
       { cale: "/panou/utilizatori", eticheta: "Utilizatori", pictograma: Ic.utilizatori, doarProprietar: true },
+      // Caietul de service sta la capatul administrarii: e o unealta de
+      // intretinere, nu un ecran de lucru zilnic. Il vede un singur cont.
+      { cale: "/panou/service", eticheta: "Caiet de service", pictograma: Ic.cheie, doarService: true },
     ],
   },
 ];
 
 export default function Cadru({
-  utilizator, numaratori, contracte, children,
+  utilizator, numaratori, contracte, esteService, children,
 }: {
   utilizator: { nume: string; email: string; rol: string };
+  /** Contul de service — decis pe server, in layout: regula tine de `crypto`. */
+  esteService?: boolean;
   numaratori: Numaratori;
   /** Contractele pe care le poate lucra omul asta. Vezi `ContractContext`. */
   contracte: ContractScurt[];
@@ -142,7 +149,8 @@ export default function Cadru({
 
       <nav className="flex-1 overflow-y-auto px-2 py-3 scroll-slim">
         {GRUPURI.map(grup => {
-          const intrari = grup.intrari.filter(i => !i.doarProprietar || proprietar);
+          const intrari = grup.intrari.filter(i =>
+            (!i.doarProprietar || proprietar) && (!i.doarService || esteService));
           if (intrari.length === 0) return null;
           return (
             <div key={grup.titlu} className="mb-4 last:mb-0">

@@ -48,3 +48,6 @@ proiect.tar.gz
 /api/
 /dashboard/
 .vercel
+
+# Caietul de service se genereaza la fiecare build, din cod.
+lib/caiet-service.json

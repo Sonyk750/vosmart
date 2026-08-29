@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "node scripts/caiet-service.mjs && next build",
     "start": "next start",
     "lint": "eslint",
     "audit:seo": "node scripts/seo-audit.mjs",

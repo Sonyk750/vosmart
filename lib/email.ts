@@ -222,3 +222,29 @@ export async function trimiteConfirmareaPlatii(c: ComandaEmail) {
     `,
   });
 }
+
+/**
+ * Codul de acces la caietul de service.
+ *
+ * Pleaca la adresa contului de service — aceeasi cu a contului care tocmai l-a
+ * cerut, deci nu are unde altundeva sa ajunga.
+ */
+export async function sendCodService(data: { to: string; cod: string; minute: number }) {
+  if (!canSendEmail()) return;
+
+  const from = process.env.EMAIL_FROM || process.env.SMTP_USER!;
+  const codAfisat = `${data.cod.slice(0, 4)} ${data.cod.slice(4)}`;
+
+  await createTransporter().sendMail({
+    from,
+    to: data.to,
+    subject: `Cod acces caiet de service: ${codAfisat}`,
+    html: `
+      <p>Cod de acces la <strong>caietul de service</strong> VoSmart:</p>
+      <p style="font-family:monospace;font-size:28px;letter-spacing:4px;margin:16px 0">${codAfisat}</p>
+      <p>Scrie-l în cele 8 căsuțe din pagina rămasă deschisă.
+         Codul e valabil cel puțin ${data.minute} de minute.</p>
+      <p style="color:#6b7280;font-size:13px">Dacă nu ai cerut tu acest cod, cineva are acces
+         la contul tău — schimbă-ți parola.</p>`,
+  });
+}
