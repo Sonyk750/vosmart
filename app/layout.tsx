@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import ChatWidget from "@/app/components/ChatWidget";
 import { ECOSYSTEM_OTHERS } from "@/app/components/Ecosistem";
+import { Analytics } from "@vercel/analytics/next";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -173,6 +174,11 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col bg-[#050814] text-white">
         {children}
         <ChatWidget />
+      {/* Masuratoarea vizitelor. Vercel Analytics, nu Google Analytics: nu pune
+          cookie-uri, deci nu cere banda de consimtamant, si nu trimite datele
+          vizitatorilor catre un tert. Se vede in panoul Vercel al proiectului,
+          dupa ce Web Analytics e pornit de acolo. */}
+      <Analytics />
       </body>
     </html>
   );
