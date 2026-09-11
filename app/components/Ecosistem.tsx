@@ -14,6 +14,7 @@ export const ECOSYSTEM: EcosystemSite[] = [
   { name: "SpokApp", url: "https://www.spokapp.ro", what: "ecosistemul de aplicații" },
   { name: "SpokInvoice", url: "https://www.spokinvoice.ro", what: "facturare și e-Factura ANAF" },
   { name: "SpokAdmin", url: "https://spokadmin.ro", what: "administrare asociații de proprietari" },
+  { name: "SpokPass", url: "https://spokpass.ro", what: "manager de parole criptate" },
   { name: "VoSmart", url: "https://www.vosmart.ro", what: "cenzorat asociații de proprietari" },
   { name: "DecoImob", url: "https://decoimob.ro", what: "administrare imobile București" },
 ];
