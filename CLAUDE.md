@@ -43,6 +43,8 @@ Raspunsul 2.
 9. **Cross-links obligatorii la finalul articolului**:
    - Link spre **[SpokInvoice](https://www.spokinvoice.ro)** — facturare online (cont gratuit de testare, fără card)
    - Link spre **[SpokApp](https://www.spokapp.ro)** — ecosistemul din care face parte VoSmart
+   - **[SpokPass](https://spokpass.ro)** — manager de parole criptate. Natural la subiecte despre CINE tine conturile si parolele asociatiei (SPV/ANAF, banca, emailul asociatiei), la predarea-primirea administrarii si la securitatea datelor. Nu-l baga in articole despre liste de plata sau contabilitate: un link fara legatura nu ajuta nimanui si slabeste subiectul paginii.
+   - **[SpokRank](https://spokrank.vercel.app)** — monitorizare pozitii in Google. Natural DOAR cand articolul e chiar despre prezenta online a firmei. Rar. (Adresa se schimba in spokrank.ro cand domeniul raspunde.)
    - Cand articolul atinge zona administrarii (administrator, gestiune, mentenanta), trimite catre **[DecoImob](https://decoimob.ro)** ca **firma separata de administrare imobile** — formulat ca serviciu complementar, independent de cenzorat (cenzorul verifica administratorul; nu sunt aceeasi firma). NU prezenta administrarea ca serviciu VoSmart.
 10. **Nu repeta subiecte** — verifica fisierele existente din `content/blog/` inainte de a scrie
 
