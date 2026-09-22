@@ -98,6 +98,8 @@ O preocupare legitima a asociatiilor este securitatea datelor financiare prelucr
 
 Asociatiile care doresc sa beneficieze de **servicii cenzorat** moderne pot contacta [VoSmart](https://www.vosmart.ro) pentru o oferta personalizata. Prin integrarea cu **[SpokApp](https://www.spokapp.ro)**, intreg ecosistemul digital al asociatiei functioneaza sincronizat.
 
+Acelasi tipar de automatizare — documentul citit de AI, verificat automat si confirmat de om — se construieste in orice firma, nu doar in cenzoratul unei asociatii. Pentru companii din alte domenii exista [automatizari AI si consultanta pentru implementare](https://www.spokapp.ro/automatizari-ai), cu evaluare initiala gratuita.
+
 ---
 
 ## Intrebari frecvente

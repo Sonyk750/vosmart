@@ -133,4 +133,6 @@ Pentru o administrare corectă care facilitează munca cenzorului, **[SpokAdmin]
 
 Firmele de cenzorat care emit facturi pentru serviciile lor găsesc în **SpokInvoice** soluția completă de facturare online cu e-Factura ANAF — cont gratuit de testare, fără card.
 
+Detectarea anomaliilor este un caz particular al aceleiași idei: AI-ul citește documentele, compară cu ce există deja și semnalează ce nu se potrivește, iar omul decide. Firmele din orice domeniu care vor același lucru pe procesele lor găsesc pe [automatizări AI pentru companii](https://www.spokapp.ro/automatizari-ai) consultanță și implementare, cu evaluare inițială gratuită.
+
 Explorează toate soluțiile integrate pe **SpokApp**.
