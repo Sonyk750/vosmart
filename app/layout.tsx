@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import ChatWidget from "@/app/components/ChatWidget";
-import { ECOSYSTEM_OTHERS } from "@/app/components/Ecosistem";
+import { ECOSYSTEM_OTHERS, SOCIAL } from "@/app/components/Ecosistem";
 import { Analytics } from "@vercel/analytics/next";
 
 const geistSans = Geist({
@@ -141,7 +141,7 @@ const jsonLd = {
         url: "https://www.spokapp.ro",
       },
       // Sincronizat cu app/components/Ecosistem.tsx — aceleasi site-uri, aceleasi URL-uri canonice.
-      sameAs: ECOSYSTEM_OTHERS.map(s => s.url),
+      sameAs: [...ECOSYSTEM_OTHERS, ...SOCIAL].map(s => s.url),
     },
     {
       "@type": "WebSite",

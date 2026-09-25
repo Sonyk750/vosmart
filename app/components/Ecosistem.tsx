@@ -25,6 +25,14 @@ export const SELF_URL = "https://www.vosmart.ro";
 
 export const ECOSYSTEM_OTHERS = ECOSYSTEM.filter(s => s.url !== SELF_URL);
 
+/**
+ * Profilurile sociale proprii. Intra si in `sameAs` din `app/layout.tsx`.
+ * Pagina de Facebook VoSmart se adauga aici cand are adresa scurta.
+ */
+export const SOCIAL: EcosystemSite[] = [
+  { name: "YouTube", url: "https://www.youtube.com/channel/UCLAQsmu4p4qPfaDeQ779wKw", what: "clipuri scurte" },
+];
+
 export function Ecosistem({ className = "" }: { className?: string }) {
   return (
     <div className={className}>
@@ -36,6 +44,18 @@ export function Ecosistem({ className = "" }: { className?: string }) {
           <li key={site.url}>
             <a href={site.url} target="_blank" rel="noopener" className="transition hover:text-emerald-400">
               <span className="text-slate-400">{site.name}</span> — {site.what}
+            </a>
+          </li>
+        ))}
+      </ul>
+      <p className="mb-3 mt-5 text-xs font-medium uppercase tracking-wider text-slate-500">
+        Urmărește-ne
+      </p>
+      <ul className="flex flex-wrap gap-x-6 gap-y-2 text-xs text-slate-600">
+        {SOCIAL.map(s => (
+          <li key={s.url}>
+            <a href={s.url} target="_blank" rel="noopener" className="transition hover:text-emerald-400">
+              <span className="text-slate-400">{s.name}</span> — {s.what}
             </a>
           </li>
         ))}
