@@ -27,9 +27,10 @@ export const ECOSYSTEM_OTHERS = ECOSYSTEM.filter(s => s.url !== SELF_URL);
 
 /**
  * Profilurile sociale proprii. Intra si in `sameAs` din `app/layout.tsx`.
- * Pagina de Facebook VoSmart se adauga aici cand are adresa scurta.
+ * Adresa `vosmart` era luata pe Facebook, de aici `vosmart.cenzorat`.
  */
 export const SOCIAL: EcosystemSite[] = [
+  { name: "Facebook", url: "https://www.facebook.com/vosmart.cenzorat", what: "pagina VoSmart" },
   { name: "YouTube", url: "https://www.youtube.com/channel/UCLAQsmu4p4qPfaDeQ779wKw", what: "clipuri scurte" },
 ];
 
