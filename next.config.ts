@@ -29,6 +29,15 @@ const nextConfig: NextConfig = {
   // `lib/cenzorat/optimizare.ts`.
   serverExternalPackages: ["sharp"],
 
+  // `/clienti` era portalul clientilor, sters la restructurarea pe Admin + Corporate.
+  // Google inca il cauta (Search Console: 404); clientul ajunge acum la autentificare.
+  async redirects() {
+    return [
+      { source: "/clienti", destination: "/login", permanent: true },
+      { source: "/clienti/:rest*", destination: "/login", permanent: true },
+    ];
+  },
+
   async headers() {
     return [
       {
