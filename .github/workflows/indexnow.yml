@@ -1,0 +1,32 @@
+# Anunță Bing (IndexNow) după fiecare publicare în producție.
+#
+# Vercel raportează fiecare publicare la GitHub; când cea de Producție iese „success",
+# site-ul nou e deja live, deci sitemap-ul citit de script are și paginile noi.
+# Înainte scriptul se rula de mână și se uita: o pagină nouă a stat o săptămână
+# neanunțată, iar Bing o marca eroare gravă.
+#
+# Scriptul n-are dependențe (doar fetch din Node), deci nu e nevoie de npm install.
+# Dacă IndexNow pică, pică doar jobul ăsta — publicarea site-ului nu e atinsă.
+name: IndexNow
+
+on:
+  deployment_status:
+
+permissions:
+  contents: read
+
+jobs:
+  anunta:
+    if: >-
+      github.event.deployment_status.state == 'success' &&
+      github.event.deployment.environment == 'Production'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: scripts
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node scripts/submit-indexnow.mjs
