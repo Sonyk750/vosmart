@@ -376,8 +376,21 @@ export default function IncarcareClient({
     setEroare("");
     setIzbanda("");
     try {
-      const r = await fetch(`/api/panou/dosare/${dosar.id}/verifica`, { method: "POST" });
-      const d = await r.json().catch(() => ({}));
+      const cere = (confirmIncomplet: boolean) => fetch(`/api/panou/dosare/${dosar.id}/verifica`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ confirmIncomplet }),
+      });
+      let r = await cere(false);
+      let d = await r.json().catch(() => ({}));
+      // Dosar incomplet: serverul spune ce lipseste, iar omul decide in cunostinta
+      // de cauza. Verificarea pe un dosar fara extrase sau registre iese
+      // „incompleta", nu „conforma" — dar asta trebuie stiut dinainte.
+      if (r.status === 409 && Array.isArray(d.lipsa)) {
+        if (!window.confirm(`Din dosar lipsesc: ${d.lipsa.join(", ")}.\n\nPornești verificarea oricum? Zonele fără documente vor ieși „neverificate”.`)) return;
+        r = await cere(true);
+        d = await r.json().catch(() => ({}));
+      }
       if (!r.ok) throw new Error(d.error || "Verificarea nu a putut fi pornită.");
       setIzbanda(`Verificarea dosarului pe ${dosar.luna} ${dosar.an} a pornit. Durează în jur de un minut.`);
       setReincarca(n => n + 1);

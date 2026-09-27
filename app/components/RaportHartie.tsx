@@ -24,6 +24,8 @@ export type DateRaport = {
   scor: { valoare: number; verdict: Verdict; defalcare: { severitate: Severitate; eticheta: string; numar: number; puncte: number }[] };
   constatari: (Constatare & { stare?: string; notaCenzor?: string | null })[];
   concluzie: string | null;
+  /** Decizia cenzorului asupra listei. Lipseste la proiecte si la rapoartele vechi. */
+  bunDePlata?: boolean | null;
   semnatar: string | null;
   semnatLa: string | null;
 };
@@ -32,7 +34,7 @@ const CULOARE_SEV: Record<Severitate, string> = {
   critica: "#dc2626", ridicata: "#ea580c", medie: "#d97706", scazuta: "#0284c7", info: "#64748b",
 };
 const CULOARE_VERDICT: Record<Verdict, string> = {
-  conform: "#059669", observatii: "#0284c7", neconform: "#d97706", grav: "#dc2626",
+  conform: "#059669", observatii: "#0284c7", incomplet: "#d97706", neconform: "#d97706", grav: "#dc2626",
 };
 
 const lei = (n: number | null | undefined) =>
@@ -69,7 +71,7 @@ function Rand({ eticheta, valoare }: { eticheta: string; valoare: React.ReactNod
  * neutre in loc sa dea cu capul: un raport mai sarac se citeste, unul care
  * arunca lasa in loc un ecran negru cu „a server error occurred".
  */
-export default function RaportHartie({ date: brut, titlu }: { date: DateRaport; titlu: string }) {
+export default function RaportHartie({ date: brut, titlu, amprenta }: { date: DateRaport; titlu: string; amprenta?: string | null }) {
   const date: DateRaport = {
     ...brut,
     asociatie: brut.asociatie ?? { denumire: null, cui: null, adresa: null },
@@ -119,6 +121,23 @@ export default function RaportHartie({ date: brut, titlu }: { date: DateRaport; 
         </div>
       </header>
 
+      {/* Decizia asupra listei — primul lucru pe care il cauta administratorul. */}
+      {typeof date.bunDePlata === "boolean" && (
+        <div
+          className="mt-5 rounded-md border-2 px-4 py-3"
+          style={{ borderColor: date.bunDePlata ? "#047857" : "#b91c1c", background: date.bunDePlata ? "#ecfdf5" : "#fef2f2" }}
+        >
+          <p className="text-[16px] font-bold" style={{ color: date.bunDePlata ? "#047857" : "#b91c1c" }}>
+            {date.bunDePlata ? "BUN DE PLATĂ" : "NU ARE BUN DE PLATĂ"}
+          </p>
+          <p className="mt-0.5 text-[12.5px]">
+            {date.bunDePlata
+              ? `Lista de plată pe ${date.perioada.luna} ${date.perioada.an} poate fi afișată.`
+              : `Lista de plată pe ${date.perioada.luna} ${date.perioada.an} nu se afișează până la remedierea constatărilor.`}
+          </p>
+        </div>
+      )}
+
       {/* ------------------------------------------------- I. identificare */}
       <Sectiune numar="I" titlu="Date de identificare">
         <div className="grid gap-x-10 sm:grid-cols-2">
@@ -140,6 +159,9 @@ export default function RaportHartie({ date: brut, titlu }: { date: DateRaport; 
       {/* --------------------------------------------- II. situația lunii */}
       {e && (
         <Sectiune numar="II" titlu="Situația financiară a lunii">
+          <p className="mb-1 text-[11px] text-[var(--color-paper-muted)]">
+            Cifre citite din documentele primite. Cele confruntate între ele sunt verificate prin constatările din secțiunea III.
+          </p>
           <div className="grid gap-x-10 sm:grid-cols-2">
             <div>
               <p className="mb-1 mt-2 text-[10.5px] font-semibold uppercase tracking-wider text-[var(--color-paper-muted)]">Casierie</p>
@@ -156,10 +178,20 @@ export default function RaportHartie({ date: brut, titlu }: { date: DateRaport; 
             </div>
             <div>
               <p className="mb-1 mt-2 text-[10.5px] font-semibold uppercase tracking-wider text-[var(--color-paper-muted)]">Bancă</p>
-              <Rand eticheta="Sold inițial" valoare={lei(e.banca.soldInitial)} />
-              <Rand eticheta="Încasări" valoare={lei(e.banca.totalIncasari)} />
-              <Rand eticheta="Plăți" valoare={lei(e.banca.totalPlati)} />
-              <Rand eticheta="Sold final" valoare={lei(e.banca.soldFinal)} />
+              {/* Cu mai multe conturi, soldul se arata pe fiecare: un singur „sold
+                  final" era al unui singur cont, tiparit ca si cum ar fi totalul. */}
+              {e.banca.conturi.length > 1 ? (
+                e.banca.conturi.map((c, i) => (
+                  <Rand key={i} eticheta={`Sold final ${c.iban ?? c.descriere}`} valoare={lei(c.sold)} />
+                ))
+              ) : (
+                <>
+                  <Rand eticheta="Sold inițial" valoare={lei(e.banca.soldInitial)} />
+                  <Rand eticheta="Încasări" valoare={lei(e.banca.totalIncasari)} />
+                  <Rand eticheta="Plăți" valoare={lei(e.banca.totalPlati)} />
+                  <Rand eticheta="Sold final" valoare={lei(e.banca.soldFinal)} />
+                </>
+              )}
 
               <p className="mb-1 mt-4 text-[10.5px] font-semibold uppercase tracking-wider text-[var(--color-paper-muted)]">Listă de plată</p>
               <Rand eticheta="Total cheltuieli repartizate" valoare={lei(e.lista.totalCheltuieli)} />
@@ -310,6 +342,9 @@ export default function RaportHartie({ date: brut, titlu }: { date: DateRaport; 
           {date.semnatLa && `Semnat ${new Date(date.semnatLa).toLocaleDateString("ro-RO", { day: "2-digit", month: "long", year: "numeric" })} · `}
           VoSmart
         </span>
+        {amprenta && (
+          <span className="w-full break-all font-mono text-[9.5px]">Amprenta raportului semnat (SHA-256): {amprenta}</span>
+        )}
       </footer>
     </article>
   );

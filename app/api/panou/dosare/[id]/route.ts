@@ -6,6 +6,7 @@ import { stergeFisiere } from "@/lib/stocare";
 import { constatariDosar } from "@/lib/cenzorat/pipeline";
 import { calculeazaScor } from "@/lib/cenzorat/scor";
 import { ExtrasDosar } from "@/lib/cenzorat/tipuri";
+import { areRaportSemnat, inLucruActiv, inLucruExpirat } from "@/lib/cenzorat/blocare";
 
 /**
  * Tot ce ii trebuie cenzorului ca sa decida asupra unui dosar.
@@ -26,7 +27,12 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   const dosar = await prisma.dosar.findUnique({
     where: { id },
     include: {
-      contract: { select: { id: true, denumire: true, cui: true, numar: true, adresa: true, telefon: true, email: true, reprezentant: true } },
+      contract: {
+        select: {
+          id: true, denumire: true, cui: true, numar: true, adresa: true, telefon: true, email: true, reprezentant: true,
+          persoanaNume: true, persoanaEmail: true, administratorNume: true, administratorEmail: true,
+        },
+      },
       fisiere: {
         select: {
           id: true, numeFisier: true, eticheta: true, tip: true, mimeType: true,
@@ -34,11 +40,17 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
           // Ce a citit modelul in document — filele din pupitru arata asta, nu
           // numele tipului: cinci file scriind toate „Facturi furnizori" nu ajuta
           // pe nimeni sa gaseasca factura de la Apa Nova.
-          denumireAi: true, emitentAi: true, perioadaAi: true, tipSursa: true,
+          denumireAi: true, emitentAi: true, perioadaAi: true, tipSursa: true, cont: true,
         },
         orderBy: { createdAt: "asc" },
       },
-      reports: { where: { tip: "expert" }, select: { id: true, status: true, semnatDe: true, semnatLa: true } },
+      reports: {
+        where: { tip: "expert" },
+        select: {
+          id: true, status: true, semnatDe: true, semnatLa: true, amprenta: true, bunDePlata: true,
+          trimiteri: { select: { catre: true, email: true, stare: true, eroare: true, trimisDe: true, createdAt: true }, orderBy: { createdAt: "desc" } },
+        },
+      },
     },
   });
   if (!dosar) return NextResponse.json({ error: "Dosar negăsit" }, { status: 404 });
@@ -54,7 +66,10 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
       id: dosar.id,
       titlu: dosar.titlu ?? `${dosar.luna} ${dosar.an}`,
       luna: dosar.luna, an: dosar.an,
-      etapa: dosar.etapa, stareEtapa: dosar.stareEtapa,
+      etapa: dosar.etapa,
+      // O analiza oprita de platforma la limita de timp ramanea „in lucru" pe
+      // vecie. Ecranul o vede drept esuata si poate relua.
+      stareEtapa: inLucruExpirat(dosar) ? "esuata" : dosar.stareEtapa,
       incredere: dosar.incredere, creatLa: dosar.createdAt, terminatLa: dosar.terminatLa,
     },
     contract: dosar.contract,
@@ -90,7 +105,7 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
   const dosar = await prisma.dosar.findUnique({
     where: { id },
     select: {
-      contractId: true, etapa: true, luna: true, an: true,
+      contractId: true, luna: true, an: true, stareEtapa: true, updatedAt: true,
       fisiere: { select: { blobUrl: true } },
     },
   });
@@ -99,14 +114,22 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
   if (!(await poateVedeaContractul(user, dosar.contractId))) {
     return NextResponse.json({ error: "Neautorizat" }, { status: 403 });
   }
-  if (dosar.etapa === "semnat") {
+  if (await areRaportSemnat(id)) {
     return NextResponse.json(
       { error: `Dosarul pe ${dosar.luna} ${dosar.an} are raport semnat și nu se poate șterge.` },
       { status: 409 },
     );
   }
+  if (inLucruActiv(dosar)) {
+    return NextResponse.json({ error: "Verificarea AI lucrează acum pe dosar. Așteaptă să se termine." }, { status: 409 });
+  }
 
-  await prisma.dosar.delete({ where: { id } });
+  // Rapoartele nu mai pleaca prin cascada (vezi schema: Restrict). Aici dosarul
+  // n-are raport semnat, deci ce e de sters e doar proiectul AI.
+  await prisma.$transaction([
+    prisma.report.deleteMany({ where: { dosarId: id, status: { not: "publicat" } } }),
+    prisma.dosar.delete({ where: { id } }),
+  ]);
   await stergeFisiere(dosar.fisiere.map(f => f.blobUrl));
 
   return NextResponse.json({ sters: true, documente: dosar.fisiere.length });

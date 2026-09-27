@@ -143,6 +143,10 @@ export const VERDICTE: Record<string, { eticheta: string; ton: Ton; explicatie: 
     eticheta: "Cu observații", ton: "warn",
     explicatie: "Lucruri de lămurit, niciunul care să pună la îndoială evidența.",
   },
+  incomplet: {
+    eticheta: "Verificare incompletă", ton: "warn",
+    explicatie: "Unele verificări de bază nu s-au putut face. Vezi constatările „nu s-a putut verifica”.",
+  },
   neconform: {
     eticheta: "Neconform", ton: "risk",
     explicatie: "Abateri care trebuie remediate înainte de următoarea listă de plată.",

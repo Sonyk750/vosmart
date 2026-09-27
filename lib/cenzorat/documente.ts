@@ -65,21 +65,24 @@ export const TIPURI: TipDocument[] = [
     cheie: "extras_cont",
     eticheta: "Extras de cont",
     explicatie: "Extrasul bancar al lunii — dovada plăților efectiv făcute.",
-    categorie: "banca", obligatoriu: false, multiplu: true, extins: false,
+    // Obligatorii, ca si registrele: fluxul nostru cere asociatiei registrele de
+    // casa, banca si fonduri si extrasele fiecarui cont. Fara ele, verificarile
+    // de bani (sold, continuitate, banca fata de extras) nu au pe ce se face.
+    categorie: "banca", obligatoriu: true, multiplu: true, extins: false,
     tipare: ["extras", "sold cont", "statement"],
   },
   {
     cheie: "registru_casa",
     eticheta: "Registru de casă",
     explicatie: "Încasările și plățile în numerar, zi cu zi.",
-    categorie: "registru", obligatoriu: false, multiplu: false, extins: true,
+    categorie: "registru", obligatoriu: true, multiplu: false, extins: true,
     tipare: ["registru casa", "registru_casa", "reg casa", "casa", "casă"],
   },
   {
     cheie: "registru_banca",
     eticheta: "Registru bancă",
     explicatie: "Oglinda extrasului, ținută de administrator.",
-    categorie: "banca", obligatoriu: false, multiplu: true, extins: true,
+    categorie: "banca", obligatoriu: true, multiplu: true, extins: true,
     tipare: ["registru banca", "registru_banca", "reg banca", "banca", "bancă"],
   },
   {
@@ -93,7 +96,7 @@ export const TIPURI: TipDocument[] = [
     cheie: "registru_fond",
     eticheta: "Registru fond",
     explicatie: "Mișcările fondului de rulment / reparații / penalități.",
-    categorie: "registru", obligatoriu: false, multiplu: true, extins: true,
+    categorie: "registru", obligatoriu: true, multiplu: true, extins: true,
     tipare: ["fond"],
   },
   {

@@ -1,5 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { EXTRAS_GOL, ExtrasDosar } from "./tipuri";
+import { EXTRAS_GOL, ExtrasDosar, normalizeaza } from "./tipuri";
 import { eticheta, tipDeBaza } from "./documente";
 import { citesteOffice, esteOffice, LIMITA_VERIFICARE } from "./office";
 
@@ -106,16 +106,39 @@ const SCHEMA_EXTRAS = obiect({
     soldInitial: nr, soldFinal: nr, totalIncasari: nr, totalPlati: nr,
     conturi: {
       type: "array",
-      items: obiect({ iban: txt, descriere: { type: "string" }, sold: nr }),
+      description: "Conturile din REGISTRUL de bancă, câte un element pe cont, fiecare cu rulajul lui. sold = soldul final al contului.",
+      items: obiect({
+        iban: txt, descriere: { type: "string" },
+        soldInitial: nr, totalIncasari: nr, totalPlati: nr, sold: nr,
+      }),
     },
   }),
+  extrase: {
+    type: "array",
+    description: "EXTRASELE DE CONT emise de bancă, câte un element pe fiecare extras/cont. Cifrele de pe extras, nu din registru.",
+    items: obiect({
+      iban: txt,
+      perioada: optional("string", "Perioada extrasului, cum scrie pe el."),
+      soldInitial: nr, totalIncasari: nr, totalPlati: nr, soldFinal: nr,
+    }),
+  },
   distributie: obiect({
     total: optional("number", "TOTALUL general din documentul „Distribuirea facturilor” al lunii verificate — cifra de la rândul TOTAL, nu suma facturilor scanate."),
     perioada: optional("string", "Luna la care se referă documentul de distribuire, așa cum scrie pe el."),
+    facturi: {
+      type: "array",
+      description: "Rândurile documentului de distribuire: fiecare factură, cu suma de pe factură și suma repartizată din ea pe lista lunii.",
+      items: obiect({ furnizor: { type: "string" }, numar: txt, sumaFactura: nr, sumaDistribuita: nr }),
+    },
   }),
   fonduri: obiect({
     rulment: nr, reparatii: nr, penalitati: nr,
     altele: { type: "array", items: obiect({ denumire: { type: "string" }, sold: nr }) },
+    miscari: {
+      type: "array",
+      description: "Din registrul de fonduri: pentru fiecare fond, soldul inițial al lunii, încasările, cheltuielile și soldul final, exact cum apar.",
+      items: obiect({ fond: { type: "string" }, soldInitial: nr, incasari: nr, cheltuieli: nr, soldFinal: nr }),
+    },
   }),
   lista: obiect({
     totalCheltuieli: optional("number", "Totalul general repartizat pe lista de plată a lunii."),
@@ -125,6 +148,12 @@ const SCHEMA_EXTRAS = obiect({
     areColoanaRestante: bool,
     areColoanaPenalizari: bool,
     areColoanaFondRulment: bool,
+    totalDePlata: optional("number", "Valoarea de pe rândul TOTAL al coloanei „Total de plată” (cu restanțe) a listei. null dacă lista nu are un astfel de rând."),
+    apartamente: {
+      type: "array",
+      description: "„Total de plată” pe fiecare apartament, exact cum apare pe listă (cu restanțe). Toate apartamentele.",
+      items: obiect({ apartament: { type: "string" }, totalDePlata: nr }),
+    },
   }),
   restantieri: obiect({
     total: nr,
@@ -184,7 +213,11 @@ Reguli, în ordinea importanței:
 4. documenteProblematice este exclusiv pentru documente pe care NU le-ai putut citi — scanare proastă, pagini lipsă, format neașteptat, conținut care nu corespunde numelui. Nu ghici conținutul lor.
 5. La restanțieri, întoarce apartamentele individual, cu numărul așa cum apare pe listă. Dacă lista are zeci de apartamente restante, întoarce-le pe toate.
 6. modalitatePlata se completează doar când reiese explicit din document (mențiune de virament, ordin de plată, chitanță de casă). Altfel null.
-7. Diferențele sub 0,50 lei sunt rotunjiri și nu se semnalează.`;
+7. Diferențele sub 0,50 lei sunt rotunjiri și nu se semnalează.
+8. BANCA, PE FIECARE CONT. În banca.conturi pune fiecare cont din REGISTRUL de bancă cu rulajul lui propriu (sold inițial, încasări, plăți, sold final). În extrase pune fiecare EXTRAS DE CONT emis de bancă, cu cifrele de pe extras. Nu aduna conturile între ele și nu amesteca registrul cu extrasul: sunt două surse care se confruntă.
+9. DISTRIBUIREA, RÂND CU RÂND. Din documentul „Distribuirea facturilor" întoarce fiecare factură: furnizorul, numărul, suma de pe factură și suma repartizată pe lista lunii.
+10. LISTA, PE APARTAMENTE. Întoarce „Total de plată" pentru fiecare apartament, cum apare pe listă, și separat valoarea de pe rândul TOTAL. Nu le aduna tu.
+11. FONDURILE. Din registrul de fonduri, pentru fiecare fond: sold inițial, încasări, cheltuieli, sold final — cum apar, fără să calculezi.`;
 
 /**
  * Cate pagini de document trimitem intr-o cerere. Un dosar cu 40 de facturi
@@ -192,6 +225,13 @@ Reguli, în ordinea importanței:
  * raspunsul, asa ca il taiem in transe si imbinam rezultatele.
  */
 const MAX_FISIERE_PE_CERERE = 12;
+
+/**
+ * Cati octeti de document intra intr-o cerere. Douasprezece PDF-uri de cate 4 MB,
+ * trimise ca base64, trec de limita de marime a API-ului, iar o transa respinsa
+ * oprea tot dosarul. Transa se inchide la oricare dintre limite.
+ */
+const MAX_OCTETI_PE_CERERE = 18 * 1024 * 1024;
 
 /* ---------------------------------------------------- CURATAREA RASPUNSULUI */
 
@@ -233,7 +273,10 @@ export function numar(v: unknown): number | null {
     // „18.450" are trei cifre dupa punct, deci punctul separa miile.
     const poz = Math.max(ultimaVirgula, ultimulPunct);
     const dupa = s.length - poz - 1;
-    if (dupa >= 1 && dupa <= 2) {
+    // „0,125" e o cota de penalizare (0,125%), nu 125: in fata separatorului sta
+    // doar zero, deci nu poate fi un separator de mii.
+    const doarZero = /^0+$/.test(s.slice(0, poz)) && s.indexOf(s[poz]) === poz;
+    if ((dupa >= 1 && dupa <= 2) || doarZero) {
       intreg = s.slice(0, poz);
       zecimale = s.slice(poz + 1);
     } else {
@@ -256,6 +299,12 @@ function sir(v: unknown): string | null {
   // Modelele scriu uneori „N/A" sau „nu se regaseste" in loc sa lase gol.
   if (!s || /^(n\/?a|null|nedefinit|necunoscut|nu (se |a |apare|reiese))/i.test(s)) return null;
   return s;
+}
+
+/** IBAN fara spatii, cu litere mari — altfel acelasi cont scris in doua feluri pare doua conturi. */
+function iban(v: unknown): string | null {
+  const s = sir(v);
+  return s ? s.replace(/\s+/g, "").toUpperCase() : null;
 }
 
 function boolean(v: unknown): boolean | null {
@@ -299,7 +348,13 @@ export function curataExtras(brut: unknown): ExtrasDosar {
   const salarii = obiectDin(r.salarii);
 
   return {
-    distributie: { total: numar(distributie.total), perioada: sir(distributie.perioada) },
+    distributie: {
+      total: numar(distributie.total), perioada: sir(distributie.perioada),
+      facturi: lista(distributie.facturi).map(obiectDin).map(f => ({
+        furnizor: sir(f.furnizor) ?? "", numar: sir(f.numar),
+        sumaFactura: numar(f.sumaFactura), sumaDistribuita: numar(f.sumaDistribuita),
+      })).filter(f => f.furnizor || f.numar),
+    },
     identificare: {
       denumire: sir(ident.denumire), cui: sir(ident.cui), adresa: sir(ident.adresa),
       iban: sir(ident.iban), banca: sir(ident.banca), presedinte: sir(ident.presedinte),
@@ -319,15 +374,25 @@ export function curataExtras(brut: unknown): ExtrasDosar {
       soldInitial: numar(banca.soldInitial), soldFinal: numar(banca.soldFinal),
       totalIncasari: numar(banca.totalIncasari), totalPlati: numar(banca.totalPlati),
       conturi: lista(banca.conturi).map(obiectDin).map(c => ({
-        iban: sir(c.iban), descriere: sir(c.descriere) ?? "cont", sold: numar(c.sold),
+        iban: iban(c.iban), descriere: sir(c.descriere) ?? "cont", sold: numar(c.sold),
+        soldInitial: numar(c.soldInitial), totalIncasari: numar(c.totalIncasari), totalPlati: numar(c.totalPlati),
       })),
     },
+    extrase: lista(r.extrase).map(obiectDin).map(x => ({
+      iban: iban(x.iban), perioada: sir(x.perioada),
+      soldInitial: numar(x.soldInitial), soldFinal: numar(x.soldFinal),
+      totalIncasari: numar(x.totalIncasari), totalPlati: numar(x.totalPlati),
+    })).filter(x => x.iban || x.soldFinal !== null || x.soldInitial !== null),
     fonduri: {
       rulment: numar(fonduri.rulment), reparatii: numar(fonduri.reparatii),
       penalitati: numar(fonduri.penalitati),
       altele: lista(fonduri.altele).map(obiectDin)
         .map(f => ({ denumire: sir(f.denumire) ?? "", sold: numar(f.sold) }))
         .filter(f => f.denumire),
+      miscari: lista(fonduri.miscari).map(obiectDin).map(m => ({
+        fond: sir(m.fond) ?? "", soldInitial: numar(m.soldInitial), incasari: numar(m.incasari),
+        cheltuieli: numar(m.cheltuieli), soldFinal: numar(m.soldFinal),
+      })).filter(m => m.fond),
     },
     lista: {
       totalCheltuieli: numar(listaPlata.totalCheltuieli),
@@ -337,6 +402,10 @@ export function curataExtras(brut: unknown): ExtrasDosar {
       areColoanaRestante: boolean(listaPlata.areColoanaRestante),
       areColoanaPenalizari: boolean(listaPlata.areColoanaPenalizari),
       areColoanaFondRulment: boolean(listaPlata.areColoanaFondRulment),
+      totalDePlata: numar(listaPlata.totalDePlata),
+      apartamente: lista(listaPlata.apartamente).map(obiectDin)
+        .map(a => ({ apartament: sir(a.apartament) ?? "", totalDePlata: numar(a.totalDePlata) }))
+        .filter(a => a.apartament),
     },
     restantieri: {
       total: numar(restantieri.total),
@@ -400,7 +469,13 @@ export async function citesteDosar(
     .filter(f => !sePoateCiti(f.mimeType))
     .map(f => ({ tip: f.tip, numeFisier: f.numeFisier, motiv: `format ${f.mimeType} — nu poate fi citit` }));
 
-  const problematice = netrimise.map(n => ({ tip: n.tip, problema: n.motiv }));
+  // Ce era deja semnalat ca necitibil ramane semnalat: la o citire incrementala
+  // lista veche se inlocuia cu cea a documentelor noi, iar un registru ilizibil
+  // disparea din raport doar pentru ca intre timp se adaugase o factura.
+  const problematice = [
+    ...(deja?.documenteProblematice ?? []),
+    ...netrimise.map(n => ({ tip: n.tip, problema: n.motiv })),
+  ];
   const citibile = fisiere.filter(f => sePoateCiti(f.mimeType));
   if (citibile.length === 0) {
     return { extras: { ...(deja ?? EXTRAS_GOL), documenteProblematice: problematice }, tokensIn: 0, tokensOut: 0, netrimise };
@@ -410,9 +485,20 @@ export async function citesteDosar(
   // macar lista de plata si registrele au fost citite.
   const ordonate = [...citibile].sort((a, b) => prioritate(a.tip) - prioritate(b.tip));
   const transe: FisierDeCitit[][] = [];
-  for (let i = 0; i < ordonate.length; i += MAX_FISIERE_PE_CERERE) {
-    transe.push(ordonate.slice(i, i + MAX_FISIERE_PE_CERERE));
+  let curenta: FisierDeCitit[] = [];
+  let octeti = 0;
+  for (const f of ordonate) {
+    if (curenta.length > 0 && (curenta.length >= MAX_FISIERE_PE_CERERE || octeti + f.continut.length > MAX_OCTETI_PE_CERERE)) {
+      transe.push(curenta);
+      curenta = [];
+      octeti = 0;
+    }
+    curenta.push(f);
+    octeti += f.continut.length;
   }
+  if (curenta.length > 0) transe.push(curenta);
+  // Pozitia fiecarei transe in dosar, pentru mesajul din jurnal.
+  const inceputuri = transe.map((_, i) => transe.slice(0, i).reduce((n, t) => n + t.length, 0));
 
   // Pornim de la ce se stia deja, cand exista: transele urmatoare se imbina peste.
   let extras: ExtrasDosar = { ...(deja ?? EXTRAS_GOL), documenteProblematice: problematice };
@@ -423,7 +509,7 @@ export async function citesteDosar(
     const transa = transe[i];
     await jurnal?.(
       transe.length > 1
-        ? `Se citesc documentele ${i * MAX_FISIERE_PE_CERERE + 1}–${i * MAX_FISIERE_PE_CERERE + transa.length} din ${ordonate.length}`
+        ? `Se citesc documentele ${inceputuri[i] + 1}–${inceputuri[i] + transa.length} din ${ordonate.length}`
         : `Se citesc ${transa.length} documente`,
     );
 
@@ -511,6 +597,12 @@ async function citesteTransa(
   });
 
   const raspuns = await stream.finalMessage();
+  // Un raspuns taiat la limita de tokeni are campurile de la coada goale — adica
+  // exact „null", pe care regulile il citesc drept „nu scrie in documente". Asa
+  // ar iesi un dosar „conform" din simplul motiv ca modelul n-a apucat sa scrie.
+  if (raspuns.stop_reason === "max_tokens") {
+    throw new Error("Răspunsul modelului s-a oprit la limita de lungime; datele ar fi fost incomplete. Reîncearcă verificarea.");
+  }
   const apel = raspuns.content.find(b => b.type === "tool_use");
   if (!apel || apel.type !== "tool_use") {
     throw new Error("Modelul nu a întors datele în forma cerută.");
@@ -541,14 +633,25 @@ function rezumatScurt(e: ExtrasDosar): string {
  * la inceput, deci ce vine din registru bate ce vine dintr-o recapitulatie
  * citita mai tarziu. Listele se aduna, fara duplicate evidente.
  */
-function imbina(a: ExtrasDosar, b: ExtrasDosar): ExtrasDosar {
+function imbina(aVechi: ExtrasDosar, bVechi: ExtrasDosar): ExtrasDosar {
+  const a = normalizeaza(aVechi);
+  const b = normalizeaza(bVechi);
   const primul = <T>(x: T | null, y: T | null): T | null => (x !== null && x !== undefined ? x : y ?? null);
 
   return {
     distributie: {
       total: primul(a.distributie?.total ?? null, b.distributie?.total ?? null),
       perioada: primul(a.distributie?.perioada ?? null, b.distributie?.perioada ?? null),
+      facturi: [
+        ...(a.distributie.facturi ?? []),
+        ...(b.distributie.facturi ?? []).filter(x => !(a.distributie.facturi ?? []).some(y => y.furnizor === x.furnizor && y.numar === x.numar)),
+      ],
     },
+    // Un extras pe cont: al doilea extras al aceluiasi cont nu se adauga peste primul.
+    extrase: [
+      ...(a.extrase ?? []),
+      ...(b.extrase ?? []).filter(x => !(a.extrase ?? []).some(y => y.iban && y.iban === x.iban)),
+    ],
     identificare: {
       denumire: primul(a.identificare.denumire, b.identificare.denumire),
       cui: primul(a.identificare.cui, b.identificare.cui),
@@ -580,13 +683,30 @@ function imbina(a: ExtrasDosar, b: ExtrasDosar): ExtrasDosar {
       soldFinal: primul(a.banca.soldFinal, b.banca.soldFinal),
       totalIncasari: primul(a.banca.totalIncasari, b.banca.totalIncasari),
       totalPlati: primul(a.banca.totalPlati, b.banca.totalPlati),
-      conturi: [...a.banca.conturi, ...b.banca.conturi.filter(c => !a.banca.conturi.some(x => x.iban && x.iban === c.iban))],
+      // Acelasi cont venit din doua transe se completeaza, nu se dubleaza si nu se pierde.
+      conturi: [
+        ...a.banca.conturi.map(c => {
+          const d = b.banca.conturi.find(x => x.iban && x.iban === c.iban);
+          return d ? {
+            ...c,
+            sold: primul(c.sold, d.sold),
+            soldInitial: primul(c.soldInitial ?? null, d.soldInitial ?? null),
+            totalIncasari: primul(c.totalIncasari ?? null, d.totalIncasari ?? null),
+            totalPlati: primul(c.totalPlati ?? null, d.totalPlati ?? null),
+          } : c;
+        }),
+        ...b.banca.conturi.filter(c => !a.banca.conturi.some(x => x.iban && x.iban === c.iban)),
+      ],
     },
     fonduri: {
       rulment: primul(a.fonduri.rulment, b.fonduri.rulment),
       reparatii: primul(a.fonduri.reparatii, b.fonduri.reparatii),
       penalitati: primul(a.fonduri.penalitati, b.fonduri.penalitati),
       altele: [...a.fonduri.altele, ...b.fonduri.altele.filter(f => !a.fonduri.altele.some(x => x.denumire === f.denumire))],
+      miscari: [
+        ...(a.fonduri.miscari ?? []),
+        ...(b.fonduri.miscari ?? []).filter(m => !(a.fonduri.miscari ?? []).some(x => x.fond === m.fond)),
+      ],
     },
     lista: {
       totalCheltuieli: primul(a.lista.totalCheltuieli, b.lista.totalCheltuieli),
@@ -596,6 +716,8 @@ function imbina(a: ExtrasDosar, b: ExtrasDosar): ExtrasDosar {
       areColoanaRestante: primul(a.lista.areColoanaRestante, b.lista.areColoanaRestante),
       areColoanaPenalizari: primul(a.lista.areColoanaPenalizari, b.lista.areColoanaPenalizari),
       areColoanaFondRulment: primul(a.lista.areColoanaFondRulment, b.lista.areColoanaFondRulment),
+      totalDePlata: primul(a.lista.totalDePlata ?? null, b.lista.totalDePlata ?? null),
+      apartamente: (a.lista.apartamente ?? []).length ? a.lista.apartamente : b.lista.apartamente,
     },
     restantieri: {
       total: primul(a.restantieri.total, b.restantieri.total),

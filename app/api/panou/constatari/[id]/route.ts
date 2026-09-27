@@ -26,7 +26,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   const constatare = await prisma.constatare.findUnique({
     where: { id },
-    select: { dosarId: true, dosar: { select: { contractId: true } } },
+    select: { dosarId: true, cod: true, stare: true, severitate: true, dosar: { select: { contractId: true } } },
   });
   if (!constatare) return NextResponse.json({ error: "Constatare negăsită" }, { status: 404 });
 
@@ -61,7 +61,40 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     return NextResponse.json({ error: "Nimic de modificat" }, { status: 400 });
   }
 
-  await prisma.constatare.update({ where: { id }, data: date });
+  // Cine a decis si cand. „Redeschisa" inseamna nedecisa: urma se sterge, iar
+  // semnarea o va cere din nou.
+  if (date.stare === "deschisa") {
+    date.decisDe = null;
+    date.decisLa = null;
+  } else if (date.stare || date.severitate) {
+    date.decisDe = user.id;
+    date.decisLa = new Date();
+  }
+
+  // Verificarea „nesemnat" si scrierea intr-un singur pas: o modificare care
+  // ajungea exact in timpul semnarii trecea de verificarea de mai sus si schimba
+  // o constatare de sub semnatura.
+  const scris = await prisma.constatare.updateMany({
+    where: { id, dosar: { NOT: { reports: { some: { tip: "expert", status: "publicat" } } } } },
+    data: date,
+  });
+  if (scris.count === 0) {
+    return NextResponse.json({ error: "Raportul a fost deja semnat și nu mai poate fi modificat." }, { status: 409 });
+  }
+
+  const schimbari = [
+    date.stare && date.stare !== constatare.stare ? `stare: ${constatare.stare} → ${date.stare}` : null,
+    date.severitate && date.severitate !== constatare.severitate ? `severitate: ${constatare.severitate} → ${date.severitate}` : null,
+    "notaCenzor" in date ? "notă" : null,
+  ].filter(Boolean);
+  if (schimbari.length) {
+    await prisma.evenimentFlux.create({
+      data: {
+        dosarId: constatare.dosarId, etapa: "revizuire", stare: "gata", autorId: user.id,
+        mesaj: `${constatare.cod}: ${schimbari.join(", ")} — ${user.name || user.email}`,
+      },
+    });
+  }
 
   const constatari = await constatariDosar(constatare.dosarId);
   const scor = calculeazaScor(constatari);
@@ -97,7 +130,15 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
     return NextResponse.json({ error: "Constatările automate se resping, nu se șterg." }, { status: 400 });
   }
 
-  await prisma.constatare.delete({ where: { id } });
+  const sters = await prisma.constatare.deleteMany({
+    where: { id, dosar: { NOT: { reports: { some: { tip: "expert", status: "publicat" } } } } },
+  });
+  if (sters.count === 0) {
+    return NextResponse.json({ error: "Raportul a fost deja semnat și nu mai poate fi modificat." }, { status: 409 });
+  }
   const constatari = await constatariDosar(constatare.dosarId);
-  return NextResponse.json({ scor: calculeazaScor(constatari), constatari });
+  const scor = calculeazaScor(constatari);
+  // Ca dupa orice decizie: lista de dosare arata acelasi scor ca pupitrul.
+  await prisma.dosar.update({ where: { id: constatare.dosarId }, data: { scor: scor.valoare, verdict: scor.verdict } });
+  return NextResponse.json({ scor, constatari });
 }

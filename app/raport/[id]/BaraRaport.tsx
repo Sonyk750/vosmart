@@ -9,7 +9,7 @@ import { Ic } from "@/app/components/icoane";
  * de HTML. Asa, ce vede omul pe ecran si ce iese pe hartie sunt acelasi
  * document: inainte existau doua sabloane diferite si nu semanau.
  */
-export default function BaraRaport({ titlu, nesemnat }: { titlu: string; nesemnat: boolean }) {
+export default function BaraRaport({ titlu, nesemnat, pdf }: { titlu: string; nesemnat: boolean; pdf?: string | null }) {
   return (
     <div className="sticky top-0 z-10 mb-5 border-b border-line bg-app/90 backdrop-blur print:hidden">
       <div className="mx-auto flex max-w-[820px] flex-wrap items-center justify-between gap-3 px-4 py-3">
@@ -23,9 +23,18 @@ export default function BaraRaport({ titlu, nesemnat }: { titlu: string; nesemna
           <span className="truncate text-[13px] text-muted">{titlu}</span>
           {nesemnat && <Eticheta ton="warn">Proiect nesemnat</Eticheta>}
         </div>
-        <Buton fel="moale" marime="mic" onClick={() => window.print()}>
-          <Ic.descarca className="h-3.5 w-3.5" /> Tipărește / salvează PDF
-        </Buton>
+        <div className="flex items-center gap-2">
+          {/* Raportul semnat are PDF-ul lui, facut pe server: exact documentul
+              trimis asociatiei, cu amprenta pe el. */}
+          {pdf && (
+            <a href={pdf} className="inline-flex items-center gap-1.5 text-[12.5px] text-muted hover:text-ink">
+              <Ic.descarca className="h-3.5 w-3.5" /> PDF semnat
+            </a>
+          )}
+          <Buton fel="moale" marime="mic" onClick={() => window.print()}>
+            <Ic.descarca className="h-3.5 w-3.5" /> Tipărește
+          </Buton>
+        </div>
       </div>
     </div>
   );

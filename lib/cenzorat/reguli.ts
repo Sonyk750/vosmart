@@ -1,7 +1,11 @@
-import { Constatare, ExtrasDosar } from "./tipuri";
+import { Constatare, ExtrasDosar, normalizeaza } from "./tipuri";
+import {
+  acoperire, bancaContinuitatePeConturi, bancaVsExtras, continuitateLuni, distributieFacturi,
+  documenteDinAltaLuna, fonduriContinuitate, listaPeApartamente,
+} from "./verificari";
 import { PLAFON_CASA_LEI, TOLERANTA_ROTUNJIRE_LEI, temei } from "./temeiuri";
 import { faraDuplicate, type ProfilAsociatie } from "./istoric";
-import { eticheta, lipsuri } from "./documente";
+import { eticheta, lipsuri, tipDeBaza } from "./documente";
 
 /**
  * Verificarile de cenzorat, scrise ca reguli care se pot citi.
@@ -30,6 +34,12 @@ export type ContextVerificare = {
   denumireDeclarata: string | null;
   /** Cheile de tip ale fisierelor primite in dosar. */
   tipuriPrimite: string[];
+  /** Documentele dosarului, cu perioada citita din ele — pentru luna documentelor. */
+  documente?: { tip: string; numeFisier: string; perioadaAi: string | null }[];
+  luna?: string;
+  an?: number;
+  /** Cifrele lunii precedente, din raportul ei semnat. */
+  precedent?: ExtrasDosar | null;
 };
 
 /**
@@ -152,13 +162,19 @@ const bancaContinuitate: Regula = ({ extras, tipuriPrimite }) => {
   if (!are(b.soldInitial) || !are(b.soldFinal) || !are(b.totalIncasari) || !are(b.totalPlati)) return [];
 
   const conturi = b.conturi?.length ?? 0;
-  const areExtras = tipuriPrimite.some(t => t === "extras_cont");
+  // Extrasele multiple vin cu sufix (extras_cont_2); toate sunt extrase.
+  const areExtras = tipuriPrimite.some(t => tipDeBaza(t) === "extras_cont");
 
   // MAI MULTE CONTURI: cifrele de sus sunt insumate sau, mai rau, ale unuia
   // singur, iar continuitatea nu se poate socoti pe ele. La dosarul pe iunie
   // asociatia avea trei intrari de cont, iar soldul initial, rulajele si soldul
   // final erau toate ale contului curent — verificarea a raportat 9.767 lei
   // diferenta din nimic. Aici nu afirmam, spunem ce nu s-a putut face.
+  // Cand fiecare cont are rulajul lui citit, verificarea se face cont cu cont
+  // (bancaContinuitatePeConturi, in verificari.ts) — aici nu mai e nimic de spus.
+  const peConturi = (b.conturi ?? []).every(c =>
+    are(c.soldInitial) && are(c.totalIncasari) && are(c.totalPlati) && are(c.sold));
+  if (conturi > 1 && peConturi) return [];
   if (conturi > 1) {
     return [{
       cod: "BANCA-NEVERIFICATA",
@@ -360,7 +376,11 @@ const listaVsDistributie: Regula = ({ extras, tipuriPrimite }) => {
       `Distribuirea facturilor totalizează ${lei(distribuit)}, iar lista de plată repartizează ${lei(total)}. `
       + `Diferența este de ${lei(Math.abs(diferenta))}. Cele două documente descriu aceeași repartizare, `
       + "deci ar trebui să dea aceeași cifră.",
-    severitate: Math.abs(diferenta) > 100 ? "ridicata" : "medie",
+    // Bani ceruti proprietarilor fara acoperire in facturi (sau facturi neacoperite
+    // de lista). Orice diferenta peste rotunjire e cel putin „ridicata"; peste
+    // 100 lei sau 1% din lista, „critica". Inainte 99 lei ieseau „medie" si
+    // dosarul putea ramane „Conform".
+    severitate: Math.abs(diferenta) > Math.max(100, total * 0.01) ? "critica" : "ridicata",
     sursa: "regula",
     temei: null,
     probe: [
@@ -390,14 +410,19 @@ const restanteNivel: Regula = ({ extras }) => {
       recomandare: "Urmărirea recuperării creanțelor de către comitetul executiv.",
     }];
   }
+  // Restanta e CUMULATA (poate pe ani), cheltuielile sunt ale unei singure luni.
+  // Pragurile vechi (15/25/50%) dadeau „deficiente grave" oricarui bloc cu
+  // restante de o jumatate de luna — situatie obisnuita, nu o abatere a
+  // administratorului. Restantele sunt risc financiar, nu neregula de evidenta:
+  // cel mult „ridicata", si doar cand trec de cheltuielile unei luni intregi.
   const raport = (restante / cheltuieli) * 100;
-  if (raport < 15) return [];
-  const severitate = raport >= 50 ? "critica" : raport >= 25 ? "ridicata" : "medie";
-  const nivel = raport >= 50 ? "foarte ridicat" : raport >= 25 ? "ridicat" : "moderat";
+  if (raport < 25) return [];
+  const severitate = raport >= 100 ? "ridicata" : raport >= 50 ? "medie" : "scazuta";
+  const nivel = raport >= 100 ? "foarte ridicat" : raport >= 50 ? "ridicat" : "moderat";
   return [{
     cod: "RESTANTE-NIVEL",
     titlu: `Nivel ${nivel} al restanțelor`,
-    detaliu: `Restanțele reprezintă ${proc(raport)} din cheltuielile lunii. La acest nivel, asociația își acoperă facturile curente din banii altor proprietari, ceea ce îi afectează echilibrul financiar.`,
+    detaliu: `Restanțele cumulate reprezintă ${proc(raport)} din cheltuielile unei luni. La acest nivel, asociația își acoperă facturile curente din banii altor proprietari, ceea ce îi afectează echilibrul financiar.`,
     severitate,
     sursa: "regula",
     temei: temei("l196_art55_1_o"),
@@ -478,7 +503,8 @@ const furnizoriNeachitat: Regula = ({ extras }) => {
 
   const disponibil = [extras.casa.soldFinal, extras.banca.soldFinal].filter(are).reduce((s, v) => s + v, 0);
   const acoperit = disponibil >= neachitat;
-  const neachitate = extras.furnizori.facturi.filter(f => f.achitata === false);
+  // Aceeasi factura vine din mai multe documente: in probe apare o singura data.
+  const neachitate = faraDuplicate(extras.furnizori.facturi).filter(f => f.achitata === false);
 
   return [{
     cod: "FURNIZORI-NEACHITAT",
@@ -504,7 +530,7 @@ const furnizoriNeachitat: Regula = ({ extras }) => {
 };
 
 const platiNumerar: Regula = ({ extras }) => {
-  const cash = extras.furnizori.facturi.filter(
+  const cash = faraDuplicate(extras.furnizori.facturi).filter(
     f => f.modalitatePlata === "numerar" && are(f.suma) && (f.suma as number) > PLAFON_CASA_LEI,
   );
   if (cash.length === 0) return [];
@@ -660,21 +686,37 @@ const REGULI: Regula[] = [
   casaContinuitate,
   casaNegativa,
   bancaContinuitate,
+  ctx => bancaContinuitatePeConturi(ctx),
+  ctx => bancaVsExtras(ctx),
   listaColoane,
   listaDataAfisarii,
   listaVsDistributie,
+  ctx => distributieFacturi(ctx),
+  ctx => listaPeApartamente(ctx),
   restanteNivel,
   restantePenalizari,
   furnizoriNeachitat,
   platiNumerar,
   fondRulment,
+  ctx => fonduriContinuitate(ctx),
+  ctx => continuitateLuni(ctx),
+  ctx => documenteDinAltaLuna(ctx),
   identificarePersoane,
   // Ultima: e context pentru cenzor, nu o constatare de sine statatoare.
   neconcordanteObservate,
 ];
 
-export function aplicaReguli(ctx: ContextVerificare): Constatare[] {
+export function aplicaReguli(ctxBrut: ContextVerificare): Constatare[] {
+  // Dosarele citite inainte de campurile noi nu le au; regulile primesc forma completa.
+  const ctx: ContextVerificare = {
+    ...ctxBrut,
+    extras: normalizeaza(ctxBrut.extras),
+    precedent: ctxBrut.precedent ? normalizeaza(ctxBrut.precedent) : null,
+  };
   const rezultat: Constatare[] = [];
+  // Ce verificari de baza n-au avut pe ce se face. Intra primele: verdictul se
+  // uita la ele inainte de orice scor.
+  rezultat.push(...acoperire(ctx, increderaDate(ctx.extras).procent));
   for (const regula of REGULI) {
     try {
       rezultat.push(...regula(ctx));
@@ -711,6 +753,8 @@ export function increderaDate(extras: ExtrasDosar): { procent: number; gasite: n
     extras.identificare.administrator, extras.perioada.dataAfisarii,
     extras.casa.soldInitial, extras.casa.soldFinal, extras.casa.totalIncasari, extras.casa.totalPlati,
     extras.banca.soldInitial, extras.banca.soldFinal,
+    extras.banca.totalIncasari, extras.banca.totalPlati,
+    extras.distributie?.total ?? null,
     extras.fonduri.rulment, extras.fonduri.reparatii,
     extras.lista.totalCheltuieli, extras.lista.areColoanaRestante,
     extras.restantieri.total,

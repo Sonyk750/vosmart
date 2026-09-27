@@ -10,7 +10,8 @@
     "audit:seo": "node scripts/seo-audit.mjs",
     "indexnow:submit": "node scripts/submit-indexnow.mjs",
     "postinstall": "prisma generate",
-    "db:push": "prisma db push"
+    "db:push": "prisma db push",
+    "proba:reguli": "node --import ./scripts/ts-loader.mjs scripts/proba-reguli.mts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.104.2",

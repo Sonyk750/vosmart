@@ -248,3 +248,61 @@ export async function sendCodService(data: { to: string; cod: string; minute: nu
          la contul tău — schimbă-ți parola.</p>`,
   });
 }
+
+/** Textul dintr-un camp liber, pus in HTML fara sa poata deveni marcaj. */
+const h = (s: string) => s.replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
+
+/**
+ * Mesajul prin care raportul semnat ajunge la asociatie si la administrator.
+ *
+ * Decizia asupra listei sta sus, pe primul rand: pentru ea deschide omul
+ * emailul. Raportul intreg e atasat ca PDF, iar amprenta lui e scrisa si in
+ * mesaj — o copie modificata pe drum nu mai are aceeasi amprenta.
+ *
+ * Arunca daca emailul nu e configurat sau serverul refuza: trimiterea se scrie
+ * atunci „esuata", nu „trimisa".
+ */
+export async function trimiteRaportSemnat(d: {
+  to: string;
+  numeDestinatar: string | null;
+  asociatie: string;
+  luna: string;
+  an: number;
+  bunDePlata: boolean;
+  verdict: string;
+  semnatar: string;
+  amprenta: string;
+  pdf: Buffer;
+  numeFisier: string;
+}) {
+  if (!canSendEmail()) throw new Error("Serverul de email nu este configurat.");
+  const from = process.env.EMAIL_FROM || process.env.SMTP_USER!;
+  const decizie = d.bunDePlata ? "BUN DE PLATĂ" : "NU ARE BUN DE PLATĂ";
+  const culoare = d.bunDePlata ? "#047857" : "#b91c1c";
+
+  await createTransporter().sendMail({
+    from,
+    to: d.to,
+    subject: `Raport de cenzor ${d.luna} ${d.an} — ${d.asociatie} — ${decizie}`,
+    html: `
+      <div style="font-family:sans-serif;max-width:600px;margin:0 auto;color:#111827">
+        <p>${d.numeDestinatar ? `Bună ziua, ${h(d.numeDestinatar)},` : "Bună ziua,"}</p>
+        <p>Vă transmitem raportul de cenzor pentru luna <strong>${h(d.luna)} ${d.an}</strong>,
+           ${h(d.asociatie)}, semnat de ${h(d.semnatar)}.</p>
+        <div style="border:2px solid ${culoare};border-radius:8px;padding:14px 16px;margin:18px 0">
+          <div style="font-size:18px;font-weight:700;color:${culoare}">${decizie}</div>
+          <div style="margin-top:4px">${d.bunDePlata
+            ? "Lista de plată a lunii poate fi afișată."
+            : "Lista de plată a lunii nu se afișează până la remedierea constatărilor din raport."}</div>
+          <div style="margin-top:6px;color:#6b7280;font-size:13px">Verdict: ${h(d.verdict)}</div>
+        </div>
+        <p>Raportul complet, cu constatările și recomandările, este atașat în format PDF.</p>
+        <p style="color:#6b7280;font-size:12px;margin-top:24px">
+          Amprenta raportului semnat (SHA-256): <span style="font-family:monospace">${d.amprenta}</span><br>
+          Aceeași amprentă este tipărită pe ultima pagină a raportului.
+        </p>
+        <p style="color:#6b7280;font-size:12px">VoSmart — cenzorat pentru asociații de proprietari · www.vosmart.ro</p>
+      </div>`,
+    attachments: [{ filename: d.numeFisier, content: d.pdf, contentType: "application/pdf" }],
+  });
+}

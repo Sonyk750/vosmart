@@ -1,4 +1,5 @@
 import { Constatare, SEVERITATI, Severitate, StareConstatare } from "./tipuri";
+import { esteNeverificat } from "./verificari";
 
 /**
  * Scorul de corectitudine, calculat din constatari.
@@ -14,11 +15,12 @@ import { Constatare, SEVERITATI, Severitate, StareConstatare } from "./tipuri";
  *  - la intrebarea „de ce 62%?" raspunsul e o lista, nu o parere.
  */
 
-export type Verdict = "conform" | "observatii" | "neconform" | "grav";
+export type Verdict = "conform" | "observatii" | "incomplet" | "neconform" | "grav";
 
 export const VERDICTE: Record<Verdict, { eticheta: string; ton: string; descriere: string }> = {
   conform:     { eticheta: "Conform",              ton: "ok",   descriere: "Nu s-au constatat abateri care să afecteze situația financiară." },
   observatii:  { eticheta: "Conform cu observații", ton: "info", descriere: "Abateri minore, remediabile în luna următoare." },
+  incomplet:   { eticheta: "Verificare incompletă", ton: "warn", descriere: "Unele verificări de bază nu s-au putut face, din lipsă de date. Concluzia nu acoperă acele zone." },
   neconform:   { eticheta: "Neconform",            ton: "warn", descriere: "Abateri care trebuie remediate înainte de aprobarea execuției." },
   grav:        { eticheta: "Deficiențe grave",     ton: "bad",  descriere: "Abateri care pun în discuție corectitudinea evidenței." },
 };
@@ -66,12 +68,25 @@ export function calculeazaScor(
 
   // Verdictul nu se ia doar din numar: o singura constatare critica inseamna
   // deficiente grave chiar daca restul dosarului e impecabil si scorul iese mare.
+  //
+  // Doua reguli noi, amandoua ca sa nu mai iasa „Conform" pe nedrept:
+  //  - o constatare „ridicata" (bani care nu se leaga, document lipsa, CUI
+  //    strain) inseamna „neconform", oricat de bun ar fi restul scorului. Inainte
+  //    5.000 lei ceruti fara factura ieseau „conform cu observatii";
+  //  - o verificare de baza care nu s-a putut face (NEVERIFICAT-…) interzice
+  //    „Conform": lipsa constatarilor nu inseamna ca dosarul e curat, ci ca nu
+  //    s-a putut verifica. Cenzorul o poate respinge daca a verificat el zona.
   const areCritica = active.some(c => c.severitate === "critica");
   const areRidicata = active.some(c => c.severitate === "ridicata");
+  const areNeverificat = active.some(c => esteNeverificat(c.cod));
+  // O constatare „medie" ramasa in picioare e o observatie, chiar daca singura ei
+  // scade scorul doar la 93: „Conform" ar spune ca n-a fost nimic de semnalat.
+  const areMedie = active.some(c => c.severitate === "medie");
   const verdict: Verdict =
     areCritica ? "grav"
-    : valoare < 60 || (areRidicata && valoare < 75) ? "neconform"
-    : valoare < 90 || areRidicata ? "observatii"
+    : areRidicata || valoare < 60 ? "neconform"
+    : areNeverificat ? "incomplet"
+    : valoare < 90 || areMedie ? "observatii"
     : "conform";
 
   return { valoare, verdict, defalcare, luateInCalcul: active.length, ignorate };

@@ -76,7 +76,7 @@ export async function sumarPanou(user: Utilizator): Promise<SumarPanou> {
     // compara si ar fi intors linistit toate randurile.
     prisma.dosar.count({ where: { ...dosare, etapa: { in: ["revizuire", "semnat"] } } }),
     // Raportul expertului e cel semnat de om.
-    prisma.report.count({ where: { semnatLa: { not: null } } }),
+    prisma.report.count({ where: { semnatLa: { not: null }, contract: contracteUnde } }),
     prisma.dosar.count({ where: { ...dosare, etapa: { in: ["intrare", "extragere"] }, stareEtapa: { not: "esuata" } } }),
     prisma.dosar.count({ where: { ...dosare, etapa: "revizuire" } }),
     prisma.dosar.count({ where: { ...dosare, stareEtapa: "esuata" } }),

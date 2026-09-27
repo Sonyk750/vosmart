@@ -59,6 +59,23 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const trup = await req.json().catch(() => ({}));
   const modificari: Record<string, unknown> = {};
 
+  // Adresele la care pleaca rapoartele si cheia de acces a clientului
+  // (`persoanaEmail`, vezi lib/acces.ts) le schimba doar proprietarul. Un cenzor
+  // care le putea schimba putea da oricui acces la documentele asociatiei, sau
+  // trimite raportul semnat altundeva. La fel starea contractului.
+  //
+  // Formularul trimite toate campurile la fiecare salvare, deci se refuza doar o
+  // SCHIMBARE, nu simpla prezenta a campului.
+  const DOAR_ADMIN = ["status", "email", "persoanaEmail", "administratorEmail"] as const;
+  if (user.role !== "admin" && DOAR_ADMIN.some(c => c in trup)) {
+    const acum = await prisma.contract.findUnique({ where: { id }, select: { status: true, email: true, persoanaEmail: true, administratorEmail: true } });
+    const norm = (v: unknown) => (typeof v === "string" ? v.trim().toLowerCase() : v ?? "") || "";
+    const schimbat = DOAR_ADMIN.filter(c => c in trup && norm(trup[c]) !== norm(acum?.[c]));
+    if (schimbat.length > 0) {
+      return NextResponse.json({ error: "Adresele de email și starea contractului le schimbă doar proprietarul." }, { status: 403 });
+    }
+  }
+
   // Schimbarea de stare vine singura, dintr-un buton, nu amestecata cu restul
   // formularului: „reziliez" si „corectez telefonul" sunt doua gesturi diferite.
   if (typeof trup.status === "string") {
@@ -90,10 +107,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     modificari.ziTermen = Number.isInteger(z) && z >= 1 && z <= 28 ? z : 15;
   }
 
-  for (const camp of ["numar", "regCom", "adresa", "localitate", "telefon", "reprezentant", "persoanaNume", "persoanaFunctie", "persoanaTelefon", "observatii"]) {
+  for (const camp of ["numar", "regCom", "adresa", "localitate", "telefon", "reprezentant", "persoanaNume", "persoanaFunctie", "persoanaTelefon", "administratorNume", "observatii"]) {
     if (camp in trup) modificari[camp] = text(trup[camp], camp === "observatii" ? 2000 : 300);
   }
-  for (const camp of ["email", "persoanaEmail"]) {
+  for (const camp of ["email", "persoanaEmail", "administratorEmail"]) {
     if (camp in trup) modificari[camp] = email(trup[camp]);
   }
   for (const camp of ["dataSemnarii", "dataIncetarii"]) {

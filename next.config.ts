@@ -29,6 +29,14 @@ const nextConfig: NextConfig = {
   // `lib/cenzorat/optimizare.ts`.
   serverExternalPackages: ["sharp"],
 
+  // Raportul semnat se face ca PDF pe server (lib/cenzorat/raport-pdf.tsx), cu
+  // fonturile din `public/fonts` citite de pe disc — altfel „ș" si „ț" ies goale.
+  // `public/` nu intra singur in pachetul functiei; il cerem aici.
+  outputFileTracingIncludes: {
+    "/api/panou/dosare/[id]/trimite": ["./public/fonts/**"],
+    "/api/panou/dosare/[id]/raport-pdf": ["./public/fonts/**"],
+  },
+
   // `/clienti` era portalul clientilor, sters la restructurarea pe Admin + Corporate.
   // Google inca il cauta (Search Console: 404); clientul ajunge acum la autentificare.
   async redirects() {

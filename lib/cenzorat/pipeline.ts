@@ -4,6 +4,8 @@ import { citesteDosar, FisierDeCitit } from "./extragere";
 import { aplicaReguli, increderaDate } from "./reguli";
 import { profilAsociatiei } from "./istoric";
 import { calculeazaScor } from "./scor";
+import { areRaportSemnat } from "./blocare";
+import { numarLuna, numeLuna } from "@/lib/luni";
 import { Constatare, Etapa, ExtrasDosar, StareEtapa } from "./tipuri";
 
 /**
@@ -14,6 +16,15 @@ import { Constatare, Etapa, ExtrasDosar, StareEtapa } from "./tipuri";
  * bara se opreste unde a ajuns si scrie de ce, in loc sa urce mai departe.
  */
 
+/**
+ * Un dosar semnat nu mai primeste nimic de la flux. Vezi `lib/cenzorat/blocare.ts`:
+ * etapa „semnat" nu mai poate fi mutata inapoi de o analiza care se termina tarziu.
+ */
+const NESEMNAT = { NOT: { reports: { some: { tip: "expert", status: "publicat" } } } };
+
+/** Aruncata cand dosarul a fost semnat cat timp analiza lucra: nu e o eroare, e o oprire. */
+class DosarSemnat extends Error {}
+
 export async function noteaza(
   dosarId: string,
   etapa: Etapa,
@@ -21,13 +32,13 @@ export async function noteaza(
   mesaj: string,
 ): Promise<void> {
   try {
-    await prisma.$transaction([
-      prisma.evenimentFlux.create({ data: { dosarId, etapa, stare, mesaj } }),
-      prisma.dosar.update({
-        where: { id: dosarId },
+    await prisma.$transaction(async tx => {
+      const { count } = await tx.dosar.updateMany({
+        where: { id: dosarId, ...NESEMNAT },
         data: { etapa, stareEtapa: stare, ...(stare === "esuata" ? { rezumat: mesaj } : {}) },
-      }),
-    ]);
+      });
+      if (count > 0) await tx.evenimentFlux.create({ data: { dosarId, etapa, stare, mesaj } });
+    });
   } catch {
     // Dosarul poate sa nu mai existe: analiza dureaza vreo jumatate de minut, iar
     // butonul de stergere e la indemana omului tot timpul asta. Cand se intampla,
@@ -82,6 +93,10 @@ export async function ruleazaFlux({ dosarId, fisiere }: OptiuniFlux): Promise<vo
     include: { contract: { select: { id: true, denumire: true, cui: true, adresa: true } } },
   });
   if (!dosar) return;
+  if (await areRaportSemnat(dosarId)) {
+    console.log(`[flux] dosarul ${dosarId} are raport semnat — nu se mai citește`);
+    return;
+  }
 
   const inceput = Date.now();
   await prisma.dosar.update({ where: { id: dosarId }, data: { inceputLa: new Date() } });
@@ -114,9 +129,24 @@ export async function ruleazaFlux({ dosarId, fisiere }: OptiuniFlux): Promise<vo
     const incremental = Boolean(dosar.extras) && nuS_aPierdutNimic && stiute.size > 0 && stiute.size < idsAcum.length;
     const idsDeCitit = incremental ? idsAcum.filter(id => !stiute.has(id)) : idsAcum;
 
-    const deCitit = fisiere && !incremental
+    // Fisierele din memorie se folosesc doar daca sunt TOT dosarul. Cererile de
+    // incarcare vin in paralel: una poate porni analiza avand in mana doar
+    // documentele ei, iar dosarul se marca apoi „citit" in intregime.
+    const deCitit = fisiere && !incremental && fisiere.length === idsAcum.length
       ? fisiere
       : await incarcaFisiere(dosarId, incremental ? idsDeCitit : undefined);
+
+    // Un fisier care nu mai vine din stocare nu e „fara continut": e o lipsa. La o
+    // recitire completa, datele vechi se inlocuiesc cu ce iese acum, deci o citire
+    // pe jumatate ar sterge cifre adevarate si regulile ar raporta ca lipseste tot.
+    const asteptate = incremental ? idsDeCitit.length : idsAcum.length;
+    if (deCitit.length < asteptate) {
+      await noteaza(
+        dosarId, "extragere", "esuata",
+        `${asteptate - deCitit.length} din ${asteptate} documente nu s-au putut aduce din stocare. Verificarea nu s-a făcut; reîncearcă.`,
+      );
+      return;
+    }
 
     if (deCitit.length === 0) {
       // Nimic nou si nimic pierdut: dosarul a fost deja citit intreg. Nu mai
@@ -149,8 +179,10 @@ export async function ruleazaFlux({ dosarId, fisiere }: OptiuniFlux): Promise<vo
     );
 
     const incredere = increderaDate(extras);
-    await prisma.dosar.update({
-      where: { id: dosarId },
+    // Citirea dureaza minute. Daca intre timp s-a semnat, rezultatul ei nu mai
+    // are voie sa atinga dosarul: semnatura s-a dat pe ce era atunci.
+    const scris = await prisma.dosar.updateMany({
+      where: { id: dosarId, ...NESEMNAT },
       data: {
         extras: extras as never,
         incredere: incredere.procent,
@@ -161,6 +193,7 @@ export async function ruleazaFlux({ dosarId, fisiere }: OptiuniFlux): Promise<vo
         fisiereCitite: idsAcum as never,
       },
     });
+    if (scris.count === 0) throw new DosarSemnat();
     await noteaza(
       dosarId,
       "extragere",
@@ -182,6 +215,11 @@ export async function ruleazaFlux({ dosarId, fisiere }: OptiuniFlux): Promise<vo
         `Se compară și cu ${istoric.luni} ${istoric.luni === 1 ? "lună verificată anterior" : "luni verificate anterior"}`);
     }
 
+    const documente = await prisma.fisier.findMany({
+      where: { dosarId }, select: { tip: true, numeFisier: true, perioadaAi: true },
+    });
+    const precedent = await extrasLunaPrecedenta(dosar.contractId, dosar.luna, dosar.an);
+
     const constatari = aplicaReguli({
       extras,
       istoric,
@@ -191,28 +229,53 @@ export async function ruleazaFlux({ dosarId, fisiere }: OptiuniFlux): Promise<vo
       // incrementala, `deCitit` are doar documentele noi, iar regulile care se
       // uita la ce LIPSESTE ar fi crezut ca dosarul are un singur document.
       tipuriPrimite: toateRandurile.map(f => f.tip),
+      documente,
+      luna: dosar.luna,
+      an: dosar.an,
+      precedent,
     });
 
     // Constatarile se rescriu de la zero la fiecare rulare: o reluare nu trebuie
     // sa lase in urma constatari dintr-o citire veche. Cele adaugate de cenzor
     // raman — nu sunt ale noastre ca sa le stergem.
-    await prisma.constatare.deleteMany({ where: { dosarId, sursa: { not: "cenzor" } } });
-    if (constatari.length > 0) {
-      await prisma.constatare.createMany({
-        data: constatari.map((c, i) => ({
-          dosarId,
-          cod: c.cod,
-          titlu: c.titlu,
-          detaliu: c.detaliu,
-          severitate: c.severitate,
-          sursa: c.sursa,
-          temei: c.temei,
-          probe: c.probe as never,
-          recomandare: c.recomandare,
-          ordine: i,
-        })),
+    //
+    // DECIZIA cenzorului insa nu se pierde. O constatare care iese la fel ca
+    // inainte (acelasi cod, acelasi text) isi pastreaza starea, nota si, daca el a
+    // umblat la ea, severitatea. Altfel adaugarea unei facturi redeschidea tot
+    // triajul, iar la semnare „deschis" ajungea sa insemne altceva decat a decis.
+    // Cand textul s-a schimbat, s-au schimbat si cifrele: se decide din nou.
+    await prisma.$transaction(async tx => {
+      if (await tx.report.findFirst({ where: { dosarId, tip: "expert", status: "publicat" }, select: { id: true } })) {
+        throw new DosarSemnat();
+      }
+      const vechi = await tx.constatare.findMany({
+        where: { dosarId, sursa: { not: "cenzor" } },
+        select: { cod: true, detaliu: true, stare: true, notaCenzor: true, severitate: true, decisDe: true, decisLa: true },
       });
-    }
+      const decizii = new Map(vechi.map(v => [`${v.cod}|${v.detaliu}`, v]));
+      await tx.constatare.deleteMany({ where: { dosarId, sursa: { not: "cenzor" } } });
+      if (constatari.length > 0) {
+        await tx.constatare.createMany({
+          data: constatari.map((c, i) => {
+            const d = decizii.get(`${c.cod}|${c.detaliu}`);
+            const decisa = d && d.decisDe;
+            return {
+              dosarId,
+              cod: c.cod,
+              titlu: c.titlu,
+              detaliu: c.detaliu,
+              severitate: decisa ? d.severitate : c.severitate,
+              sursa: c.sursa,
+              temei: c.temei,
+              probe: c.probe as never,
+              recomandare: c.recomandare,
+              ordine: i,
+              ...(decisa ? { stare: d.stare, notaCenzor: d.notaCenzor, decisDe: d.decisDe, decisLa: d.decisLa } : {}),
+            };
+          }),
+        });
+      }
+    });
 
     await noteaza(
       dosarId,
@@ -229,8 +292,8 @@ export async function ruleazaFlux({ dosarId, fisiere }: OptiuniFlux): Promise<vo
     const scor = calculeazaScor(constatari);
     const titlu = `Raport AI · ${dosar.luna} ${dosar.an} — ${dosar.contract.denumire}`;
 
-    await prisma.dosar.update({
-      where: { id: dosarId },
+    await prisma.dosar.updateMany({
+      where: { id: dosarId, ...NESEMNAT },
       data: {
         scor: scor.valoare,
         verdict: scor.verdict,
@@ -278,6 +341,10 @@ export async function ruleazaFlux({ dosarId, fisiere }: OptiuniFlux): Promise<vo
 
     console.log(`[flux] dosar ${dosarId} gata în ${Math.round((Date.now() - inceput) / 1000)}s`);
   } catch (e) {
+    if (e instanceof DosarSemnat) {
+      console.log(`[flux] dosarul ${dosarId} a fost semnat în timpul analizei — rezultatul nu se mai scrie`);
+      return;
+    }
     // Intai intrebam daca dosarul mai exista. Daca omul l-a sters intre timp,
     // nu e o defectiune: e o cerere anulata.
     const inca = await prisma.dosar.findUnique({ where: { id: dosarId }, select: { etapa: true } });
@@ -293,6 +360,25 @@ export async function ruleazaFlux({ dosarId, fisiere }: OptiuniFlux): Promise<vo
     console.error("[flux] eroare:", curat);
     await noteaza(dosarId, (inca.etapa as Etapa) ?? "extragere", "esuata", `Analiza s-a oprit: ${curat || "eroare necunoscută"}`);
   }
+}
+
+/**
+ * Cifrele lunii de dinainte, asa cum au fost SEMNATE.
+ *
+ * Soldul final de luna trecuta trebuie sa fie soldul initial de acum. Se ia din
+ * copia inghetata a raportului semnat, nu din `Dosar.extras`: acolo poate sta o
+ * citire refacuta dupa semnare, pe care nu s-a pus nicio semnatura.
+ */
+async function extrasLunaPrecedenta(contractId: string, luna: string, an: number): Promise<ExtrasDosar | null> {
+  const nr = numarLuna(luna);
+  if (!nr) return null;
+  const inainte = nr === 1 ? { luna: numeLuna(12)!, an: an - 1 } : { luna: numeLuna(nr - 1)!, an };
+  const raport = await prisma.report.findFirst({
+    where: { tip: "expert", status: "publicat", dosar: { contractId, luna: inainte.luna, an: inainte.an } },
+    select: { date: true },
+  });
+  const date = raport?.date as { extras?: ExtrasDosar | null } | null;
+  return date?.extras ?? null;
 }
 
 /** Constatarile unui dosar, in forma cu care lucreaza scorul si ecranele. */

@@ -56,6 +56,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       probe: [],
       // Constatarile cenzorului sunt acceptate din start: el le-a scris.
       stare: "acceptata",
+      decisDe: user.id,
+      decisLa: new Date(),
       ordine: 1000 + dosar._count.constatari,
     },
   });

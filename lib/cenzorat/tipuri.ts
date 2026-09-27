@@ -51,8 +51,31 @@ export type ExtrasDosar = {
     soldFinal: Suma;
     totalIncasari: Suma;
     totalPlati: Suma;
-    conturi: { iban: string | null; descriere: string; sold: Suma }[];
+    /**
+     * Conturile din REGISTRUL de banca, fiecare cu rulajul lui. `sold` e soldul
+     * final. Campurile de rulaj lipsesc la dosarele citite inainte sa le cerem.
+     */
+    conturi: {
+      iban: string | null;
+      descriere: string;
+      sold: Suma;
+      soldInitial?: Suma;
+      totalIncasari?: Suma;
+      totalPlati?: Suma;
+    }[];
   };
+  /**
+   * Extrasele de cont, fiecare asa cum l-a dat BANCA — cate unul pe cont. Ele sunt
+   * dovada din afara asociatiei cu care se confrunta registrul de banca.
+   */
+  extrase?: {
+    iban: string | null;
+    perioada: string | null;
+    soldInitial: Suma;
+    soldFinal: Suma;
+    totalIncasari: Suma;
+    totalPlati: Suma;
+  }[];
   /**
    * Documentul „Distribuirea facturilor" — totalul repartizat efectiv pe luna.
    *
@@ -64,12 +87,20 @@ export type ExtrasDosar = {
     total: Suma;
     /** Luna la care se refera documentul, asa cum scrie pe el. */
     perioada: string | null;
+    /**
+     * Randurile distribuirii: fiecare factura, cu suma de pe ea si cat s-a
+     * repartizat din ea pe lista lunii. Din ele se vede o factura distribuita
+     * partial sau de doua ori — un total pe total nu arata asta.
+     */
+    facturi?: { furnizor: string; numar: string | null; sumaFactura: Suma; sumaDistribuita: Suma }[];
   };
   fonduri: {
     rulment: Suma;
     reparatii: Suma;
     penalitati: Suma;
     altele: { denumire: string; sold: Suma }[];
+    /** Miscarea fiecarui fond pe luna, cand registrul de fonduri o arata. */
+    miscari?: { fond: string; soldInitial: Suma; incasari: Suma; cheltuieli: Suma; soldFinal: Suma }[];
   };
   lista: {
     totalCheltuieli: Suma;
@@ -80,6 +111,10 @@ export type ExtrasDosar = {
     areColoanaRestante: boolean | null;
     areColoanaPenalizari: boolean | null;
     areColoanaFondRulment: boolean | null;
+    /** Totalul coloanei „Total de plată" (cu restanțe), de pe randul TOTAL al listei. */
+    totalDePlata?: Suma;
+    /** „Total de plată" pe fiecare apartament. Suma lor trebuie sa dea randul TOTAL. */
+    apartamente?: { apartament: string; totalDePlata: Suma }[];
   };
   restantieri: {
     total: Suma;
@@ -129,9 +164,10 @@ export const EXTRAS_GOL: ExtrasDosar = {
   perioada: { luna: null, an: null, dataAfisarii: null, dataScadenta: null },
   casa: { soldInitial: null, soldFinal: null, totalIncasari: null, totalPlati: null, primaChitanta: { numar: null, suma: null }, ultimaChitanta: { numar: null, suma: null }, soldMaximZilnic: null, zileCuIncasari: null },
   banca: { soldInitial: null, soldFinal: null, totalIncasari: null, totalPlati: null, conturi: [] },
-  distributie: { total: null, perioada: null },
-  fonduri: { rulment: null, reparatii: null, penalitati: null, altele: [] },
-  lista: { totalCheltuieli: null, totalRestante: null, numarApartamente: null, coloane: [], areColoanaRestante: null, areColoanaPenalizari: null, areColoanaFondRulment: null },
+  extrase: [],
+  distributie: { total: null, perioada: null, facturi: [] },
+  fonduri: { rulment: null, reparatii: null, penalitati: null, altele: [], miscari: [] },
+  lista: { totalCheltuieli: null, totalRestante: null, numarApartamente: null, coloane: [], areColoanaRestante: null, areColoanaPenalizari: null, areColoanaFondRulment: null, totalDePlata: null, apartamente: [] },
   restantieri: { total: null, apartamente: [] },
   furnizori: { facturi: [], totalNeachitat: null },
   penalizari: { aplicate: null, cotaZilnica: null, total: null },
@@ -193,3 +229,20 @@ export const INDEX_ETAPA: Record<Etapa, number> = Object.fromEntries(
 ) as Record<Etapa, number>;
 
 export type StareEtapa = "asteptare" | "in_lucru" | "gata" | "esuata";
+
+/**
+ * Aduce datele salvate la forma de acum.
+ *
+ * Dosarele citite inainte de campurile noi (extrase, randurile distribuirii,
+ * miscarile fondurilor, totalurile pe apartamente) nu le au. Regulile primesc
+ * mereu forma completa, ca sa nu citeasca `undefined` drept „nimic de semnalat".
+ */
+export function normalizeaza(e: ExtrasDosar): ExtrasDosar {
+  return {
+    ...e,
+    extrase: e.extrase ?? [],
+    distributie: { ...e.distributie, facturi: e.distributie?.facturi ?? [] },
+    fonduri: { ...e.fonduri, miscari: e.fonduri?.miscari ?? [] },
+    lista: { ...e.lista, totalDePlata: e.lista?.totalDePlata ?? null, apartamente: e.lista?.apartamente ?? [] },
+  };
+}

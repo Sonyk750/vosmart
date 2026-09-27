@@ -8,6 +8,7 @@ import { dinNume, inventariaza } from "@/lib/cenzorat/inventar";
 import { esteAcceptat, formatul, mimeDupaNume, FORMATE_TEXT, LIMITA_FISIER_MB } from "@/lib/cenzorat/formate";
 import { numeDupaMime, pregatesteFisier } from "@/lib/cenzorat/optimizare";
 import { ruleazaFlux } from "@/lib/cenzorat/pipeline";
+import { areRaportSemnat, IN_LUCRU_EXPIRA_MS } from "@/lib/cenzorat/blocare";
 import type { FisierDeCitit } from "@/lib/cenzorat/extragere";
 import { numarLuna, numeLuna } from "@/lib/luni";
 
@@ -246,7 +247,7 @@ export async function POST(req: NextRequest) {
 
   // Un dosar semnat e inchis: raportul cenzorului s-a dat deja pe documentele de
   // atunci. Ce vine dupa nu se strecoara sub semnatura lui.
-  if (dosar.etapa === "semnat") {
+  if (await areRaportSemnat(dosar.id)) {
     return NextResponse.json(
       { error: `Dosarul pe ${tinta.luna} ${tinta.an} are deja raport semnat. Documentele noi nu se mai pot adăuga la el.` },
       { status: 409 },
@@ -374,7 +375,9 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  await prisma.fisier.createMany({ data: randuri });
+  // Doua cereri paralele cu acelasi document trec amandoua de verificarea de mai
+  // sus; indexul unic (dosar, amprenta) o opreste pe a doua in baza.
+  await prisma.fisier.createMany({ data: randuri, skipDuplicates: true });
 
   /* --------------------------------------------------- ce s-a strans deja */
 
@@ -424,18 +427,21 @@ export async function POST(req: NextRequest) {
     });
   }
 
+  // Cat timp analiza lucreaza, dosarul ramane al ei. Un document urcat in timpul
+  // ei punea starea pe „asteptare", ecranul nu mai vedea analiza si lasa sa
+  // porneasca a doua, in paralel cu prima.
+  const prag = new Date(Date.now() - IN_LUCRU_EXPIRA_MS);
+  const liber = { id: dosar.id, OR: [{ stareEtapa: { not: "in_lucru" } }, { updatedAt: { lt: prag } }] };
+  let pornit = false;
   if (!porneste) {
     // Dosarul ramane deschis, in asteptarea restului documentelor. Etapa nu se
     // muta: „intrare / așteptare" e exact adevarul.
-    await prisma.dosar.update({
-      where: { id: dosar.id },
+    await prisma.dosar.updateMany({
+      where: liber,
       data: { etapa: "intrare", stareEtapa: "asteptare" },
     });
-  } else {
-    await prisma.dosar.update({
-      where: { id: dosar.id },
-      data: { etapa: "intrare", stareEtapa: "in_lucru" },
-    });
+  } else if ((await prisma.dosar.updateMany({ where: liber, data: { etapa: "intrare", stareEtapa: "in_lucru" } })).count > 0) {
+    pornit = true;
 
     // Raspunsul pleaca acum; citirea continua dupa el. Cand dosarul era gol,
     // fisierele sunt deja in memorie si nu le mai coboram inca o data din
@@ -459,6 +465,6 @@ export async function POST(req: NextRequest) {
     nesalvate,
     necitibile,
     lipsa,
-    pornit: porneste,
+    pornit,
   }, { status: 201 });
 }

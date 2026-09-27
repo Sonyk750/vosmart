@@ -25,7 +25,7 @@ export default async function PaginaRaport({ params }: { params: Promise<{ id: s
     where: { id },
     select: {
       id: true, titlu: true, tip: true, status: true, date: true,
-      contractId: true, semnatDe: true, semnatLa: true,
+      contractId: true, semnatDe: true, semnatLa: true, dosarId: true, amprenta: true, bunDePlata: true,
     },
   });
   if (!raport) notFound();
@@ -41,11 +41,19 @@ export default async function PaginaRaport({ params }: { params: Promise<{ id: s
 
   return (
     <main className="min-h-screen bg-app py-6 print:bg-white print:py-0">
-      <BaraRaport titlu={raport.titlu} nesemnat={raport.status !== "publicat"} />
+      <BaraRaport
+        titlu={raport.titlu}
+        nesemnat={raport.status !== "publicat"}
+        pdf={raport.tip === "expert" && raport.status === "publicat" ? `/api/panou/dosare/${raport.dosarId}/raport-pdf` : null}
+      />
 
       <div className="px-4 print:px-0">
         {date ? (
-          <RaportHartie date={date} titlu={raport.titlu} />
+          <RaportHartie
+            date={{ ...date, bunDePlata: raport.bunDePlata ?? date.bunDePlata ?? null }}
+            titlu={raport.titlu}
+            amprenta={raport.amprenta}
+          />
         ) : (
           <article className="mx-auto max-w-[820px] bg-paper px-10 py-9 text-[13px] leading-relaxed text-paper-ink shadow-[0_18px_60px_-20px_rgba(0,0,0,.5)] print:shadow-none">
             <h1 className="mb-5 border-b-2 border-paper-ink pb-3 text-[20px] font-semibold">{raport.titlu}</h1>

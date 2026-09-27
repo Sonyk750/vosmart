@@ -87,6 +87,7 @@ export default async function PaginaContract({ params }: { params: Promise<{ id:
           ziTermen: c.ziTermen,
           persoanaNume: c.persoanaNume, persoanaFunctie: c.persoanaFunctie,
           persoanaEmail: c.persoanaEmail, persoanaTelefon: c.persoanaTelefon,
+          administratorNume: c.administratorNume, administratorEmail: c.administratorEmail,
           observatii: c.observatii,
         }}
       />

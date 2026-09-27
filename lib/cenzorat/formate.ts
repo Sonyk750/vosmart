@@ -58,6 +58,13 @@ export const FORMATE: Format[] = [
     eticheta: "Word (vechi)", citibilDeAi: false, inventariabil: false,
   },
   {
+    // Exportul simplu al multor programe de administrare. E text, deci modelul il
+    // citeste ca atare (vezi `office.ts`, codificarea se ghiceste acolo).
+    extensii: [".csv"],
+    mime: ["text/csv"],
+    eticheta: "CSV", citibilDeAi: true, inventariabil: true,
+  },
+  {
     extensii: [".xls"],
     mime: ["application/vnd.ms-excel"],
     eticheta: "Excel (vechi)", citibilDeAi: false, inventariabil: false,

@@ -28,6 +28,7 @@ const GOL: Camp2 = {
   cui: "", denumire: "", regCom: "", adresa: "", localitate: "", telefon: "", email: "",
   reprezentant: "", numar: "", dataSemnarii: "", dataIncetarii: "", ziTermen: "15",
   persoanaNume: "", persoanaFunctie: "", persoanaEmail: "", persoanaTelefon: "",
+  administratorNume: "", administratorEmail: "",
   observatii: "",
 };
 
@@ -216,6 +217,25 @@ export default function FormularContract({
             </Camp>
             <Camp eticheta="Telefon">
               <input value={c.persoanaTelefon} onChange={pune("persoanaTelefon")} className={claseCamp} inputMode="tel" />
+            </Camp>
+          </div>
+        </section>
+
+        {/* ------------------------------------------- administratorul */}
+        <section className="border-t border-line pt-5">
+          <p className="text-[10.5px] font-semibold uppercase tracking-[0.12em] text-faint">
+            Administratorul asociației
+          </p>
+          <p className="mb-3 mt-1 max-w-2xl text-[12px] leading-relaxed text-faint">
+            Firma sau persoana care face lista de plată. Primește raportul semnat și decizia
+            „bun de plată”, alături de asociație (emailul asociației de mai sus).
+          </p>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Camp eticheta="Nume / firmă">
+              <input value={c.administratorNume} onChange={pune("administratorNume")} className={claseCamp} />
+            </Camp>
+            <Camp eticheta="Email">
+              <input value={c.administratorEmail} onChange={pune("administratorEmail")} className={claseCamp} inputMode="email" />
             </Camp>
           </div>
         </section>

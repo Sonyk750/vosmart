@@ -38,19 +38,33 @@ type Fisier = {
   marime: number; marimeOriginala: number | null; amprenta: string | null;
   /** Denumirea citita din document: „Factură Apa Nova". */
   denumireAi: string | null; emitentAi: string | null; perioadaAi: string | null; tipSursa: string;
+  /** IBAN-ul extrasului / registrului de banca. */
+  cont?: string | null;
 };
+
+/** La ce documente are sens contul bancar. */
+const CU_CONT = ["extras_cont", "registru_banca"];
+
+type Trimitere = { catre: string; email: string; stare: string; eroare: string | null; trimisDe: string; createdAt: string };
 
 /** Cum se cheama documentul pe fila. Denumirea citita bate numele tipului. */
 const numeleFisierului = (f: Fisier) => f.denumireAi || f.eticheta || etichetaTip(f.tip);
 
 type Date_ = {
   dosar: { id: string; titlu: string; luna: string | null; an: number | null; etapa: string; stareEtapa: string; incredere: number | null; creatLa: string };
-  contract: { id: string; denumire: string; cui: string; numar: string | null; adresa: string | null; telefon: string | null; email: string | null; reprezentant: string | null } | null;
+  contract: {
+    id: string; denumire: string; cui: string; numar: string | null; adresa: string | null; telefon: string | null;
+    email: string | null; reprezentant: string | null;
+    persoanaNume: string | null; persoanaEmail: string | null; administratorNume: string | null; administratorEmail: string | null;
+  } | null;
   extras: Record<string, never> | null;
   fisiere: Fisier[];
   constatari: Constatare[];
   scor: Scor;
-  raport: { id: string; status: string; semnatDe: string | null; semnatLa: string | null } | null;
+  raport: {
+    id: string; status: string; semnatDe: string | null; semnatLa: string | null;
+    amprenta: string | null; bunDePlata: boolean | null; trimiteri: Trimitere[];
+  } | null;
 };
 
 const TON_SEV: Record<Severitate, Ton> = {
@@ -59,6 +73,7 @@ const TON_SEV: Record<Severitate, Ton> = {
 const VERDICT: Record<string, { text: string; ton: Ton }> = {
   conform: { text: "Conform", ton: "ok" },
   observatii: { text: "Conform cu observații", ton: "info" },
+  incomplet: { text: "Verificare incompletă", ton: "warn" },
   neconform: { text: "Neconform", ton: "warn" },
   grav: { text: "Deficiențe grave", ton: "bad" },
 };
@@ -85,7 +100,7 @@ export default function PupitruCenzor({
   const [lucreaza, setLucreaza] = useState<string | null>(null);
   const [fisierDeschis, setFisierDeschis] = useState<Fisier | null>(null);
   const [corecteaza, setCorecteaza] = useState(false);
-  const [ciorna, setCiorna] = useState({ denumire: "", tip: "" });
+  const [ciorna, setCiorna] = useState({ denumire: "", tip: "", cont: "" });
   const [salveazaCorectia, setSalveazaCorectia] = useState(false);
 
   /**
@@ -103,7 +118,8 @@ export default function PupitruCenzor({
       const r = await fetch(`/api/panou/fisiere/${fisierDeschis.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(ciorna),
+        // Contul se trimite doar la extrase si registre de banca: la restul n-are inteles.
+        body: JSON.stringify(CU_CONT.includes(ciorna.tip) ? ciorna : { denumire: ciorna.denumire, tip: ciorna.tip }),
       });
       const d = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(d.error || "Corectura nu a putut fi salvată.");
@@ -141,6 +157,11 @@ export default function PupitruCenzor({
   const [semneaza, setSemneaza] = useState(false);
   const [confirmSemnare, setConfirmSemnare] = useState(false);
   const [concluzie, setConcluzie] = useState("");
+  /** Decizia asupra listei lunii. Nealeasa = nu se poate semna. */
+  const [bunDePlata, setBunDePlata] = useState<boolean | null>(null);
+  const [destinatari, setDestinatari] = useState<string[]>(["asociatie", "administrator"]);
+  const [trimite, setTrimite] = useState(false);
+  const [rezultatTrimitere, setRezultatTrimitere] = useState<string>("");
 
   const adu = useCallback(async () => {
     const r = await fetch(`/api/panou/dosare/${dosarId}`);
@@ -195,7 +216,7 @@ export default function PupitruCenzor({
       const r = await fetch(`/api/panou/dosare/${dosarId}/semneaza`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ concluzie }),
+        body: JSON.stringify({ concluzie, bunDePlata }),
       });
       const d = await r.json();
       if (!r.ok) throw new Error(d.error);
@@ -205,6 +226,32 @@ export default function PupitruCenzor({
       setEroare(e instanceof Error ? e.message : "Raportul nu a putut fi semnat.");
     } finally {
       setSemneaza(false);
+    }
+  }
+
+  /** Trimiterea raportului semnat: pas separat, cu destinatarii la vedere. */
+  async function trimiteRaportul() {
+    setTrimite(true);
+    setEroare("");
+    setRezultatTrimitere("");
+    try {
+      const r = await fetch(`/api/panou/dosare/${dosarId}/trimite`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ catre: destinatari }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error);
+      const rez = d.rezultate as { catre: string; email: string | null; stare: string; eroare?: string }[];
+      setRezultatTrimitere(rez.map(x =>
+        x.stare === "trimis" ? `✓ trimis la ${x.email}`
+        : x.stare === "fara_adresa" ? `— ${x.catre}: fără adresă de email în contract`
+        : `✗ ${x.email}: ${x.eroare ?? "netrimis"}`).join(" · "));
+      await adu();
+    } catch (e) {
+      setEroare(e instanceof Error ? e.message : "Raportul nu a putut fi trimis.");
+    } finally {
+      setTrimite(false);
     }
   }
 
@@ -260,12 +307,64 @@ export default function PupitruCenzor({
         </Card>
       </div>
 
-      {semnat && (
+      {semnat && date.raport && (
         <Card className="mb-4 border-ok/30 bg-ok-dim/40 px-4 py-3">
-          <p className="flex items-center gap-2 text-[13px] text-ok">
-            <Ic.semnatura className="h-4 w-4 shrink-0" />
-            Raport semnat de <strong className="font-semibold">{date.raport?.semnatDe}</strong> la {dataRo(date.raport?.semnatLa)}. Nu mai poate fi modificat.
-          </p>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="flex items-center gap-2 text-[13px] text-ok">
+              <Ic.semnatura className="h-4 w-4 shrink-0" />
+              Raport semnat de <strong className="font-semibold">{date.raport.semnatDe}</strong> la {dataRo(date.raport.semnatLa)}. Nu mai poate fi modificat.
+            </p>
+            {date.raport.bunDePlata !== null && (
+              <Eticheta ton={date.raport.bunDePlata ? "ok" : "bad"}>
+                {date.raport.bunDePlata ? "BUN DE PLATĂ" : "FĂRĂ BUN DE PLATĂ"}
+              </Eticheta>
+            )}
+          </div>
+          {date.raport.amprenta && (
+            <p className="mt-1.5 break-all font-mono text-[11px] text-faint" title="SHA-256 al raportului semnat. E tipărit și pe PDF.">
+              amprentă {date.raport.amprenta}
+            </p>
+          )}
+
+          {/* Trimiterea: nimic nu pleaca singur. Cenzorul vede cui si la ce adresa. */}
+          <div className="mt-3 border-t border-ok/20 pt-3">
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-[12.5px]">
+              {([
+                ["asociatie", "Asociația", date.contract?.email],
+                ["administrator", "Administratorul", date.contract?.administratorEmail],
+                ["persoana", "Persoana desemnată", date.contract?.persoanaEmail],
+              ] as const).map(([cheie, nume, email]) => (
+                <label key={cheie} className={`flex items-center gap-1.5 ${email ? "text-ink" : "text-faint"}`}>
+                  <input
+                    type="checkbox"
+                    disabled={!email}
+                    checked={Boolean(email) && destinatari.includes(cheie)}
+                    onChange={e => setDestinatari(d => e.target.checked ? [...d, cheie] : d.filter(x => x !== cheie))}
+                  />
+                  {nume} <span className="text-faint">{email ?? "(fără email în contract)"}</span>
+                </label>
+              ))}
+            </div>
+            <div className="mt-2.5 flex flex-wrap items-center gap-2">
+              <Buton fel="principal" marime="mic" incarca={trimite} disabled={destinatari.length === 0} onClick={trimiteRaportul}>
+                <Ic.semnatura className="h-3.5 w-3.5" /> Trimite raportul (PDF)
+              </Buton>
+              <a href={`/api/panou/dosare/${dosarId}/raport-pdf`} className="inline-flex items-center gap-1.5 text-[12px] text-muted hover:text-ink">
+                <Ic.descarca className="h-3.5 w-3.5" /> Descarcă PDF-ul
+              </a>
+            </div>
+            {rezultatTrimitere && <p className="mt-2 text-[12px] text-muted">{rezultatTrimitere}</p>}
+            {date.raport.trimiteri.length > 0 && (
+              <ul className="mt-2 space-y-0.5 text-[11.5px] text-faint">
+                {date.raport.trimiteri.map((t, i) => (
+                  <li key={i}>
+                    {t.stare === "trimis" ? "✓" : "✗"} {dataRo(t.createdAt)} · {t.catre} · {t.email} · de {t.trimisDe}
+                    {t.eroare && <span className="text-bad"> — {t.eroare}</span>}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         </Card>
       )}
 
@@ -333,11 +432,12 @@ export default function PupitruCenzor({
                 <p className="truncate text-[12px] text-faint">
                   {numeleFisierului(fisierDeschis)} · {fisierDeschis.numeFisier} · {(fisierDeschis.marime / 1024).toFixed(0)} KB
                   {fisierDeschis.tipSursa === "om" && " · corectat de cenzor"}
+                  {fisierDeschis.cont && ` · cont ${fisierDeschis.cont}`}
                 </p>
                 {!semnat && (
                   <button
                     onClick={() => {
-                      setCiorna({ denumire: fisierDeschis.denumireAi ?? "", tip: fisierDeschis.tip });
+                      setCiorna({ denumire: fisierDeschis.denumireAi ?? "", tip: fisierDeschis.tip, cont: fisierDeschis.cont ?? "" });
                       setCorecteaza(v => !v);
                     }}
                     title="Corectează denumirea și tipul"
@@ -377,6 +477,19 @@ export default function PupitruCenzor({
                     </select>
                   </label>
                 </div>
+                {CU_CONT.includes(ciorna.tip) && (
+                  <label className="mt-2.5 block">
+                    <span className="mb-1 block text-[11px] font-medium text-muted">
+                      Cont (IBAN) — fiecare extras se verifică pe contul lui
+                    </span>
+                    <input
+                      value={ciorna.cont}
+                      onChange={e => setCiorna(c => ({ ...c, cont: e.target.value }))}
+                      placeholder="RO49 AAAA 1B31 0075 9384 0000"
+                      className={claseCamp}
+                    />
+                  </label>
+                )}
                 <div className="mt-3 flex items-center gap-2">
                   <Buton fel="principal" marime="mic" incarca={salveazaCorectia} onClick={trimiteCorectia}>
                     <Ic.bifa className="h-3.5 w-3.5" /> Salvează
@@ -467,9 +580,26 @@ export default function PupitruCenzor({
           {/* -------------------------------------------------- semnare */}
           {!semnat && (
             <Card>
-              <CardCap titlu="Semnarea raportului" sub="După semnare, raportul devine vizibil asociației și nu mai poate fi modificat." />
+              <CardCap titlu="Semnarea raportului" sub="După semnare raportul nu mai poate fi modificat. Nu pleacă singur: îl trimiți tu, după semnare, cu destinatarii la vedere." />
               <div className="space-y-3 px-5 py-4">
-                <Camp eticheta="Concluzia cenzorului" ajutor="Opțional. Ce scrieți aici apare la finalul raportului, sub constatări.">
+                <div>
+                  <p className="mb-1.5 text-[12px] font-medium text-muted">Lista de plată a lunii</p>
+                  <div className="flex flex-wrap gap-2">
+                    <Buton fel={bunDePlata === true ? "principal" : "moale"} marime="mic" onClick={() => setBunDePlata(true)}>
+                      <Ic.bifa className="h-3.5 w-3.5" /> Bun de plată
+                    </Buton>
+                    <Buton fel={bunDePlata === false ? "principal" : "moale"} marime="mic" onClick={() => setBunDePlata(false)}>
+                      Fără bun de plată
+                    </Buton>
+                  </div>
+                  <p className="mt-1.5 text-[11.5px] text-faint">
+                    Decizia dumneavoastră, nu a scorului. Apare pe prima pagină a raportului și în emailul către administrator.
+                    {bunDePlata === true && !["conform", "observatii"].includes(date.scor.verdict) &&
+                      " Verdictul nu e „conform”: scrieți în concluzie de ce lista se poate totuși afișa."}
+                  </p>
+                </div>
+
+                <Camp eticheta="Concluzia cenzorului" ajutor="Ce scrieți aici apare la finalul raportului, sub constatări.">
                   <textarea
                     value={concluzie}
                     onChange={e => setConcluzie(e.target.value)}
@@ -482,8 +612,14 @@ export default function PupitruCenzor({
                 {grupate.deDecis.length > 0 && (
                   <p className="flex items-start gap-2 text-[12.5px] text-warn">
                     <Ic.info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                    {grupate.deDecis.length} {grupate.deDecis.length === 1 ? "constatare nu a fost triată" : "constatări nu au fost triate"}.
-                    La semnare se consideră însușite.
+                    {grupate.deDecis.length} {grupate.deDecis.length === 1 ? "constatare nu a fost decisă" : "constatări nu au fost decise"}.
+                    Acceptați sau respingeți fiecare constatare înainte de semnare.
+                  </p>
+                )}
+                {!["revizuire"].includes(date.dosar.etapa) && (
+                  <p className="flex items-start gap-2 text-[12.5px] text-warn">
+                    <Ic.info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                    Dosarul nu a trecut încă prin verificare. Semnarea devine posibilă după ce analiza se termină.
                   </p>
                 )}
 
@@ -495,8 +631,12 @@ export default function PupitruCenzor({
                     <Buton fel="fantoma" onClick={() => setConfirmSemnare(false)}>Renunță</Buton>
                   </div>
                 ) : (
-                  <Buton fel="principal" marime="mare" className="w-full" onClick={() => setConfirmSemnare(true)}>
-                    <Ic.semnatura className="h-4 w-4" /> Semnează și trimite asociației
+                  <Buton
+                    fel="principal" marime="mare" className="w-full"
+                    disabled={bunDePlata === null || grupate.deDecis.length > 0 || date.dosar.etapa !== "revizuire"}
+                    onClick={() => setConfirmSemnare(true)}
+                  >
+                    <Ic.semnatura className="h-4 w-4" /> Semnează raportul
                   </Buton>
                 )}
               </div>

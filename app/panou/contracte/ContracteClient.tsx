@@ -17,6 +17,7 @@ type Contract = {
   id: string; numar: string | null; denumire: string; cui: string;
   localitate: string | null; adresa: string | null; telefon: string | null; email: string | null;
   reprezentant: string | null; persoanaNume: string | null; persoanaEmail: string | null;
+  administratorNume: string | null; administratorEmail: string | null;
   ziTermen: number; status: string;
   dataSemnarii: string | null; dataIncetarii: string | null;
   dosare: number;
@@ -102,6 +103,7 @@ export default function ContracteClient({ initialCount }: { initialCount: number
               dataSemnarii: deEditat.dataSemnarii, dataIncetarii: deEditat.dataIncetarii,
               ziTermen: deEditat.ziTermen, persoanaNume: deEditat.persoanaNume,
               persoanaEmail: deEditat.persoanaEmail,
+              administratorNume: deEditat.administratorNume, administratorEmail: deEditat.administratorEmail,
             }}
             peRenunt={() => setDeEditat(null)}
             peSalvat={() => { setDeEditat(null); setReincarca(v => v + 1); }}

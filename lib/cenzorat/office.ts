@@ -22,8 +22,24 @@
 const WORD = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 const EXCEL = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 
+const CSV = "text/csv";
+
 export function esteOffice(mimeType: string): boolean {
-  return mimeType === WORD || mimeType === EXCEL;
+  return mimeType === WORD || mimeType === EXCEL || mimeType === CSV;
+}
+
+/**
+ * CSV-ul e deja text — doar codificarea trebuie ghicita. Programele romanesti de
+ * administrare il scot des in Windows-1250, nu in UTF-8; decodat gresit, „ș" si
+ * „ț" devin semne de intrebare, iar numele de furnizori nu se mai potrivesc.
+ */
+function textDinCsv(continut: Buffer, limita: number): string {
+  const utf8 = new TextDecoder("utf-8").decode(continut);
+  const text = utf8.includes("\uFFFD") ? new TextDecoder("windows-1250").decode(continut) : utf8;
+  const curat = text.replace(/^\uFEFF/, "");
+  return curat.length > limita
+    ? `${curat.slice(0, limita)}\n\n[ATENȚIE: fișierul continuă, dar textul a fost tăiat la ${limita} de caractere. Totalurile de la final pot lipsi — nu le deduce.]`
+    : curat;
 }
 
 /** Cat text ii trebuie inventarului: antetul si titlul, nu continutul. */
@@ -118,9 +134,16 @@ async function textDinExcel(
     const xml = await arhiva.file(caiFoi[f])!.async("string");
     const randuri: string[] = [];
 
-    for (const rand of xml.matchAll(/<row\b[^>]*>([\s\S]*?)<\/row>/g)) {
+    // Celulele si randurile GOALE se scriu scurt, `<c r="A2" s="3"/>`. O expresie
+    // `<c ...>...</c>` le inghitea impreuna cu celula urmatoare: A2 primea
+    // valoarea lui B2, iar a lui B2 se pierdea. Intr-un registru exportat in Excel
+    // celulele goale formatate sunt peste tot, deci cifrele ajungeau la model sub
+    // coloana gresita. Forma scurta se recunoaste acum si se sare.
+    for (const rand of xml.matchAll(/<row\b[^>]*?(?:\/>|>([\s\S]*?)<\/row>)/g)) {
+      if (rand[1] === undefined) continue;
       const celule: string[] = [];
-      for (const c of rand[1].matchAll(/<c\b([^>]*)>([\s\S]*?)<\/c>/g)) {
+      for (const c of rand[1].matchAll(/<c\b([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g)) {
+        if (c[2] === undefined) continue;
         const atribute = c[1];
         const tip = /t="([^"]+)"/.exec(atribute)?.[1];
         const stil = Number(/s="(\d+)"/.exec(atribute)?.[1] ?? "-1");
@@ -151,7 +174,12 @@ async function textDinExcel(
     scris += text.length;
   }
 
-  return bucati.join("\n\n");
+  // Un text taiat fara semn arata ca un document care se termina acolo — iar
+  // randul TOTAL al unei liste mari e exact ce cade dupa taietura.
+  const tot = bucati.join("\n\n");
+  return scris > limita
+    ? `${tot}\n\n[ATENȚIE: foaia de calcul continuă, dar textul a fost tăiat la ${limita} de caractere. Totalurile de la final pot lipsi — nu le deduce.]`
+    : tot;
 }
 
 /* ------------------------------------------------------------------- WORD */
@@ -163,7 +191,10 @@ async function textDinWord(arhiva: import("jszip"), limita: number): Promise<str
   const xml = (await parte.async("string"))
     // Structura de tabel se pastreaza: altfel un tabel de doua coloane iese ca un
     // sir de cuvinte lipite, si nu se mai vede ce valoare tine de ce rand.
-    .replace(/<\/w:tc>/g, "\t")
+    // Separatorul de celula e „ | ", nu tab: `fara` strange orice sir de spatii si
+    // tab-uri intr-un singur spatiu, iar tab-ul pus aici disparea — celulele unui
+    // rand se lipeau si nu se mai stia ce cifra tine de ce coloana.
+    .replace(/<\/w:tc>/g, " | ")
     .replace(/<\/w:tr>/g, "\n")
     .replace(/<\/w:p>/g, "\n");
 
@@ -185,6 +216,10 @@ export async function citesteOffice(
   limita: number,
 ): Promise<CititDinOffice | null> {
   if (!esteOffice(mimeType)) return null;
+  if (mimeType === CSV) {
+    const text = textDinCsv(continut, limita);
+    return text.trim().length > 20 ? { titlu: "", text } : null;
+  }
 
   try {
     const { default: JSZip } = await import("jszip");

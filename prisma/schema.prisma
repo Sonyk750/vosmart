@@ -80,6 +80,12 @@ model Contract {
   persoanaEmail   String?
   persoanaTelefon String?
 
+  // --- Administratorul asociatiei (firma sau persoana care face lista) ---
+  // Raportul semnat pleaca la el SI la asociatie: el e cel care afiseaza lista,
+  // deci el trebuie sa stie daca are „bun de plata".
+  administratorNume  String?
+  administratorEmail String?
+
   /// Ziua din luna pana la care asociatia trebuie sa trimita documentele.
   ziTermen Int @default(15)
 
@@ -193,11 +199,17 @@ model Fisier {
   /// De unde vine `tip`: ai — citit din document; nume — ghicit din numele
   /// fisierului; om — pus cu mana de cenzor, si atunci nu se mai suprascrie.
   tipSursa   String  @default("nume")
+  /// Contul bancar (IBAN) al extrasului sau al registrului de banca. O asociatie
+  /// cu doua conturi are doua extrase, iar ele se verifica fiecare pe contul lui.
+  cont       String?
 
   createdAt DateTime @default(now())
 
   dosar Dosar @relation(fields: [dosarId], references: [id], onDelete: Cascade)
 
+  /// Acelasi document de doua ori in acelasi dosar ar fi citit si numarat de doua
+  /// ori. Cererile de incarcare vin in paralel, deci regula sta in baza, nu in cod.
+  @@unique([dosarId, amprenta])
   @@index([dosarId])
 }
 
@@ -217,6 +229,9 @@ model Constatare {
   recomandare String?
   stare       String   @default("deschisa") // deschisa | acceptata | respinsa
   notaCenzor  String?
+  /// Cine a luat decizia (id utilizator) si cand. Gol = nedecisa.
+  decisDe     String?
+  decisLa     DateTime?
   ordine      Int      @default(0)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -234,6 +249,8 @@ model EvenimentFlux {
   etapa     String
   stare     String // in_lucru | gata | esuata
   mesaj     String
+  /// Cine a facut pasul (id utilizator). Gol = sistemul (analiza AI).
+  autorId   String?
   createdAt DateTime @default(now())
 
   dosar Dosar @relation(fields: [dosarId], references: [id], onDelete: Cascade)
@@ -257,18 +274,50 @@ model Report {
   date   Json?
   status String @default("draft") // draft | publicat
 
-  semnatDe String?
-  semnatLa DateTime?
+  semnatDe   String?
+  semnatDeId String?
+  semnatLa   DateTime?
+  /// sha256 al continutului semnat (JSON canonic din `date`). Se tipareste pe
+  /// raport: ce primeste asociatia se poate compara cu ce s-a semnat.
+  amprenta   String?
+  /// Decizia cenzorului asupra listei de plata a lunii: true = bun de plata
+  /// (lista se poate afisa), false = nu. E a omului, nu a scorului.
+  bunDePlata Boolean?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  dosar    Dosar    @relation(fields: [dosarId], references: [id], onDelete: Cascade)
-  contract Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  // Restrict, nu Cascade: un raport semnat nu pleaca odata cu dosarul sau cu
+  // contractul. Stergerea lor trebuie sa se opreasca in fata lui.
+  dosar     Dosar             @relation(fields: [dosarId], references: [id], onDelete: Restrict)
+  contract  Contract          @relation(fields: [contractId], references: [id], onDelete: Restrict)
+  trimiteri TrimitereRaport[]
 
   /// Un singur raport de fiecare fel intr-un dosar.
   @@unique([dosarId, tip])
   @@index([contractId])
+}
+
+/// O trimitere a raportului semnat, catre un destinatar.
+///
+/// Fiecare trimitere ramane scrisa: cui, cand, de catre cine si daca serverul de
+/// email a primit-o. La intrebarea „ati trimis raportul?" raspunsul e un rand de
+/// aici, nu o amintire.
+model TrimitereRaport {
+  id        String   @id @default(cuid())
+  reportId  String
+  /// asociatie | administrator | persoana
+  catre     String
+  email     String
+  /// trimis | esuat
+  stare     String
+  eroare    String?
+  trimisDe  String
+  createdAt DateTime @default(now())
+
+  report Report @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  @@index([reportId])
 }
 
 /// Cache Q&A pentru asistentul de ajutor: intrebarile fara context se retin

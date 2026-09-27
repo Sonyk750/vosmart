@@ -5,6 +5,7 @@ import { poateVedeaContractul } from "@/lib/acces";
 import { citesteFisier, stergeFisiere } from "@/lib/stocare";
 import { numeDupaMime } from "@/lib/cenzorat/optimizare";
 import { TIPURI, eticheta as etichetaTip } from "@/lib/cenzorat/documente";
+import { areRaportSemnat, inLucruActiv } from "@/lib/cenzorat/blocare";
 
 export const runtime = "nodejs";
 
@@ -36,6 +37,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       numeFisier: true,
       mimeType: true,
       blobUrl: true,
+      dosarId: true,
       dosar: { select: { contractId: true } },
     },
   });
@@ -43,6 +45,11 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
   if (!(await poateVedeaContractul(user, fisier.dosar.contractId))) {
     return NextResponse.json({ error: "Neautorizat" }, { status: 403 });
+  }
+  // Clientul vede o luna abia cand ea are raport semnat — aceeasi regula ca la
+  // pagina de raport. Pana atunci dosarul e lucru in curs al cenzorului.
+  if (user.role === "client" && !(await areRaportSemnat(fisier.dosarId))) {
+    return NextResponse.json({ error: "Documentele lunii se văd după semnarea raportului." }, { status: 403 });
   }
 
   const continut = await citesteFisier(fisier.blobUrl);
@@ -106,7 +113,7 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
       numeFisier: true,
       blobUrl: true,
       dosarId: true,
-      dosar: { select: { contractId: true, etapa: true, luna: true, an: true } },
+      dosar: { select: { contractId: true, luna: true, an: true, stareEtapa: true, updatedAt: true } },
     },
   });
   if (!fisier) return NextResponse.json({ error: "Fișier negăsit" }, { status: 404 });
@@ -117,7 +124,10 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
 
   // Un dosar cu raport semnat e o fotografie a ceea ce s-a verificat. Daca s-ar
   // putea scoate documente din el, semnatura ar ramane pe altceva decat s-a semnat.
-  if (fisier.dosar.etapa === "semnat") {
+  if (inLucruActiv(fisier.dosar)) {
+    return NextResponse.json({ error: "Verificarea AI lucrează acum pe dosar. Așteaptă să se termine." }, { status: 409 });
+  }
+  if (await areRaportSemnat(fisier.dosarId)) {
     return NextResponse.json(
       { error: `Dosarul pe ${fisier.dosar.luna} ${fisier.dosar.an} are raport semnat. Documentele din el nu se mai pot șterge.` },
       { status: 409 },
@@ -131,6 +141,7 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
       etapa: "intrare",
       stare: "gata",
       mesaj: `Document scos din dosar: ${fisier.numeFisier}`,
+      autorId: user.id,
     },
   });
   await stergeFisiere([fisier.blobUrl]);
@@ -156,14 +167,17 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   const fisier = await prisma.fisier.findUnique({
     where: { id },
-    select: { dosar: { select: { contractId: true, etapa: true, luna: true, an: true } } },
+    select: { dosarId: true, tip: true, dosar: { select: { contractId: true, luna: true, an: true, stareEtapa: true, updatedAt: true } } },
   });
   if (!fisier) return NextResponse.json({ error: "Fișier negăsit" }, { status: 404 });
 
   if (!(await poateVedeaContractul(user, fisier.dosar.contractId))) {
     return NextResponse.json({ error: "Neautorizat" }, { status: 403 });
   }
-  if (fisier.dosar.etapa === "semnat") {
+  if (inLucruActiv(fisier.dosar)) {
+    return NextResponse.json({ error: "Verificarea AI lucrează acum pe dosar. Așteaptă să se termine." }, { status: 409 });
+  }
+  if (await areRaportSemnat(fisier.dosarId)) {
     return NextResponse.json(
       { error: `Dosarul pe ${fisier.dosar.luna} ${fisier.dosar.an} are raport semnat. Inventarul lui nu se mai poate schimba.` },
       { status: 409 },
@@ -171,7 +185,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   }
 
   const trup = await req.json().catch(() => ({}));
-  const date: { tip?: string; eticheta?: string; tipSursa?: string; denumireAi?: string | null } = {};
+  const date: { tip?: string; eticheta?: string; tipSursa?: string; denumireAi?: string | null; cont?: string | null } = {};
 
   if (typeof trup.tip === "string") {
     const cunoscut = trup.tip === "altele" || TIPURI.some(t => t.cheie === trup.tip);
@@ -187,6 +201,13 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     date.denumireAi = curat || null;
   }
 
+  // Contul bancar al extrasului sau al registrului de banca. Fara el, doua
+  // extrase de pe conturi diferite nu se pot verifica fiecare pe contul lui.
+  if (typeof trup.cont === "string" || trup.cont === null) {
+    const iban = typeof trup.cont === "string" ? trup.cont.replace(/s+/g, "").toUpperCase().slice(0, 34) : "";
+    date.cont = iban || null;
+  }
+
   if (Object.keys(date).length === 0) {
     return NextResponse.json({ error: "Nu s-a trimis nimic de schimbat." }, { status: 400 });
   }
@@ -194,8 +215,16 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const salvat = await prisma.fisier.update({
     where: { id },
     data: date,
-    select: { id: true, tip: true, eticheta: true, denumireAi: true, tipSursa: true },
+    select: { id: true, tip: true, eticheta: true, denumireAi: true, tipSursa: true, cont: true },
   });
+
+  // Documentul fusese citit sub eticheta veche, iar cifrele lui sunt deja
+  // amestecate in datele dosarului; ele nu se pot scoate de acolo pe bucati.
+  // Singurul raspuns corect e recitirea intreaga — altfel butonul spunea „totul e
+  // deja verificat" si constatarile ramaneau pe tipul gresit.
+  if ((date.tip && date.tip !== fisier.tip) || "cont" in date) {
+    await prisma.dosar.update({ where: { id: fisier.dosarId }, data: { fisiereCitite: [] as never } });
+  }
 
   return NextResponse.json({ fisier: salvat });
 }

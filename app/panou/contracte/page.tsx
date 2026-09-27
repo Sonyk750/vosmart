@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { filtruContracte } from "@/lib/acces";
 import ContracteClient from "./ContracteClient";
 
 /**
@@ -15,6 +16,7 @@ export default async function PaginaContracte() {
   const user = await requireAdmin();
   if (!user) redirect("/login?next=/panou/contracte");
 
-  const cate = await prisma.contract.count();
+  // Numarul tine cont de cine intreaba: un cenzor numara doar contractele lui.
+  const cate = await prisma.contract.count({ where: filtruContracte(user) });
   return <ContracteClient initialCount={cate} />;
 }
