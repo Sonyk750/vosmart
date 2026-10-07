@@ -95,7 +95,7 @@ O soluție modernă completă pentru asociații de proprietari include:
 
 Când administratorul folosește SpokAdmin, datele sunt structurate și ușor de verificat de cenzor prin VoSmart. Cei doi lucrează pe aceeași platformă, eliminând erorile de comunicare.
 
-Dacă asociația vrea să externalizeze complet administrarea către o firmă specializată — activitate separată de cenzorat — **[DecoImob](https://decoimob.ro)** oferă administrare imobile în București și Ilfov, în timp ce VoSmart asigură cenzoratul independent al administratorului.
+Dacă asociația vrea să externalizeze complet administrarea către o firmă specializată — activitate separată de cenzorat — **[DecoImob](https://decoimob.ro)** oferă administrare imobile în toată România, în timp ce VoSmart asigură cenzoratul independent al administratorului.
 
 ## Întrebări frecvente despre cenzorat asociații
 

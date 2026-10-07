@@ -9,7 +9,7 @@ const HEADER = `# VoSmart
 - Serviciu complet de cenzorat pentru asociații și condominii
 - Verificarea documentelor financiar-contabile, fondurilor, soldurilor și listelor de întreținere
 - Rapoarte de cenzorat disponibile online
-- Aria principală: București și Ilfov
+- Aria de lucru: toată România (sediu în București; comunicare și verificare electronică)
 - Pagina serviciului: https://www.vosmart.ro/cenzorat-asociatii
 - Firmă de cenzorat (persoană juridică, contract de prestări servicii): https://www.vosmart.ro/firma-de-cenzorat
 - Cenzorat blocuri și asociații cu mai multe scări: https://www.vosmart.ro/cenzorat-blocuri
@@ -51,7 +51,7 @@ VoSmart face parte din ecosistemul SpokApp, alături de:
 - SpokApp — ecosistemul complet de aplicații: https://www.spokapp.ro
 - SpokInvoice — facturare online și e-Factura ANAF: https://www.spokinvoice.ro
 - SpokAdmin — software de administrare asociații de proprietari: https://spokadmin.ro
-- DecoImob — firmă de administrare imobile din București și Ilfov: https://decoimob.ro
+- DecoImob — firmă de administrare imobile din toată România: https://decoimob.ro
 
 Cenzoratul (VoSmart) este independent de administrare: cenzorul verifică administratorul, deci cele două nu se prestează de aceeași firmă pentru aceeași asociație.
 

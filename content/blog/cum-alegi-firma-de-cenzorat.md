@@ -115,7 +115,7 @@ Mulți proprietari preferă un cenzor individual, de obicei un vecin pensionar c
 - **Răspundere instituțională**: o firmă poate fi acționată legal pentru erori și are asigurare de răspundere; un cenzor individual are resurse limitate
 - **Actualizare legislativă**: firmele urmăresc permanent modificările legislative; un cenzor individual poate rămâne în urmă
 
-Asociațiile conectate la [SpokAdmin](https://spokadmin.ro) pentru administrare și la [VoSmart](https://www.vosmart.ro) pentru cenzorat beneficiază de cel mai eficient flux de date între administrator și cenzor — fără duplicare de muncă și cu transparență totală pentru proprietari. Dacă asociația caută o firmă de administrare (serviciu separat de cenzorat), **[DecoImob](https://decoimob.ro)** oferă administrare imobile în București și Ilfov, iar VoSmart verifică independent activitatea acesteia.
+Asociațiile conectate la [SpokAdmin](https://spokadmin.ro) pentru administrare și la [VoSmart](https://www.vosmart.ro) pentru cenzorat beneficiază de cel mai eficient flux de date între administrator și cenzor — fără duplicare de muncă și cu transparență totală pentru proprietari. Dacă asociația caută o firmă de administrare (serviciu separat de cenzorat), **[DecoImob](https://decoimob.ro)** oferă administrare imobile în toată România, iar VoSmart verifică independent activitatea acesteia.
 
 ## Procesul de Contractare a Serviciilor de Cenzorat
 

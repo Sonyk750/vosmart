@@ -65,10 +65,7 @@ const jsonLd = {
       name: "Audit financiar-contabil intern pentru asociații de proprietari",
       serviceType: "Verificare financiar-contabilă și control de gestiune",
       provider: { "@id": "https://www.vosmart.ro/#organization" },
-      areaServed: [
-        { "@type": "City", name: "București" },
-        { "@type": "AdministrativeArea", name: "Ilfov" },
-      ],
+      areaServed: { "@type": "Country", name: "România" },
       audience: { "@type": "Audience", audienceType: "Asociații de proprietari" },
       url: canonical,
       description: metadata.description,

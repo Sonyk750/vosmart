@@ -63,10 +63,7 @@ const jsonLd = {
       name: "Cenzorat pentru asociațiile de proprietari din blocuri",
       serviceType: "Control financiar-contabil intern al asociației de proprietari",
       provider: { "@id": "https://www.vosmart.ro/#organization" },
-      areaServed: [
-        { "@type": "City", name: "București" },
-        { "@type": "AdministrativeArea", name: "Ilfov" },
-      ],
+      areaServed: { "@type": "Country", name: "România" },
       audience: { "@type": "Audience", audienceType: "Asociații de proprietari din blocuri de locuințe" },
       url: canonical,
       description: metadata.description,

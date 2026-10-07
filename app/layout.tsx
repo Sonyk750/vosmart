@@ -26,7 +26,7 @@ export const metadata: Metadata = {
     template: "%s | VoSmart",
   },
   description:
-    "Servicii de cenzorat pentru asociații de proprietari din București, cu analiză asistată de AI, rapoarte online și verificări financiare clare.",
+    "Servicii de cenzorat pentru asociații de proprietari din toată România, cu analiză asistată de AI, rapoarte online și verificări financiare clare.",
   keywords: [
     "firma de cenzorat",
     "cenzorat asociatii",
@@ -112,10 +112,7 @@ const jsonLd = {
         postalCode: "013711",
         addressCountry: "RO",
       },
-      areaServed: [
-        { "@type": "City", name: "București" },
-        { "@type": "AdministrativeArea", name: "Ilfov" },
-      ],
+      areaServed: { "@type": "Country", name: "România" },
       knowsAbout: [
         "cenzorat asociații de proprietari",
         "cenzorat blocuri",
@@ -133,7 +130,7 @@ const jsonLd = {
         closes: "17:00",
       },
       description:
-        "Firmă de cenzorat pentru asociații de proprietari din București. Rapoarte lunare online, portal client și verificări financiare conforme Legii 196/2018.",
+        "Firmă de cenzorat pentru asociații de proprietari din toată România. Rapoarte lunare online, portal client și verificări financiare conforme Legii 196/2018.",
       parentOrganization: {
         "@type": "Organization",
         "@id": "https://www.spokapp.ro/#organization",

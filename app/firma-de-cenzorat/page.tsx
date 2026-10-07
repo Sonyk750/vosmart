@@ -60,7 +60,7 @@ const faqs = [
   ["Cum se alege firma de cenzorat?", "Firma este propusă și aprobată de adunarea generală a proprietarilor, iar decizia se consemnează în hotărâre. Ulterior se semnează contractul de prestări servicii care stabilește durata mandatului, frecvența verificărilor și livrabilele."],
   ["Firma de cenzorat se ocupă și de administrarea asociației?", "Nu. Cenzoratul și administrarea sunt roluri distincte și incompatibile în aceeași asociație: cenzorul verifică activitatea administratorului. VoSmart prestează exclusiv cenzorat."],
   ["Cât costă serviciile unei firme de cenzorat?", "Tariful depinde de numărul de apartamente, de volumul documentelor, de perioada analizată și de frecvența verificărilor. Oferta se stabilește după ce cunoaștem dimensiunea asociației."],
-  ["În ce zone lucrează VoSmart?", "Serviciul complet de cenzorat este livrat în principal în București și Ilfov. Pentru asociațiile din alte județe, verificarea se poate organiza în format digital, pe baza documentelor încărcate în platformă."],
+  ["În ce zone lucrează VoSmart?", "VoSmart lucrează cu asociații de proprietari din toată România. Sediul este în București; comunicarea și verificarea se fac electronic, pe baza documentelor încărcate în platformă, iar raportul ajunge online."],
 ]
 
 const jsonLd = {
@@ -72,10 +72,7 @@ const jsonLd = {
       name: "Servicii de cenzorat prestate de firmă specializată",
       serviceType: "Cenzorat asociații de proprietari",
       provider: { "@id": "https://www.vosmart.ro/#organization" },
-      areaServed: [
-        { "@type": "City", name: "București" },
-        { "@type": "AdministrativeArea", name: "Ilfov" },
-      ],
+      areaServed: { "@type": "Country", name: "România" },
       audience: { "@type": "Audience", audienceType: "Asociații de proprietari" },
       url: canonical,
       description: metadata.description,
@@ -125,7 +122,7 @@ export default function FirmaDeCenzoratPage() {
         <div className="pointer-events-none absolute left-1/2 top-0 h-[500px] w-[900px] -translate-x-1/2 rounded-full bg-violet-600/15 blur-[120px]" />
         <div className="relative mx-auto grid max-w-7xl items-center gap-14 lg:grid-cols-[1.08fr_.92fr]">
           <div>
-            <div className="mb-6 inline-flex rounded-full border border-violet-400/25 bg-violet-400/10 px-4 py-2 text-sm text-violet-200">Primul cenzorat cu AI · București și Ilfov</div>
+            <div className="mb-6 inline-flex rounded-full border border-violet-400/25 bg-violet-400/10 px-4 py-2 text-sm text-violet-200">Primul cenzorat cu AI · toată România</div>
             <h1 className="max-w-4xl text-4xl font-bold leading-tight tracking-tight sm:text-5xl lg:text-7xl">
               Firmă de cenzorat pentru asociații de proprietari
             </h1>

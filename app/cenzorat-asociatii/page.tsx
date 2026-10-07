@@ -6,9 +6,9 @@ import { Ecosistem } from "@/app/components/Ecosistem";
 const canonical = "https://www.vosmart.ro/cenzorat-asociatii"
 
 export const metadata: Metadata = {
-  title: "Cenzorat asociații proprietari București și Ilfov",
+  title: "Cenzorat asociații proprietari în România, din București",
   description:
-    "Servicii de cenzorat pentru asociații de proprietari din București și Ilfov: verificări financiar-contabile, rapoarte clare și analiză asistată de AI.",
+    "Servicii de cenzorat pentru asociații de proprietari din toată România: verificări financiar-contabile, rapoarte clare și analiză asistată de AI.",
   alternates: { canonical },
   openGraph: {
     type: "website",
@@ -54,10 +54,7 @@ const jsonLd = {
       name: "Cenzorat pentru asociații de proprietari",
       serviceType: "Servicii de cenzorat și verificare financiar-contabilă",
       provider: { "@id": "https://www.vosmart.ro/#organization" },
-      areaServed: [
-        { "@type": "City", name: "București" },
-        { "@type": "AdministrativeArea", name: "Ilfov" },
-      ],
+      areaServed: { "@type": "Country", name: "România" },
       url: canonical,
       description: metadata.description,
     },
@@ -104,7 +101,7 @@ export default function CenzoratAsociatiiPage() {
         <div className="pointer-events-none absolute left-1/2 top-0 h-[500px] w-[900px] -translate-x-1/2 rounded-full bg-violet-600/15 blur-[120px]" />
         <div className="relative mx-auto grid max-w-7xl items-center gap-14 lg:grid-cols-[1.08fr_.92fr]">
           <div>
-            <div className="mb-6 inline-flex rounded-full border border-cyan-400/25 bg-cyan-400/10 px-4 py-2 text-sm text-cyan-300">București și Ilfov · raportare digitală</div>
+            <div className="mb-6 inline-flex rounded-full border border-cyan-400/25 bg-cyan-400/10 px-4 py-2 text-sm text-cyan-300">Toată România · raportare digitală</div>
             <h1 className="max-w-4xl text-4xl font-bold leading-tight tracking-tight sm:text-5xl lg:text-7xl">
               Cenzorat pentru asociații, cu verificări clare și tehnologie modernă
             </h1>
