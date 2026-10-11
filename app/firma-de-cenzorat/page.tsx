@@ -13,7 +13,6 @@ export const metadata: Metadata = {
     "firma de cenzorat",
     "firma cenzorat bucuresti",
     "firma de cenzorat asociatii de proprietari",
-    "servicii cenzorat",
     "cenzor persoana juridica",
     "contract cenzorat asociatie",
   ],

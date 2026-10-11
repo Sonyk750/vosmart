@@ -211,7 +211,12 @@ export default function HomeClient() {
                 className="h-auto w-[110px]"
               />
             </a>
-            <nav className="hidden items-center gap-8 text-sm text-slate-300 md:flex">
+            {/* Paginile care aduc clienți („firmă de cenzorat”, „cenzorat asociații”) stau primele în meniu:
+                fără link din meniu, Google și oamenii nu ajungeau la ele de pe pagina principală (11.10.2026).
+                Cu ele, meniul are ~830px: pe ecrane sub 1280px apare rândul de linkuri de dedesubt. */}
+            <nav className="hidden items-center gap-6 text-sm text-slate-300 xl:flex">
+              <a href="/firma-de-cenzorat" className="transition hover:text-violet-300">Firmă de cenzorat</a>
+              <a href="/cenzorat-asociatii" className="transition hover:text-violet-300">Cenzorat asociații</a>
               <a href="/platforma-ai-cenzorat" className="transition hover:text-violet-300">Platformă AI</a>
               <a href="#pachete" className="transition hover:text-violet-300">Pachete</a>
               <a href="#servicii" className="transition hover:text-violet-300">Servicii</a>
@@ -220,10 +225,12 @@ export default function HomeClient() {
               <a href="#contact" className="transition hover:text-violet-300">Contact</a>
               <a href="/login" className="transition hover:text-emerald-200 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-emerald-300 font-medium">Autentificare</a>
             </nav>
-            <a href="#contact" className="hidden rounded-xl bg-violet-600 px-5 py-2.5 text-sm font-semibold shadow-[0_0_25px_rgba(124,58,237,0.4)] transition hover:bg-violet-500 hover:shadow-[0_0_35px_rgba(124,58,237,0.6)] md:inline-flex">Solicită ofertă</a>
-            <a href="#contact" className="inline-flex rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold md:hidden">Contact</a>
+            <a href="#contact" className="hidden rounded-xl bg-violet-600 px-5 py-2.5 text-sm font-semibold shadow-[0_0_25px_rgba(124,58,237,0.4)] transition hover:bg-violet-500 hover:shadow-[0_0_35px_rgba(124,58,237,0.6)] xl:inline-flex">Solicită ofertă</a>
+            <a href="#contact" className="inline-flex rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold xl:hidden">Contact</a>
           </div>
-          <nav className="flex justify-center gap-5 border-t border-white/5 px-4 py-3 text-xs text-slate-300 md:hidden">
+          <nav className="flex flex-wrap justify-center gap-x-5 gap-y-2 border-t border-white/5 px-4 py-3 text-xs text-slate-300 xl:hidden">
+            <a href="/firma-de-cenzorat" className="hover:text-white">Firmă de cenzorat</a>
+            <a href="/cenzorat-asociatii" className="hover:text-white">Cenzorat asociații</a>
             <a href="/platforma-ai-cenzorat" className="hover:text-white">Platformă AI</a>
             <a href="#pachete" className="hover:text-white">Pachete</a>
             <a href="#servicii" className="hover:text-white">Servicii</a>
@@ -242,16 +249,17 @@ export default function HomeClient() {
                   <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-violet-400 opacity-75"></span>
                   <span className="relative inline-flex h-2 w-2 rounded-full bg-violet-500"></span>
                 </span>
-                Firmă de cenzorat · Portal online · Rapoarte lunare
+                Cenzorat cu AI · Portal online · Rapoarte lunare
               </div>
               <h1 className="max-w-4xl text-4xl font-bold leading-tight sm:text-5xl lg:text-6xl">
-                Firmă de cenzorat pentru{" "}
+                Servicii de cenzorat pentru{" "}
                 <span style={{background:"linear-gradient(135deg,#a78bfa,#67e8f9)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundClip:"text"}}>
                   asociații de proprietari
                 </span>
               </h1>
               <p className="mt-6 max-w-2xl text-lg leading-relaxed text-slate-300">
-                VoSmart oferă servicii profesionale de cenzorat asociații, cenzorat blocuri și verificare financiară, într-un format modern: rapoarte lunare, documente și observații disponibile online.
+                {/* Linkurile cu exact cuvântul paginii-țintă îi spun lui Google care pagină răspunde la el. */}
+                VoSmart este o <Link href="/firma-de-cenzorat" className="text-white underline decoration-violet-400/50 underline-offset-4 hover:text-violet-200">firmă de cenzorat</Link> care oferă <Link href="/cenzorat-asociatii" className="text-white underline decoration-violet-400/50 underline-offset-4 hover:text-violet-200">cenzorat asociații</Link>, <Link href="/cenzorat-blocuri" className="text-white underline decoration-violet-400/50 underline-offset-4 hover:text-violet-200">cenzorat blocuri</Link> și verificare financiară, într-un format modern: rapoarte lunare, documente și observații disponibile online.
               </p>
               <div className="mt-6 flex flex-wrap gap-3">
                 {["✓ Rapoarte în 60 min","✓ Portal 24/7","✓ AI + Expert uman"].map((b)=>(

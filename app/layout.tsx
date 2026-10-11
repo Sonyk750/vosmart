@@ -22,7 +22,7 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.vosmart.ro"),
   title: {
-    default: "VoSmart — Firmă de Cenzorat pentru Asociații de Proprietari",
+    default: "VoSmart — Servicii de Cenzorat pentru Asociații de Proprietari",
     template: "%s | VoSmart",
   },
   description:

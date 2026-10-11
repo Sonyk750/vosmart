@@ -6,9 +6,9 @@ import { Ecosistem } from "@/app/components/Ecosistem";
 const canonical = "https://www.vosmart.ro/cenzorat-asociatii"
 
 export const metadata: Metadata = {
-  title: "Cenzorat asociații proprietari în România, din București",
+  title: "Cenzorat asociații de proprietari — România, din București",
   description:
-    "Servicii de cenzorat pentru asociații de proprietari din toată România: verificări financiar-contabile, rapoarte clare și analiză asistată de AI.",
+    "Cenzorat asociații de proprietari în toată România: verificări financiar-contabile, rapoarte de cenzor clare și analiză asistată de AI.",
   alternates: { canonical },
   openGraph: {
     type: "website",
@@ -103,7 +103,7 @@ export default function CenzoratAsociatiiPage() {
           <div>
             <div className="mb-6 inline-flex rounded-full border border-cyan-400/25 bg-cyan-400/10 px-4 py-2 text-sm text-cyan-300">Toată România · raportare digitală</div>
             <h1 className="max-w-4xl text-4xl font-bold leading-tight tracking-tight sm:text-5xl lg:text-7xl">
-              Cenzorat pentru asociații, cu verificări clare și tehnologie modernă
+              Cenzorat asociații de proprietari, cu verificări clare
             </h1>
             <p className="mt-7 max-w-3xl text-lg leading-8 text-slate-300">
               VoSmart verifică activitatea financiar-contabilă a asociației de proprietari și transformă documentele într-un raport ușor de înțeles, cu observații, concluzii și recomandări documentate.
