@@ -217,6 +217,7 @@ export default function HomeClient() {
             <nav className="hidden items-center gap-6 text-sm text-slate-300 xl:flex">
               <a href="/firma-de-cenzorat" className="transition hover:text-violet-300">Firmă de cenzorat</a>
               <a href="/cenzorat-asociatii" className="transition hover:text-violet-300">Cenzorat asociații</a>
+              <a href="/cenzorat-ceccar" className="transition hover:text-violet-300">CECCAR</a>
               <a href="/platforma-ai-cenzorat" className="transition hover:text-violet-300">Platformă AI</a>
               <a href="#pachete" className="transition hover:text-violet-300">Pachete</a>
               <a href="#servicii" className="transition hover:text-violet-300">Servicii</a>
@@ -231,6 +232,7 @@ export default function HomeClient() {
           <nav className="flex flex-wrap justify-center gap-x-5 gap-y-2 border-t border-white/5 px-4 py-3 text-xs text-slate-300 xl:hidden">
             <a href="/firma-de-cenzorat" className="hover:text-white">Firmă de cenzorat</a>
             <a href="/cenzorat-asociatii" className="hover:text-white">Cenzorat asociații</a>
+            <a href="/cenzorat-ceccar" className="hover:text-white">CECCAR</a>
             <a href="/platforma-ai-cenzorat" className="hover:text-white">Platformă AI</a>
             <a href="#pachete" className="hover:text-white">Pachete</a>
             <a href="#servicii" className="hover:text-white">Servicii</a>
@@ -259,9 +261,12 @@ export default function HomeClient() {
               </h1>
               <p className="mt-6 max-w-2xl text-lg leading-relaxed text-slate-300">
                 {/* Linkurile cu exact cuvântul paginii-țintă îi spun lui Google care pagină răspunde la el. */}
-                VoSmart este o <Link href="/firma-de-cenzorat" className="text-white underline decoration-violet-400/50 underline-offset-4 hover:text-violet-200">firmă de cenzorat</Link> care oferă <Link href="/cenzorat-asociatii" className="text-white underline decoration-violet-400/50 underline-offset-4 hover:text-violet-200">cenzorat asociații</Link>, <Link href="/cenzorat-blocuri" className="text-white underline decoration-violet-400/50 underline-offset-4 hover:text-violet-200">cenzorat blocuri</Link> și verificare financiară, într-un format modern: rapoarte lunare, documente și observații disponibile online.
+                VoSmart este o <Link href="/firma-de-cenzorat" className="text-white underline decoration-violet-400/50 underline-offset-4 hover:text-violet-200">firmă de cenzorat</Link> care oferă <Link href="/cenzorat-asociatii" className="text-white underline decoration-violet-400/50 underline-offset-4 hover:text-violet-200">cenzorat asociații</Link>, <Link href="/cenzorat-blocuri" className="text-white underline decoration-violet-400/50 underline-offset-4 hover:text-violet-200">cenzorat blocuri</Link> și verificare financiară, împreună cu un expert contabil membru CECCAR (<Link href="/cenzorat-ceccar" className="text-white underline decoration-violet-400/50 underline-offset-4 hover:text-violet-200">cenzorat CECCAR</Link>), într-un format modern: rapoarte lunare, documente și observații disponibile online.
               </p>
+              {/* CECCAR la vedere (Octav, 11.10.2026: „nu am găsit nimic despre CECCAR” — era doar în subsol).
+                  Fapt confirmat: expert contabil membru CECCAR, colaborator VoSmart pe bază de contract. */}
               <div className="mt-6 flex flex-wrap gap-3">
+                <Link href="/cenzorat-ceccar" className="rounded-full border border-cyan-400/40 bg-cyan-400/10 px-4 py-1.5 text-sm font-semibold text-cyan-200 transition hover:bg-cyan-400/20">✓ Expert contabil CECCAR</Link>
                 {["✓ Rapoarte în 60 min","✓ Portal 24/7","✓ AI + Expert uman"].map((b)=>(
                   <span key={b} className="rounded-full border border-white/10 bg-white/[0.04] px-4 py-1.5 text-sm text-slate-300">{b}</span>
                 ))}
