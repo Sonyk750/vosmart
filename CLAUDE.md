@@ -6,7 +6,7 @@ VoSmart este **firma de cenzorat cu AI** pentru asociatii de proprietari. NU se 
 
 Tagline: **"Primul cenzorat cu AI"**
 
-**Cadenta:** la fiecare **10 zile** scrie **2 articole noi** despre cenzorat asociatii proprietari, obligatii legale ale cenzorului, digitalizarea cenzoratului sau legislatie asociatii din Romania.
+**Cadenta:** o data la **3 zile** intre 12.10 si 25.10.2026, la **5 zile** intre 26.10 si 08.11.2026, apoi **o data pe saptamana** (hotarat de Octav pe 11.10.2026; zilele exacte sunt in rutina cloud, care le verifica singura), **2 articole noi** (rutina cloud „VoSmart Blog”). VoSmart e PRIORITAR (aduce venituri); cuvinte cheie: servicii cenzorat, cenzorat asociatii, firma de cenzorat, cenzorat CECCAR. Subiecte: cenzorat asociatii proprietari, obligatii legale ale cenzorului, digitalizarea cenzoratului sau legislatie asociatii din Romania.
 
 > **DecoImob** (`C:\Projects\decoimob`, administrare imobile) este firma separata din ecosistem. **NU adauga pagini noi in decoimob** — sitemap-ul lui e deja lansat in Search Console. Articolele VoSmart pot lega catre paginile DecoImob EXISTENTE (ex. `https://decoimob.ro/administrare-imobile`), ca firma separata de administrare, acolo unde e natural (cenzorul verifica administratorul). Fiecare proiect isi pastreaza subiectul EXCLUSIV: VoSmart doar cenzorat, DecoImob doar administrare.
 
