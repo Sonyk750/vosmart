@@ -68,3 +68,22 @@ git add content/blog/articol-nou.md
 git commit -m "Blog: titlul articolului"
 git push
 ```
+
+## Blogul nu concureaza cu paginile-tinta (regula din 11.10.2026)
+
+Fiecare cuvant cheie principal are O singura pagina care il poarta in titlu si H1:
+
+- **servicii de cenzorat** → https://www.vosmart.ro/
+- **firmă de cenzorat** → https://www.vosmart.ro/firma-de-cenzorat
+- **cenzorat asociații (de proprietari)** → https://www.vosmart.ro/cenzorat-asociatii
+- **cenzorat CECCAR** → https://www.vosmart.ro/cenzorat-ceccar
+
+Un articol de blog care incepe titlul (sau titlul SEO) cu unul din aceste cuvinte concureaza cu
+pagina lui: Google le alterneaza si niciuna nu urca (s-a vazut pe DecoImob, VoSmart, SpokAdmin,
+SpokInvoice, SpokRank). De aceea, la fiecare articol nou:
+
+1. **Nu pune cuvantul principal la inceputul titlului.** Articolul tinteste o intrebare / o varianta
+   lunga („cum alegi…”, „ce verifici…”, „greseli la…”, „ghid pentru…”), nu cuvantul paginii.
+2. **Trimite spre pagina-tinta** cel putin o data, cu textul linkului EXACT cuvantul ei
+   (ex. „servicii de cenzorat” → https://www.vosmart.ro/).
+3. Nu face articole care repeta continutul unei pagini-tinta — completeaza-l.
