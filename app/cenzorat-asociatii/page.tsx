@@ -227,6 +227,7 @@ export default function CenzoratAsociatiiPage() {
         <div className="mx-auto flex max-w-7xl flex-col justify-between gap-5 sm:flex-row">
           <p>© 2026 VoSmart · Cenzorat modern pentru asociații de proprietari.</p>
           <div className="flex flex-wrap gap-5">
+            <Link href="/cenzorat-ceccar" className="hover:text-white">Cenzorat CECCAR</Link>
             <Link href="/blog" className="hover:text-white">Ghiduri</Link>
             <Link href="/help" className="hover:text-white">Ajutor</Link>
             <a href="mailto:office@vosmart.ro" className="hover:text-white">office@vosmart.ro</a>

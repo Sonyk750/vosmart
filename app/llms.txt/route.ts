@@ -30,6 +30,7 @@ const HEADER = `# VoSmart
 - Firmă de cenzorat: https://www.vosmart.ro/firma-de-cenzorat
 - Servicii pentru asociații: https://www.vosmart.ro/cenzorat-asociatii
 - Cenzorat blocuri: https://www.vosmart.ro/cenzorat-blocuri
+- Cenzorat CECCAR (expert contabil membru CECCAR, colaborator pe bază de contract): https://www.vosmart.ro/cenzorat-ceccar
 - Audit financiar-contabil: https://www.vosmart.ro/audit-financiar-contabil
 - Aplicație AI pentru profesioniști: https://www.vosmart.ro/platforma-ai-cenzorat
 - Acces Corporate: https://www.vosmart.ro/corporate

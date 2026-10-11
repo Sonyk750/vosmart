@@ -25,6 +25,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: "https://www.vosmart.ro", lastModified: siteUpdatedAt, changeFrequency: "weekly", priority: 1 },
     { url: "https://www.vosmart.ro/firma-de-cenzorat", lastModified: siteUpdatedAt, changeFrequency: "monthly", priority: 0.9 },
     { url: "https://www.vosmart.ro/cenzorat-asociatii", lastModified: siteUpdatedAt, changeFrequency: "monthly", priority: 0.9 },
+    { url: "https://www.vosmart.ro/cenzorat-ceccar", lastModified: siteUpdatedAt, changeFrequency: "monthly", priority: 0.9 },
     { url: "https://www.vosmart.ro/cenzorat-blocuri", lastModified: siteUpdatedAt, changeFrequency: "monthly", priority: 0.9 },
     { url: "https://www.vosmart.ro/audit-financiar-contabil", lastModified: siteUpdatedAt, changeFrequency: "monthly", priority: 0.9 },
     { url: "https://www.vosmart.ro/platforma-ai-cenzorat", lastModified: siteUpdatedAt, changeFrequency: "monthly", priority: 0.9 },

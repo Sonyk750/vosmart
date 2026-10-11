@@ -687,6 +687,7 @@ export default function HomeClient() {
                     ["Firmă de cenzorat", "/firma-de-cenzorat"],
                     ["Cenzorat asociații", "/cenzorat-asociatii"],
                     ["Cenzorat blocuri", "/cenzorat-blocuri"],
+                    ["Cenzorat CECCAR", "/cenzorat-ceccar"],
                     ["Audit financiar-contabil", "/audit-financiar-contabil"],
                     ["Ghiduri și articole", "/blog"],
                   ].map(([label, href])=>(

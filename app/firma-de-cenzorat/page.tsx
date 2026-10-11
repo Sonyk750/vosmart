@@ -306,6 +306,7 @@ export default function FirmaDeCenzoratPage() {
             <Link href="/cenzorat-asociatii" className="hover:text-white">Cenzorat asociații</Link>
             <Link href="/cenzorat-blocuri" className="hover:text-white">Cenzorat blocuri</Link>
             <Link href="/audit-financiar-contabil" className="hover:text-white">Audit financiar-contabil</Link>
+            <Link href="/cenzorat-ceccar" className="hover:text-white">Cenzorat CECCAR</Link>
             <Link href="/blog" className="hover:text-white">Ghiduri</Link>
             <a href="mailto:office@vosmart.ro" className="hover:text-white">office@vosmart.ro</a>
           </div>
