@@ -87,3 +87,15 @@ SpokInvoice, SpokRank). De aceea, la fiecare articol nou:
 2. **Trimite spre pagina-tinta** cel putin o data, cu textul linkului EXACT cuvantul ei
    (ex. „servicii de cenzorat” → https://www.vosmart.ro/).
 3. Nu face articole care repeta continutul unei pagini-tinta — completeaza-l.
+
+## Blogul automat: până pe 31.01.2027 + direcția SEO săptămânală (hotărât de Octav, 26.11.2026)
+
+Regulile de aici au prioritate față de promptul rutinei de blog (inclusiv față de „fără dată de sfârșit”).
+
+1. **Data de sfârșit.** Rutina de blog publică o dată pe săptămână, sâmbăta, **până pe 31.01.2027 inclusiv**. Rulează `date +%Y%m%d`: dacă e mai mare decât `20270131`, oprește-te imediat — nu instala, nu modifica, nu publica nimic; răspunde doar „Rutina s-a încheiat pe 31.01.2027 — aștept hotărârea lui Octav dacă o prelungim.”
+2. **Direcția săptămânii: `SEO-DIRECTIE.md`.** Dacă în rădăcina repo-ului există `SEO-DIRECTIE.md`, citește-l INTEGRAL înainte să alegi subiectele. Îl scrie analiza SEO săptămânală (pozițiile reale din Google pe cuvintele cheie, făcută luni pe PC-ul lui Octav). Urmează-l la:
+   - alegerea subiectelor / intențiilor de căutare;
+   - ce trebuie EVITAT (cuvinte care concurează o pagină-țintă sau un articol care aduce deja clicuri);
+   - linkurile interne (cu textul exact al cuvântului pentru pagina-țintă).
+   Dacă se contrazice cu restul acestui fișier (granițe, fapte reale, prețuri din cod, regula paginilor-țintă), restul fișierului are prioritate. Nu modifica și nu șterge `SEO-DIRECTIE.md`. Dacă lipsește, continuă ca până acum.
+3. Commit-urile „SEO: direcția articolelor …” sunt ale analizei săptămânale, nu articole — nu le număra la poarta „s-a publicat deja”.
